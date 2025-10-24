@@ -3,6 +3,7 @@
 
 #include "ir/id_list.h"
 #include "ir/type.h"
+#include <stdio.h>
 
 /**
  * @brief 区分 IRValueNode 到底“是”什么
@@ -27,10 +28,36 @@ typedef enum
 typedef struct
 {
   IRValueKind kind; // <-- 用于运行时类型识别
-  const char *name; // 如 %entry, %x, %tmp1， 用于调试
+  char *name;       // 如 %entry, %x, %tmp1， 用于调试
   IRType *type;
   IDList uses; // “谁在用我？” (Def-Use 链)
                // 这是一个 IRUse 对象的链表头
 } IRValueNode;
+
+/**
+ * @brief 打印一个 Value 的引用 (e.g., "i32 %foo" or "label %entry")
+ * (这是我们之前 temp_print_value 的正式版本)
+ * @param val 要打印的 Value
+ * @param stream 输出流
+ */
+void ir_value_dump(IRValueNode *val, FILE *stream);
+
+/**
+ * @brief 安全地设置 Value 的名字 (自动 free 旧名字并 strdup 新名字)
+ * @param val 要修改的 Value
+ * @param name 新的名字
+ */
+void ir_value_set_name(IRValueNode *val, const char *name);
+
+/**
+ * @brief (核心优化函数) 替换所有对 old_val 的使用为 new_val
+ *
+ * 遍历 old_val->uses 链表, 将每个 Use 重新指向 new_val 的 uses 链表。
+ * 这是实现常量折叠、指令合并等优化的基础。
+ *
+ * @param old_val 将被替换的 Value
+ * @param new_val 替换后的新 Value
+ */
+void ir_value_replace_all_uses_with(IRValueNode *old_val, IRValueNode *new_val);
 
 #endif
