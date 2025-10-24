@@ -47,29 +47,24 @@ ir_instruction_destroy(IRInstruction *inst)
   list_del(&inst->list_node);
 
   // 2. 销毁所有 Operands (IRUse 边)
-  //    这至关重要：它会从 Use-Def 链中解除链接
   IDList *iter, *temp;
   list_for_each_safe(&inst->operands, iter, temp)
   {
-    // iter 是 IRUse->user_node
     IRUse *use = list_entry(iter, IRUse, user_node);
-
-    // ir_use_unlink 会从 user_node 和 def_node 两个链表中移除
     ir_use_unlink(use);
-
-    // 销毁 Use 对象本身
     ir_use_destroy(use);
   }
 
-  // 3. (重要) 处理所有对该指令结果的使用
+  // 3. (已解决的 TODO) 处理所有对该指令结果的使用
   //    在销毁指令前, 必须将所有对它结果(inst->result)的使用
   //    替换为一个 'undef' 值。
-  //
-  //    (未来需要 #include "ir/constant.h")
-  //    IRValueNode *undef = ir_constant_get_undef(inst->result.type);
-  //    ir_value_replace_all_uses_with(&inst->result, undef);
-  //
-  // (目前, 我们暂时只做断言检查)
+  if (inst->result.type->kind != IR_TYPE_VOID && !list_empty(&inst->result.uses))
+  {
+    IRValueNode *undef = ir_constant_get_undef(inst->result.type);
+    ir_value_replace_all_uses_with(&inst->result, undef);
+  }
+
+  // (断言检查)
   assert(list_empty(&inst->result.uses) && "Instruction result still in use!");
 
   // 4. 释放指令结果的名字

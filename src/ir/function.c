@@ -2,6 +2,7 @@
 
 #include "ir/function.h"
 #include "ir/basicblock.h" // <-- 需要 (用于 destroy 和 dump)
+#include "ir/constant.h"
 #include "ir/module.h"
 #include "ir/type.h" // <-- 需要 (用于 dump)
 #include "ir/value.h"
@@ -9,35 +10,6 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-
-// --- 内部辅助函数 (用于 dump) ---
-
-// (这是一个临时的辅助函数，理想情况下你应该在 type.c 中有一个)
-static void
-temp_type_to_string(IRType *type, char *buffer, size_t size)
-{
-  if (!type)
-  {
-    strncpy(buffer, "<null_type>", size);
-    return;
-  }
-  switch (type->kind)
-  {
-  case IR_TYPE_VOID:
-    strncpy(buffer, "void", size);
-    break;
-  case IR_TYPE_I32:
-    strncpy(buffer, "i32", size);
-    break;
-  case IR_TYPE_PTR:
-    // (递归太复杂，暂时简化)
-    strncpy(buffer, "ptr", size);
-    break;
-  default:
-    strncpy(buffer, "<?_type>", size);
-    break;
-  }
-}
 
 // --- IRArgument 实现 ---
 
@@ -71,17 +43,23 @@ ir_argument_destroy(IRArgument *arg)
   if (!arg)
     return;
 
-  // TODO: 销毁一个 Value 之前，应该处理所有对它的 Use (e.g., replace all uses with undef)
-  // (目前简化：假设所有 use 都已处理)
-  // assert(list_empty(&arg->value.uses) && "Argument still in use when destroyed");
+  // 1. (已解决的 TODO) 替换所有对该参数的使用
+  //    在销毁参数之前，将所有对它的使用替换为 'undef' 值
+  if (!list_empty(&arg->value.uses))
+  {
+    IRValueNode *undef_val = ir_constant_get_undef(arg->value.type);
+    ir_value_replace_all_uses_with(&arg->value, undef_val);
+  }
+  // 断言检查
+  assert(list_empty(&arg->value.uses) && "Argument still in use when destroyed!");
 
-  // 从父链表中移除
+  // 2. 从父链表中移除
   list_del(&arg->list_node);
 
-  // 释放名字
+  // 3. 释放名字
   free(arg->value.name);
 
-  // 释放自身
+  // 4. 释放自身
   free(arg);
 }
 
@@ -161,7 +139,7 @@ ir_function_dump(IRFunction *func, FILE *stream)
 
   // 1. 打印函数签名 (e.g., "define i32 @main")
   char type_str[32];
-  temp_type_to_string(func->return_type, type_str, sizeof(type_str));
+  ir_type_to_string(func->return_type, type_str, sizeof(type_str));
   fprintf(stream, "define %s @%s(", type_str, func->entry_address.name);
 
   // 2. 打印参数
@@ -174,7 +152,7 @@ ir_function_dump(IRFunction *func, FILE *stream)
       fprintf(stream, ", ");
     }
     IRArgument *arg = list_entry(arg_iter, IRArgument, list_node);
-    temp_type_to_string(arg->value.type, type_str, sizeof(type_str));
+    ir_type_to_string(arg->value.type, type_str, sizeof(type_str));
     fprintf(stream, "%s %%%s", type_str, arg->value.name);
     first_arg = 0;
   }

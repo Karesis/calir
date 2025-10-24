@@ -1,6 +1,7 @@
 // src/ir/value.c
 
 #include "ir/value.h"
+#include "ir/constant.h"
 #include "ir/type.h" // <-- 关键依赖, 用于 dump
 #include "ir/use.h"  // <-- 关键依赖, 用于 R-A-U-W
 
@@ -20,24 +21,39 @@ ir_value_dump(IRValueNode *val, FILE *stream)
     return;
   }
 
+  // --- 新增：处理常量 ---
+  if (val->kind == IR_KIND_CONSTANT)
+  {
+    IRConstant *konst = (IRConstant *)val; // 向下转型
+
+    // 1. 打印类型
+    ir_type_dump(konst->value.type, stream);
+    fprintf(stream, " ");
+
+    // 2. 打印常量的值
+    if (konst->const_kind == CONST_KIND_INT)
+    {
+      fprintf(stream, "%d", konst->data.int_val);
+    }
+    else if (konst->const_kind == CONST_KIND_UNDEF)
+    {
+      fprintf(stream, "undef");
+    }
+    return; // *** 提前返回 ***
+  }
+  // --- 修改结束 ---
+
   // 基本块标签
   if (val->kind == IR_KIND_BASIC_BLOCK)
   {
     // 标签没有类型, 只有名字
     fprintf(stream, "label %%%s", val->name);
   }
-  // TODO: 常量 (需要扩展)
-  /*
-  else if (val->kind == IR_KIND_CONSTANT_INT)
-  {
-      // 打印常量值
-  }
-  */
   // 其他 (参数, 指令结果, 函数, ...)
   else
   {
     // 打印类型
-    ir_type_dump(val->type, stream); // <-- 使用 type.c 中的函数
+    ir_type_dump(val->type, stream);
 
     // 打印名字
     if (val->kind == IR_KIND_FUNCTION)
