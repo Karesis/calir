@@ -16,7 +16,7 @@
 // 哈希表桶 (Bucket)
 typedef struct
 {
-  void *key; // <--- Key 类型改变
+  void *key;
   void *value;
 } PtrHashMapBucket;
 
@@ -37,13 +37,13 @@ struct PtrHashMap_t
 static void *
 ptr_hashmap_get_empty_key(void)
 {
-  return NULL; // <--- 哨兵改变
+  return NULL;
 }
 
 static void *
 ptr_hashmap_get_tombstone_key(void)
 {
-  return (void *)-1; // <--- 哨兵改变
+  return (void *)-1;
 }
 
 /*
@@ -53,32 +53,32 @@ ptr_hashmap_get_tombstone_key(void)
 static inline bool
 ptr_hashmap_key_is_equal(void *k1, void *k2)
 {
-  return k1 == k2; // <--- 比较逻辑改变
+  return k1 == k2;
 }
 
 static inline bool
 ptr_hashmap_key_is_empty(void *k)
 {
-  return k == NULL; // <--- 比较逻辑改变
+  return k == NULL;
 }
 
 static inline bool
 ptr_hashmap_key_is_tombstone(void *k)
 {
-  return k == (void *)-1; // <--- 比较逻辑改变
+  return k == (void *)-1;
 }
 
 static inline bool
 ptr_hashmap_key_is_sentinel(void *k)
 {
-  return k == NULL || k == (void *)-1; // <--- 比较逻辑改变
+  return k == NULL || k == (void *)-1;
 }
 
 static inline uint64_t
 ptr_hashmap_get_hash(void *key)
 {
-  // **关键**: Hash 指针 *本身* 的值
-  return XXH3_64bits(&key, sizeof(void *)); // <--- HASH 逻辑改变
+  // Hash 指针 *本身* 的值
+  return XXH3_64bits(&key, sizeof(void *));
 }
 
 /*
@@ -120,7 +120,7 @@ ptr_hashmap_find_bucket(const PtrHashMap *map, void *key, PtrHashMapBucket **fou
     return false;
   }
 
-  uint64_t hash = ptr_hashmap_get_hash(key); // <--- 使用新的 hash 函数
+  uint64_t hash = ptr_hashmap_get_hash(key);
   size_t bucket_mask = map->num_buckets - 1;
   size_t bucket_idx = (size_t)(hash & bucket_mask);
   size_t probe_amt = 1;
@@ -131,17 +131,17 @@ ptr_hashmap_find_bucket(const PtrHashMap *map, void *key, PtrHashMapBucket **fou
   {
     PtrHashMapBucket *bucket = &map->buckets[bucket_idx];
 
-    if (ptr_hashmap_key_is_equal(bucket->key, key)) // <--- 使用新的
+    if (ptr_hashmap_key_is_equal(bucket->key, key))
     {
       *found_bucket = bucket;
       return true;
     }
-    if (ptr_hashmap_key_is_empty(bucket->key)) // <--- 使用新的
+    if (ptr_hashmap_key_is_empty(bucket->key))
     {
       *found_bucket = (first_tombstone != NULL) ? first_tombstone : bucket;
       return false;
     }
-    if (ptr_hashmap_key_is_tombstone(bucket->key)) // <--- 使用新的
+    if (ptr_hashmap_key_is_tombstone(bucket->key))
     {
       if (first_tombstone == NULL)
       {
@@ -171,10 +171,10 @@ ptr_hashmap_grow(PtrHashMap *map)
   for (size_t i = 0; i < old_num_buckets; i++)
   {
     PtrHashMapBucket *old_bucket = &old_buckets[i];
-    if (!ptr_hashmap_key_is_sentinel(old_bucket->key)) // <--- 使用新的
+    if (!ptr_hashmap_key_is_sentinel(old_bucket->key))
     {
       PtrHashMapBucket *dest_bucket;
-      bool found = ptr_hashmap_find_bucket(map, old_bucket->key, &dest_bucket); // <--- 使用新的
+      bool found = ptr_hashmap_find_bucket(map, old_bucket->key, &dest_bucket);
       (void)found;
       assert(!found && "Re-hashing should never find the key");
       assert(dest_bucket != NULL && "Re-hashing must find a slot");
@@ -252,7 +252,7 @@ ptr_hashmap_remove(PtrHashMap *map, void *key)
 bool
 ptr_hashmap_put(PtrHashMap *map, void *key, void *value)
 {
-  // **关键**: Key 不能是我们的哨兵值
+  // Key 不能是我们的哨兵值
   assert(key != NULL && "Key cannot be NULL (reserved for Empty)");
   assert(key != (void *)-1 && "Key cannot be -1 (reserved for Tombstone)");
 
