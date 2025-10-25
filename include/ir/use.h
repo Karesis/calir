@@ -1,10 +1,10 @@
 #ifndef IR_USE_H
 #define IR_USE_H
 
-#include "context.h"
-#include "ir/id_list.h"
+#include "ir/context.h"
 #include "ir/instruction.h"
 #include "ir/value.h"
+#include "utils/id_list.h"
 
 /**
  * @brief "Use" 边 (Def-Use 链的核心)

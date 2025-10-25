@@ -2,8 +2,8 @@
 #define INSTRUCTION_H
 
 #include "ir/basicblock.h"
-#include "ir/id_list.h"
 #include "ir/value.h"
+#include "utils/id_list.h"
 #include <stdio.h>
 
 // 指令类型

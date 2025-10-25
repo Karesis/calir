@@ -1,8 +1,8 @@
 #include "ir/basicblock.h"
-#include "context.h" // <-- [新]
+#include "ir/context.h"
 #include "ir/function.h"
-#include "ir/instruction.h" // <-- 需要 instruction_dump
-#include "utils/bump.h"     // <-- [新]
+#include "ir/instruction.h"
+#include "utils/bump.h"
 
 #include <assert.h>
 #include <stdlib.h>

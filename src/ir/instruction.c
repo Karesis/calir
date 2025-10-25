@@ -1,7 +1,7 @@
 #include "ir/instruction.h"
-#include "context.h"       // 需要 Context
 #include "ir/basicblock.h" // 需要 BasicBlock->parent
 #include "ir/constant.h"   // 需要 ir_constant_get_undef
+#include "ir/context.h"    // 需要 Context
 #include "ir/function.h"   // 需要 Function->parent
 #include "ir/module.h"     // 需要 Module->context
 #include "ir/type.h"       // 需要 ir_type_dump

@@ -1,5 +1,5 @@
 #include "ir/type.h"
-#include "context.h"    // 需要 IRContext 结构体
+#include "ir/context.h" // 需要 IRContext 结构体
 #include "utils/bump.h" // 需要 BUMP_ALLOC_ZEROED
 #include <assert.h>
 #include <string.h> // for snprintf, strlcat

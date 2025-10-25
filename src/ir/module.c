@@ -1,5 +1,5 @@
 #include "ir/module.h"
-#include "context.h"     // <-- [新] 核心依赖
+#include "ir/context.h"  // <-- [新] 核心依赖
 #include "ir/function.h" // 需要 function_dump
 #include "utils/bump.h"  // <-- [新] 需要 BUMP_ALLOC 和 BUMP_ALLOC_ZEROED
 

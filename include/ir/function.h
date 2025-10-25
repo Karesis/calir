@@ -1,10 +1,10 @@
 #ifndef FUNCTION_H
 #define FUNCTION_H
 
-#include "ir/id_list.h"
 #include "ir/module.h"
 #include "ir/type.h"
 #include "ir/value.h"
+#include "utils/id_list.h"
 #include <stdio.h>
 
 /**

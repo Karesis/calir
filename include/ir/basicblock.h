@@ -1,12 +1,9 @@
 #ifndef BASIC_BLOCK_H
 #define BASIC_BLOCK_H
 
-#include "ir/id_list.h"
+#include "ir/function.h"
 #include "ir/value.h"
-
-// --- 前向声明 ---
-typedef struct IRFunction IRFunction;
-typedef struct IRInstruction IRInstruction;
+#include "utils/id_list.h"
 
 /**
  * @brief 基本块

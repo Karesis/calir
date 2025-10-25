@@ -1,13 +1,9 @@
 #ifndef MODULE_H
 #define MODULE_H
 
-#include "ir/id_list.h"
+#include "context.h"
+#include "utils/id_list.h"
 #include <stdio.h>
-
-// --- 前向声明 ---
-typedef struct IRContext IRContext;
-typedef struct IRFunction IRFunction;
-// typedef struct IRGlobalVariable IRGlobalVariable;
 
 /**
  * @brief 模块 (翻译单元)

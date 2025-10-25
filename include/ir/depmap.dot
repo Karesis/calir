@@ -1,0 +1,41 @@
+// calir/include/ir/ 依赖图
+// A -> B 意味着 A 依赖 B
+digraph CalirIR {
+    // 布局方向：Left to Right (从左到右)
+    rankdir="LR";
+
+    // 节点样式
+    node [shape=box, style=filled, fillcolor="#E6F2FF"];
+
+    // 节点定义
+    "basicblock.h";
+    "constant.h";
+    "function.h";
+    "instruction.h";
+    "module.h";
+    "type.h";
+    "use.h";
+    "value.h";
+
+    // 依赖关系 (A -> B : A depends on B)
+    "value.h"       -> "type.h";
+
+    "constant.h"    -> "value.h";
+
+    "function.h"    -> "type.h";
+    "function.h"    -> "value.h";
+    "function.h"    -> "module.h";
+
+    "basicblock.h"  -> "value.h";
+    "basicblock.h"  -> "function.h";
+    
+    "instruction.h" -> "basicblock.h";
+    "instruction.h" -> "value.h";
+
+    "use.h"         -> "instruction.h";
+    "use.h"         -> "value.h";
+    
+    // 根节点 (无依赖)
+    "type.h";
+    "module.h";
+}

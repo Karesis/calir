@@ -1,5 +1,5 @@
 #include "ir/use.h"
-#include "context.h"
+#include "ir/context.h"
 #include "ir/instruction.h" // 需要 IRInstruction->operands
 #include "ir/value.h"       // 需要 IRValueNode->uses
 #include "utils/bump.h"     // 需要 BUMP_ALLOC_ZEROED

@@ -1,13 +1,9 @@
 #ifndef TYPE_H
 #define TYPE_H
 
+#include "ir/context.h"
 #include <stddef.h> // for size_t
 #include <stdio.h>  // for FILE
-
-// --- 前向声明 ---
-// 构造函数需要 Context 来进行 Arena 分配
-typedef struct IRContext IRContext;
-typedef struct IRType IRType;
 
 /**
  * @brief 扩展后的类型枚举 (以匹配 context.h)

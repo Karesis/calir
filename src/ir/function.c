@@ -1,6 +1,6 @@
 #include "ir/function.h"
-#include "context.h"       // <-- [新]
 #include "ir/basicblock.h" // 需要 basic_block_dump
+#include "ir/context.h"    // <-- [新]
 #include "ir/module.h"
 #include "ir/type.h"
 #include "ir/value.h"
