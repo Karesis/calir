@@ -1,6 +1,8 @@
 #ifndef IR_CONTEXT_H
 #define IR_CONTEXT_H
 
+#include "ir/type.h" // typedef IRContext goes here
+#include "ir/value.h"
 #include "utils/bump.h"    // Arena 分配器
 #include "utils/hashmap.h" // 哈希表主头文件
 #include <stdbool.h>       // for bool
@@ -23,14 +25,10 @@
  * 都将持有一个指向此 IRContext 的指针。
  */
 
-// --- 前向声明 (Forward Declarations) ---
-typedef struct IRType IRType;
-typedef struct IRValueNode IRValueNode;
-
 /**
  * @brief IR 上下文 (Context) 结构体定义
  */
-typedef struct IRContext
+struct IRContext
 {
   // --- 1. 内存管理 (来自 bump.h) ---
 
@@ -73,8 +71,7 @@ typedef struct IRContext
   // i1 (bool) 类型的两个常量
   IRValueNode *const_i1_true;
   IRValueNode *const_i1_false;
-
-} IRContext;
+};
 
 /*
  * =================================================================

@@ -1,9 +1,10 @@
 #ifndef TYPE_H
 #define TYPE_H
 
-#include "ir/context.h"
 #include <stddef.h> // for size_t
 #include <stdio.h>  // for FILE
+
+typedef struct IRContext IRContext;
 
 /**
  * @brief 扩展后的类型枚举 (以匹配 context.h)
@@ -26,11 +27,12 @@ typedef enum
 /**
  * @brief IR 类型结构体 (保持不变)
  */
-typedef struct IRType
+typedef struct IRType IRType;
+struct IRType
 {
   IRTypeKind kind;
   IRType *pointee_type; // 仅用于 IR_TYPE_PTR
-} IRType;
+};
 
 /*
  * =================================================================
