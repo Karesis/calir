@@ -5,7 +5,7 @@
 #include <string.h> // for memcmp, memcpy
 
 #define XXH_INLINE_ALL
-#include "xxhash.h"
+#include "utils/xxhash.h"
 
 /*
  * ========================================
@@ -117,7 +117,7 @@ ptr_hashmap_create(Bump *arena, size_t initial_capacity)
   if (!map)
     return NULL;
 
-  PtrHashMapBucket *buckets = BUMP_ALLOC_SLICE_ZEROED(map->arena, PtrHashMapBucket, num_buckets);
+  PtrHashMapBucket *buckets = BUMP_ALLOC_SLICE_ZEROED(arena, PtrHashMapBucket, num_buckets);
   if (!buckets)
     return NULL;
 
