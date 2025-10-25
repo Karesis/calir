@@ -240,6 +240,56 @@ str_hashmap_put(StrHashMap *map, const char *key_body, size_t key_len, void *val
   return true;
 }
 
+bool
+str_hashmap_put_preallocated_key(StrHashMap *map, const char *key_body, size_t key_len, void *value)
+{
+  // API 特化: 将 (char*, len) 转换为内部 StrSlice
+  StrSlice key_to_find = {.body = key_body, .len = key_len};
+  StrHashMapBucket *bucket;
+
+  // 调用泛型的 find_bucket
+  bool found = str_hashmap_find_bucket(map, key_to_find, &bucket);
+
+  if (found)
+  {
+    // Key 已经存在。我们只更新 value。
+    // (这在 interning 场景下不应发生, 但为了健壮性我们处理它)
+    bucket->value = value;
+    return true;
+  }
+
+  assert(bucket != NULL && "find_bucket must return a valid slot");
+
+  size_t total_load = map->num_entries + map->num_tombstones + 1;
+  if (total_load * 4 >= map->num_buckets * 3)
+  {
+    // 调用泛型的 grow
+    if (!str_hashmap_grow(map))
+    {
+      return false; // OOM on grow
+    }
+    // 重新 find
+    found = str_hashmap_find_bucket(map, key_to_find, &bucket);
+    assert(!found && "Key should not exist after grow");
+    assert(bucket != NULL);
+  }
+
+  if (str_hashmap_key_is_tombstone(bucket->key))
+  {
+    map->num_tombstones--;
+  }
+
+  // --- [关键区别] ---
+  // 我们信任 key_body 已经 在 arena 中，并且是唯一的。
+  // 我们 *不* 复制它，只存储指针。
+  bucket->key.body = key_body;
+  bucket->key.len = key_len;
+  bucket->value = value;
+  map->num_entries++;
+
+  return true;
+}
+
 size_t
 str_hashmap_size(const StrHashMap *map)
 {

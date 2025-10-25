@@ -1,321 +1,238 @@
 #include "builder.h"
-
+#include "context.h"
 #include "ir/basicblock.h"
-#include "ir/function.h"
 #include "ir/instruction.h"
-#include "ir/module.h"
 #include "ir/type.h"
 #include "ir/use.h"
-#include "ir/value.h"
+#include "utils/bump.h"
 
-#include <assert.h> // for assert
-#include <stdlib.h> // for malloc, free
-#include <string.h> // for strdup
+#include <assert.h>
+#include <stdio.h>  // for snprintf
+#include <stdlib.h> // for malloc/free
+#include <string.h>
 
-// --- 私有辅助函数 (Private Helpers) ---
-
-/**
- * @brief (内部) 创建、初始化并插入一条新指令
- *
- * 这是所有 `ir_build_...` 函数的核心。
- * 它处理 malloc, 设置 opcode, 设置 parent, 初始化列表,
- * 并将新指令插入到 builder 的当前 insert_point。
- *
- * @param builder The IR builder.
- * @param opcode 指令的操作码
- * @param name 指令结果 Value 的名字 (e.g., "tmp1", 可为 NULL)
- * @param type 指令结果 Value 的类型 (e.g., i32, void)
- * @return 指向新创建的 IRInstruction 的指针
- */
-static IRInstruction *
-__inst_create_and_insert(IRBuilder *builder, IROpcode opcode, const char *name, IRType *type)
-{
-  assert(builder != NULL);
-  assert(builder->insert_point != NULL && "Builder's insert_point is not set!");
-
-  IRInstruction *inst = (IRInstruction *)malloc(sizeof(IRInstruction));
-  if (!inst)
-  {
-    return NULL; // 内存分配失败
-  }
-
-  inst->opcode = opcode;
-  inst->parent = builder->insert_point;
-
-  // 初始化所有链表节点
-  list_init(&inst->list_node);
-  list_init(&inst->operands);
-
-  // 初始化 'result' (IRValueNode 基类)
-  inst->result.kind = IR_KIND_INSTRUCTION;
-  inst->result.type = type;
-  inst->result.name = (name) ? strdup(name) : NULL; // 复制名字
-  list_init(&inst->result.uses);
-
-  // 将指令插入到基本块的末尾
-  list_add_tail(&builder->insert_point->instructions, &inst->list_node);
-
-  return inst;
-}
-
-/**
- * @brief (内部) 为一条指令添加一个操作数 (Operand)
- *
- * 这会创建 `IRUse` 边，并将其正确链接到
- * `inst->operands` 和 `val->uses` 两个链表。
- *
- * @param inst 正在构建的指令 (User)
- * @param val 被使用的值 (Value)
- */
-static void
-__inst_add_operand(IRInstruction *inst, IRValueNode *val)
-{
-  assert(inst != NULL);
-  assert(val != NULL && "Cannot add NULL as operand");
-
-  // 1. 创建 Use 边
-  IRUse *use = ir_use_create(inst, val);
-  if (!use)
-  {
-    // 内存分配失败
-    return;
-  }
-
-  // 2. 链接 Use 边 (自动添加到 inst->operands 和 val->uses)
-  ir_use_link(use);
-}
-
-// --- 生命周期 (Lifecycle) ---
+// --- 生命周期 ---
 
 IRBuilder *
-ir_builder_create()
+ir_builder_create(IRContext *ctx)
 {
+  assert(ctx != NULL);
+  // Builder 本身是 malloc/free 的，它只是一个工具
   IRBuilder *builder = (IRBuilder *)malloc(sizeof(IRBuilder));
   if (!builder)
-  {
     return NULL;
-  }
 
-  // 初始化上下文为空
-  builder->insert_point = NULL;
-  builder->current_function = NULL;
-  builder->current_module = NULL;
-
+  builder->context = ctx;
+  builder->insertion_point = NULL;
+  builder->next_temp_reg_id = 0;
   return builder;
 }
 
 void
 ir_builder_destroy(IRBuilder *builder)
 {
-  if (builder)
-  {
-    free(builder);
-  }
+  if (!builder)
+    return;
+  free(builder);
 }
 
-// --- 上下文管理 (Context Management) ---
-
 void
-ir_builder_set_insert_point(IRBuilder *builder, IRBasicBlock *bb)
+ir_builder_set_insertion_point(IRBuilder *builder, IRBasicBlock *bb)
 {
   assert(builder != NULL);
-  builder->insert_point = bb;
+  builder->insertion_point = bb;
+}
 
-  // 当设置基本块时，自动更新函数和模块的上下文
-  if (bb)
+/*
+ * =================================================================
+ * --- 内部辅助函数 ---
+ * =================================================================
+ */
+
+/**
+ * @brief [内部] 生成下一个临时寄存器名 (e.g., "%1")
+ *
+ * 名字被分配在 *IR Arena* 中 (因为它们被 IRInstruction 引用)
+ *
+ * @param builder Builder
+ * @return const char* 指向 Arena 中的字符串
+ */
+static const char *
+builder_get_next_reg_name(IRBuilder *builder)
+{
+  IRContext *ctx = builder->context;
+  char buffer[16]; // "%" + 10-digit number + "\0" (足够了)
+
+  // 1. 生成名字
+  // (注意: 在一个真正的编译器中, 0 应该是一个有效的名字)
+  snprintf(buffer, sizeof(buffer), "%zu", builder->next_temp_reg_id);
+  builder->next_temp_reg_id++;
+
+  // 2. 将名字 Intern (或至少分配在 Arena)
+  // 我们使用 intern 来确保 "%1" 总是同一个指针，
+  // 尽管对于临时变量，使用 bump_alloc_str 也可以。
+  return ir_context_intern_str(ctx, buffer);
+}
+
+/**
+ * @brief [内部] 分配并初始化指令 (但不创建 Operands)
+ * @param builder Builder
+ * @param opcode 指令码
+ * @param type 指令*结果*的类型 (如果是 void, 使用 ctx->type_void)
+ * @return 指向新指令的指针
+ */
+static IRInstruction *
+ir_instruction_create_internal(IRBuilder *builder, IROpcode opcode, IRType *type)
+{
+  assert(builder != NULL);
+  assert(builder->insertion_point != NULL && "Builder insertion point is not set");
+  IRContext *ctx = builder->context;
+
+  // 1. [新] 从 ir_arena 分配
+  IRInstruction *inst = BUMP_ALLOC_ZEROED(&ctx->ir_arena, IRInstruction);
+  if (!inst)
+    return NULL; // OOM
+
+  // 2. 初始化基类 (IRValueNode)
+  inst->result.kind = IR_KIND_INSTRUCTION;
+  inst->result.type = type;
+  list_init(&inst->result.uses); // [新] 显式初始化
+
+  // 3. 初始化子类 (IRInstruction)
+  inst->opcode = opcode;
+  inst->parent = builder->insertion_point;
+  list_init(&inst->list_node);
+  list_init(&inst->operands);
+
+  // 4. [新] 分配名字 (如果它有结果)
+  if (type->kind != IR_TYPE_VOID)
   {
-    builder->current_function = bb->parent;
-    if (builder->current_function)
-    {
-      builder->current_module = builder->current_function->parent;
-    }
+    inst->result.name = builder_get_next_reg_name(builder);
   }
   else
   {
-    // 如果清除插入点，也清除上下文
-    builder->current_function = NULL;
-    builder->current_module = NULL;
+    inst->result.name = NULL;
   }
+
+  // 5. 插入到基本块
+  list_add_tail(&builder->insertion_point->instructions, &inst->list_node);
+
+  return inst;
 }
 
-IRBasicBlock *
-ir_builder_get_insert_block(IRBuilder *builder)
-{
-  assert(builder != NULL);
-  return builder->insert_point;
-}
+/*
+ * =================================================================
+ * --- 公共 API 实现 ---
+ * =================================================================
+ */
 
-IRFunction *
-ir_builder_get_current_function(IRBuilder *builder)
-{
-  assert(builder != NULL);
-  return builder->current_function;
-}
-
-IRModule *
-ir_builder_get_current_module(IRBuilder *builder)
-{
-  assert(builder != NULL);
-  return builder->current_module;
-}
-
-// --- 容器创建 (Container Creation) ---
-
-IRBasicBlock *
-ir_builder_create_basic_block(IRBuilder *builder, IRFunction *func, const char *name)
-{
-  assert(builder != NULL);
-  assert(func != NULL);
-
-  // 调用 basicblock.c 中的核心创建函数
-  IRBasicBlock *bb = ir_basic_block_create(func, name);
-
-  // (可选，但非常方便) 创建后立即设置插入点
-  if (bb)
-  {
-    ir_builder_set_insert_point(builder, bb);
-  }
-  return bb;
-}
-
-IRFunction *
-ir_builder_create_function(IRBuilder *builder, IRModule *mod, const char *name, IRType *ret_type)
-{
-  assert(builder != NULL);
-  assert(mod != NULL);
-
-  // 调用 function.c 中的核心创建函数
-  IRFunction *func = ir_function_create(mod, name, ret_type);
-
-  if (func)
-  {
-    // 更新 builder 上下文
-    builder->current_module = mod;
-    builder->current_function = func;
-    builder->insert_point = NULL; // 新函数还没有基本块
-  }
-  return func;
-}
-
-// --- 指令创建 (Instruction Creation) ---
+// --- API: 终结者指令 (Terminators) ---
 
 IRValueNode *
-ir_build_ret(IRBuilder *builder, IRValueNode *val)
+ir_builder_create_ret(IRBuilder *builder, IRValueNode *val)
 {
-  // 'ret' 是一条 "void" 指令 (它不产生可被赋值的结果)
-  IRType *ret_type = ir_type_get_void();
-  IRInstruction *inst = __inst_create_and_insert(builder, IR_OP_RET, NULL, ret_type);
+  IRType *void_type = builder->context->type_void;
+  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_RET, void_type);
 
   if (val)
   {
-    // 如果 val 不是 NULL, 说明是 'ret <type> <val>'
-    // 添加 val 作为操作数
-    __inst_add_operand(inst, val);
-
-    // (可选) 'ret' 指令的 "type" 可以设为它返回的值的类型
-    inst->result.type = val->type;
+    // 'ret <val>'
+    ir_use_create(builder->context, inst, val);
   }
-  // else: 'ret void' (val is NULL), 没有操作数
+  // else 'ret void' (0 个操作数)
 
   return &inst->result;
 }
 
 IRValueNode *
-ir_build_br(IRBuilder *builder, IRBasicBlock *dest)
+ir_builder_create_br(IRBuilder *builder, IRValueNode *target_bb)
 {
-  assert(dest != NULL && "Branch destination cannot be NULL");
+  assert(target_bb != NULL);
+  assert(target_bb->type->kind == IR_TYPE_LABEL && "br target must be a label");
 
-  // 'br' 也是 "void" 指令
-  IRType *ret_type = ir_type_get_void();
-  IRInstruction *inst = __inst_create_and_insert(builder, IR_OP_BR, NULL, ret_type);
+  IRType *void_type = builder->context->type_void;
+  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_BR, void_type);
 
-  // 将目标基本块 (的标签 Value) 添加为操作数
-  __inst_add_operand(inst, &dest->label_address);
-
-  return &inst->result;
-}
-
-IRValueNode *
-ir_build_add(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name)
-{
-  assert(lhs != NULL && rhs != NULL);
-  assert(lhs->type == rhs->type && "Operands for 'add' must have the same type");
-
-  // 'add' 的结果类型与操作数类型相同
-  IRType *res_type = lhs->type;
-  IRInstruction *inst = __inst_create_and_insert(builder, IR_OP_ADD, name, res_type);
-
-  // 添加两个操作数
-  __inst_add_operand(inst, lhs);
-  __inst_add_operand(inst, rhs);
+  ir_use_create(builder->context, inst, target_bb);
 
   return &inst->result;
 }
 
-IRValueNode *
-ir_build_sub(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name)
+// --- API: 二元运算 ---
+
+// 辅助函数
+static IRValueNode *
+builder_create_binary_op(IRBuilder *builder, IROpcode op, IRValueNode *lhs, IRValueNode *rhs)
 {
   assert(lhs != NULL && rhs != NULL);
-  assert(lhs->type == rhs->type && "Operands for 'sub' must have the same type");
+  assert(lhs->type == rhs->type && "Binary operands must have the same type");
 
-  IRType *res_type = lhs->type;
-  IRInstruction *inst = __inst_create_and_insert(builder, IR_OP_SUB, name, res_type);
+  // 结果类型与操作数类型相同
+  IRInstruction *inst = ir_instruction_create_internal(builder, op, lhs->type);
 
-  __inst_add_operand(inst, lhs);
-  __inst_add_operand(inst, rhs);
-
-  return &inst->result;
-}
-
-IRValueNode *
-ir_build_alloca(IRBuilder *builder, IRType *type, const char *name)
-{
-  assert(type != NULL);
-
-  // 'alloca' 指令的结果是一个 *指针*，指向被分配的类型
-  IRType *ptr_type = ir_type_get_ptr(type);
-
-  IRInstruction *inst = __inst_create_and_insert(builder, IR_OP_ALLOCA, name, ptr_type);
-
-  // Alloca 指令没有 Value 操作数 (被分配的类型 'type'
-  // 已经通过 ptr_type->pointee_type 编码在结果类型中了)
+  ir_use_create(builder->context, inst, lhs); // Operand 0
+  ir_use_create(builder->context, inst, rhs); // Operand 1
 
   return &inst->result;
 }
 
 IRValueNode *
-ir_build_load(IRBuilder *builder, IRType *type, IRValueNode *ptr, const char *name)
+ir_builder_create_add(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs)
 {
-  assert(type != NULL);
+  return builder_create_binary_op(builder, IR_OP_ADD, lhs, rhs);
+}
+
+IRValueNode *
+ir_builder_create_sub(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs)
+{
+  return builder_create_binary_op(builder, IR_OP_SUB, lhs, rhs);
+}
+
+// --- API: 内存操作 ---
+
+IRValueNode *
+ir_builder_create_alloca(IRBuilder *builder, IRType *allocated_type)
+{
+  assert(allocated_type != NULL);
+  IRContext *ctx = builder->context;
+
+  // Alloca 的结果是一个指向 allocated_type 的指针
+  IRType *ptr_type = ir_type_get_ptr(ctx, allocated_type);
+
+  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_ALLOCA, ptr_type);
+  // (Alloca 0 个操作数)
+
+  return &inst->result;
+}
+
+IRValueNode *
+ir_builder_create_load(IRBuilder *builder, IRType *result_type, IRValueNode *ptr)
+{
+  assert(result_type != NULL);
   assert(ptr != NULL);
-  assert(ptr->type->kind == IR_TYPE_PTR && "Source for 'load' must be a pointer");
-  assert(ptr->type->pointee_type == type && "Load type mismatch pointer's pointee type");
+  assert(ptr->type->kind == IR_TYPE_PTR && "load operand must be a pointer");
+  // (在真实编译器中, 还会检查 ptr->type->pointee_type == result_type)
 
-  // 'load' 的结果类型是 'type' (被加载的类型)
-  IRInstruction *inst = __inst_create_and_insert(builder, IR_OP_LOAD, name, type);
+  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_LOAD, result_type);
 
-  // 添加指针源作为操作数
-  __inst_add_operand(inst, ptr);
+  ir_use_create(builder->context, inst, ptr); // Operand 0 (指针)
 
   return &inst->result;
 }
 
 IRValueNode *
-ir_build_store(IRBuilder *builder, IRValueNode *val, IRValueNode *ptr)
+ir_builder_create_store(IRBuilder *builder, IRValueNode *val, IRValueNode *ptr)
 {
   assert(val != NULL);
   assert(ptr != NULL);
-  assert(ptr->type->kind == IR_TYPE_PTR && "Destination for 'store' must be a pointer");
-  assert(ptr->type->pointee_type == val->type && "Store value type mismatch pointer's pointee type");
+  assert(ptr->type->kind == IR_TYPE_PTR && "store target must be a pointer");
+  // (在真实编译器中, 还会检查 ptr->type->pointee_type == val->type)
 
-  // 'store' 是一条 "void" 指令
-  IRType *ret_type = ir_type_get_void();
-  IRInstruction *inst = __inst_create_and_insert(builder, IR_OP_STORE, NULL, ret_type);
+  IRType *void_type = builder->context->type_void;
+  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_STORE, void_type);
 
-  // 操作数 0: 要存储的值
-  __inst_add_operand(inst, val);
-  // 操作数 1: 目标指针
-  __inst_add_operand(inst, ptr);
+  ir_use_create(builder->context, inst, val); // Operand 0 (要存储的值)
+  ir_use_create(builder->context, inst, ptr); // Operand 1 (目标指针)
 
   return &inst->result;
 }

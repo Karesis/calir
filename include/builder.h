@@ -1,166 +1,79 @@
-// src/include/builder.h
-
 #ifndef IR_BUILDER_H
 #define IR_BUILDER_H
 
-#include "ir/basicblock.h"
-#include "ir/function.h"
-#include "ir/instruction.h"
-#include "ir/module.h"
-#include "ir/type.h"
-#include "ir/value.h"
+#include "ir/value.h" // 需要 IRValueNode
+#include <stddef.h>   // 需要 size_t
+
+// --- 前向声明 ---
+typedef struct IRContext IRContext;
+typedef struct IRBasicBlock IRBasicBlock;
+typedef struct IRType IRType;
 
 /**
  * @brief IR 构建器
  *
- * 封装了创建 IR 对象的复杂逻辑，并管理
- * 当前的指令插入点。
+ * 这是一个辅助结构体，用于在 BasicBlock 中轻松创建和插入指令。
+ * 它持有 Context 和当前的插入点。
+ *
+ * (Builder 结构体本身是 malloc/free 的，它只是一个临时的工具)
  */
 typedef struct IRBuilder
 {
-  /** 当前的指令插入点 (新指令会被插入到这个块的末尾) */
-  IRBasicBlock *insert_point;
+  IRContext *context;
+  IRBasicBlock *insertion_point;
 
-  /** (可选，但推荐) 追踪当前所在的函数 */
-  IRFunction *current_function;
-
-  /** (可选，但推荐) 追踪当前所在的模块 */
-  IRModule *current_module;
+  // 用于自动生成 %1, %2, %3...
+  size_t next_temp_reg_id;
 
 } IRBuilder;
 
 // --- 生命周期 ---
 
-/** 创建一个新的 Builder */
-IRBuilder *ir_builder_create();
+/**
+ * @brief 创建一个新的 IRBuilder
+ * @param ctx Context (用于分配指令)
+ * @return 指向新 Builder 的指针 (必须由 ir_builder_destroy 释放)
+ */
+IRBuilder *ir_builder_create(IRContext *ctx);
 
-/** 销毁一个 Builder */
+/**
+ * @brief 销毁一个 IRBuilder
+ * @param builder 要销毁的 Builder
+ */
 void ir_builder_destroy(IRBuilder *builder);
 
-// --- 上下文管理 API ---
-
 /**
- * @brief 设置当前指令插入点
+ * @brief 设置 Builder 的当前插入点 (将在此 BB 末尾插入)
  * @param builder Builder
- * @param bb 新指令将被插入到此基本块的末尾
+ * @param bb 目标基本块
  */
-void ir_builder_set_insert_point(IRBuilder *builder, IRBasicBlock *bb);
+void ir_builder_set_insertion_point(IRBuilder *builder, IRBasicBlock *bb);
 
-/**
- * @brief 获取当前的插入基本块
- */
-IRBasicBlock *ir_builder_get_insert_block(IRBuilder *builder);
+// --- API: 终结者指令 (Terminators) ---
 
-/**
- * @brief 获取当前插入点所在的函数
- * (通常由 set_insert_point 自动设置)
- */
-IRFunction *ir_builder_get_current_function(IRBuilder *builder);
+/** @brief 构建 'ret <val>' 或 'ret void' */
+IRValueNode *ir_builder_create_ret(IRBuilder *builder, IRValueNode *val);
 
-/**
- * @brief 获取当前插入点所在的模块
- * (通常由 set_insert_point 自动设置)
- */
-IRModule *ir_builder_get_current_module(IRBuilder *builder);
+/** @brief 构建 'br <target_bb>' (无条件跳转) */
+IRValueNode *ir_builder_create_br(IRBuilder *builder, IRValueNode *target_bb);
 
-// --- 容器创建 API (可选，但推荐) ---
+// --- API: 二元运算 ---
 
-/**
- * @brief 创建一个新的基本块，并将其插入到指定的函数末尾
- * * @param builder Builder (用于更新上下文)
- * @param func 要添加基本块的函数
- * @param name 基本块的标签名 (如 "entry", "if_then")
- * @return 创建的 IRBasicBlock
- */
-IRBasicBlock *ir_builder_create_basic_block(IRBuilder *builder, IRFunction *func, const char *name);
+/** @brief 构建 'add <type> <lhs>, <rhs>' */
+IRValueNode *ir_builder_create_add(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs);
 
-/**
- * @brief 创建一个新函数，并将其插入到指定的模块末尾
- *
- * @param builder Builder (用于更新上下文)
- * @param mod 要添加函数的模块
- * @param name 函数名 (如 "main")
- * @param ret_type 函数返回类型
- * @return 创建的 IRFunction
- */
-IRFunction *ir_builder_create_function(IRBuilder *builder, IRModule *mod, const char *name, IRType *ret_type);
+/** @brief 构建 'sub <type> <lhs>, <rhs>' */
+IRValueNode *ir_builder_create_sub(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs);
 
-// --- 指令创建 API (这才是 Builder 的核心) ---
+// --- API: 内存操作 ---
 
-/**
- * @brief 创建一条 'ret' (return) 指令
- * @param builder Builder
- * @param val 要返回的 Value (如果是 void, 传 NULL)
- * @return 指向新创建指令的 IRValueNode (即 inst->result)
- */
-IRValueNode *ir_build_ret(IRBuilder *builder, IRValueNode *val);
+/** @brief 构建 'alloca <type>' (e.g., alloca i32) */
+IRValueNode *ir_builder_create_alloca(IRBuilder *builder, IRType *allocated_type);
 
-/**
- * @brief 创建一条 'br' (unconditional branch) 指令
- * @param builder Builder
- * @param dest 目标基本块
- * @return 指向新创建指令的 IRValueNode (即 inst->result)
- */
-IRValueNode *ir_build_br(IRBuilder *builder, IRBasicBlock *dest);
+/** @brief 构建 'load <type>, <ptr>' (e.g., load i32, ptr %p) */
+IRValueNode *ir_builder_create_load(IRBuilder *builder, IRType *result_type, IRValueNode *ptr);
 
-// --- 二元运算 ---
-
-/**
- * @brief 创建一条 'add' 指令
- *
- * 指令会被插入到 builder 的当前 insert_point 的末尾。
- *
- * @param builder Builder
- * @param lhs 左操作数
- * @param rhs 右操作数
- * @param name 结果 ValueNode 的名字 (如 "tmp1")
- * @return 指向新创建指令的 IRValueNode (即 inst->result)
- */
-IRValueNode *ir_build_add(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name);
-
-/**
- * @brief 创建一条 'sub' 指令
- * @param builder Builder
- * @param lhs 左操作数
- * @param rhs 右操作数
- * @param name 结果 ValueNode 的名字 (如 "tmp2")
- * @return 指向新创建指令的 IRValueNode (即 inst->result)
- */
-IRValueNode *ir_build_sub(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name);
-
-// --- 内存操作 (你需要为此添加 IROpcode) ---
-
-/**
- * @brief 创建一条 'alloca' 指令 (在栈上分配空间)
- *
- * @param builder Builder
- * @param type 要分配的类型 (例如 IR_TYPE_I32)
- * @param name 结果指针的名字 (如 "ptr_x")
- * @return 指向新创建指令的 IRValueNode (结果是一个指针类型)
- */
-IRValueNode *ir_build_alloca(IRBuilder *builder, IRType *type, const char *name);
-
-/**
- * @brief 创建一条 'load' 指令 (从内存读取)
- *
- * @param builder Builder
- * @param type 要加载的类型
- * @param ptr 指向要加载的内存的指针 (通常来自 alloca)
- * @param name 结果 ValueNode 的名字 (如 "loaded_val")
- * @return 指向新创建指令的 IRValueNode (结果是加载到的值)
- */
-IRValueNode *ir_build_load(IRBuilder *builder, IRType *type, IRValueNode *ptr, const char *name);
-
-/**
- * @brief 创建一条 'store' 指令 (写入内存)
- *
- * @param builder Builder
- * @param val 要存储的值
- * @param ptr 要存储到的内存地址 (通常来自 alloca)
- * @return 指向新创建指令的 IRValueNode (store 指令通常返回 void)
- */
-IRValueNode *ir_build_store(IRBuilder *builder, IRValueNode *val, IRValueNode *ptr);
-
-// ... 其他指令, 比如 ir_build_mul, ir_build_div, ir_build_call, ir_build_br_cond ...
+/** @brief 构建 'store <val>, <ptr>' (e.g., store i32 %a, ptr %p) */
+IRValueNode *ir_builder_create_store(IRBuilder *builder, IRValueNode *val, IRValueNode *ptr);
 
 #endif // IR_BUILDER_H

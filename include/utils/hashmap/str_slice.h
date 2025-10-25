@@ -2,7 +2,7 @@
 #ifndef HASHMAP_STR_SLICE_H
 #define HASHMAP_STR_SLICE_H
 
-#include "bump.h"
+#include "utils/bump.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -44,6 +44,23 @@ StrHashMap *str_hashmap_create(Bump *arena, size_t initial_capacity);
  * @return bool true 表示成功，false 表示内存溢出 (在扩容或复制 Key 时)。
  */
 bool str_hashmap_put(StrHashMap *map, const char *key_body, size_t key_len, void *value);
+
+/**
+ * @brief 插入一个*已经*在 Arena 中的键 (专用于 Interning)
+ *
+ * 此函数*假定* key_body 指向的内存*已经*
+ * 位于 hashmap 自己的 Arena 中，并且生命周期相同。
+ *
+ * 它*不会*复制 key_body, 而是直接存储 key_body 指针
+ * 作为内部的 Key。
+ *
+ * @param map 哈希表。
+ * @param key_body 指向 Arena 中字符串内容的指针。
+ * @param key_len 字符串的长度。
+ * @param value 要存储的 void* 值。
+ * @return bool true 表示成功，false 表示内存溢出 (在扩容时)。
+ */
+bool str_hashmap_put_preallocated_key(StrHashMap *map, const char *key_body, size_t key_len, void *value);
 
 /**
  * @brief 查找一个 Key 对应的 Value。

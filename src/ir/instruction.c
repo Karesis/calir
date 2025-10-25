@@ -1,7 +1,12 @@
 #include "ir/instruction.h"
-#include "ir/type.h"  // <-- 依赖, 用于 ir_type_dump
-#include "ir/use.h"   // <-- 核心依赖
-#include "ir/value.h" // <-- 依赖, 用于 ir_value_dump
+#include "context.h"       // 需要 Context
+#include "ir/basicblock.h" // 需要 BasicBlock->parent
+#include "ir/constant.h"   // 需要 ir_constant_get_undef
+#include "ir/function.h"   // 需要 Function->parent
+#include "ir/module.h"     // 需要 Module->context
+#include "ir/type.h"       // 需要 ir_type_dump
+#include "ir/use.h"        // 需要 ir_use_unlink
+#include "ir/value.h"      // 需要 ir_value_dump, ir_value_replace_all_uses_with
 
 #include <assert.h>
 #include <stdlib.h>
@@ -10,10 +15,7 @@
 // --- 内部辅助函数 (用于 dump) ---
 
 /**
- * @brief (内部) 获取第 N 个操作数
- * @param inst 指令
- * @param index 操作数索引 (0-based)
- * @return 指向操作数的 IRValueNode, 如果索引越界则返回 NULL
+ * @brief (内部) 获取第 N 个操作数 (实现不变)
  */
 static IRValueNode *
 get_operand(IRInstruction *inst, int index)
@@ -27,54 +29,54 @@ get_operand(IRInstruction *inst, int index)
   }
 
   if (iter == head)
-    return NULL; // 索引越界
+    return NULL;
 
-  // 从 IRUse->user_node 获取 IRUse
   IRUse *use = list_entry(iter, IRUse, user_node);
-  // 从 IRUse 返回 Value
   return use->value;
 }
 
-// --- 生命周期 ---
+// --- 生命周期 (新) ---
 
+/**
+ * @brief [新] 从其父基本块中安全地擦除一条指令
+ */
 void
-ir_instruction_destroy(IRInstruction *inst)
+ir_instruction_erase_from_parent(IRInstruction *inst)
 {
   if (!inst)
     return;
 
-  // 1. 从父基本块的链表中移除
-  list_del(&inst->list_node);
+  // 1. [新] 获取 Context
+  //    inst -> BasicBlock -> Function -> Module -> Context
+  assert(inst->parent != NULL && "Instruction has no parent BasicBlock");
+  assert(inst->parent->parent != NULL && "BasicBlock has no parent Function");
+  assert(inst->parent->parent->parent != NULL && "Function has no parent Module");
+  IRContext *ctx = inst->parent->parent->parent->context;
 
-  // 2. 销毁所有 Operands (IRUse 边)
+  // 2. [修改] 将所有对该指令结果的使用替换为 'undef'
+  if (inst->result.type->kind != IR_TYPE_VOID && !list_empty(&inst->result.uses))
+  {
+    // [修改] 调用新的 Context API
+    IRValueNode *undef = ir_constant_get_undef(ctx, inst->result.type);
+    ir_value_replace_all_uses_with(&inst->result, undef);
+  }
+  assert(list_empty(&inst->result.uses) && "Instruction result still in use!");
+
+  // 3. [修改] 解开 (unlink) 所有 Operands (IRUse 边)
+  //    我们不再 "destroy" use, 只是 "unlink"
   IDList *iter, *temp;
   list_for_each_safe(&inst->operands, iter, temp)
   {
     IRUse *use = list_entry(iter, IRUse, user_node);
     ir_use_unlink(use);
-    ir_use_destroy(use);
+    // (IRUse 对象仍在 Arena 中, 将被统一释放)
   }
 
-  // 3. (已解决的 TODO) 处理所有对该指令结果的使用
-  //    在销毁指令前, 必须将所有对它结果(inst->result)的使用
-  //    替换为一个 'undef' 值。
-  if (inst->result.type->kind != IR_TYPE_VOID && !list_empty(&inst->result.uses))
-  {
-    IRValueNode *undef = ir_constant_get_undef(inst->result.type);
-    ir_value_replace_all_uses_with(&inst->result, undef);
-  }
-
-  // (断言检查)
-  assert(list_empty(&inst->result.uses) && "Instruction result still in use!");
-
-  // 4. 释放指令结果的名字
-  free(inst->result.name);
-
-  // 5. 释放指令自身
-  free(inst);
+  // 4. 从父基本块的链表中移除
+  list_del(&inst->list_node);
 }
 
-// --- 调试 ---
+// --- 调试 (实现基本不变) ---
 
 void
 ir_instruction_dump(IRInstruction *inst, FILE *stream)
@@ -85,11 +87,11 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     return;
   }
 
-  // 1. 打印结果 (如果指令有结果的话)
+  // 1. 打印结果
   int has_result = (inst->result.type && inst->result.type->kind != IR_TYPE_VOID);
   if (has_result)
   {
-    // 结果值使用 '%'
+    // [修改] inst->result.name 现在是 const char* (interned)
     fprintf(stream, "%%%s = ", inst->result.name);
   }
 
@@ -103,21 +105,18 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     op1 = get_operand(inst, 0);
     if (op1)
     {
-      // e.g., "ret i32 %a"
       ir_value_dump(op1, stream);
     }
     else
     {
-      // e.g., "ret void"
       fprintf(stream, "void");
     }
     break;
 
   case IR_OP_BR:
     fprintf(stream, "br ");
-    op1 = get_operand(inst, 0); // 目标基本块
+    op1 = get_operand(inst, 0);
     assert(op1 && "br must have a target");
-    // e.g., "br label %entry"
     ir_value_dump(op1, stream);
     break;
 
@@ -128,17 +127,19 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     op2 = get_operand(inst, 1);
     assert(op1 && op2 && "Binary operator needs two operands");
 
-    // e.g., "add i32 %a, %b"
     ir_type_dump(op1->type, stream);
-    fprintf(stream, " %%%s, %%%s", op1->name, op2->name);
+    // [修改] 假设 ir_value_dump 能正确处理 name
+    // (如果 ir_value_dump 也打印 '%', 这里需要调整)
+    // 假设 ir_value_dump 只打印 "type %name"
+    fprintf(stream, " ");
+    ir_value_dump(op1, stream);
+    fprintf(stream, ", ");
+    ir_value_dump(op2, stream);
     break;
 
   case IR_OP_ALLOCA:
     fprintf(stream, "alloca ");
-    // alloca 的结果(inst->result)是一个指针
-    // 我们打印该指针指向的类型
     assert(inst->result.type->kind == IR_TYPE_PTR);
-    // e.g., "alloca i32"
     ir_type_dump(inst->result.type->pointee_type, stream);
     break;
 
@@ -147,11 +148,8 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     op1 = get_operand(inst, 0); // 指针
     assert(op1 && "load needs a pointer operand");
 
-    // e.g., "load i32, ptr %ptr_a"
-    // 1. 打印加载的类型 (即指令结果的类型)
     ir_type_dump(inst->result.type, stream);
     fprintf(stream, ", ");
-    // 2. 打印指针操作数 (值和类型)
     ir_value_dump(op1, stream);
     break;
 
@@ -161,11 +159,8 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     op2 = get_operand(inst, 1); // 目标指针
     assert(op1 && op2 && "store needs value and pointer operands");
 
-    // e.g., "store i32 %a, ptr %ptr_a"
-    // 1. 打印值操作数
     ir_value_dump(op1, stream);
     fprintf(stream, ", ");
-    // 2. 打印指针操作数
     ir_value_dump(op2, stream);
     break;
 

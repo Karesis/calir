@@ -2,7 +2,7 @@
 #ifndef HASHMAP_PTR_H
 #define HASHMAP_PTR_H
 
-#include "bump.h"
+#include "utils/bump.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>

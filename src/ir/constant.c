@@ -1,104 +1,101 @@
 #include "ir/constant.h"
-#include "ir/type.h"
-
+#include "context.h"    // 需要 IRContext
+#include "ir/id_list.h" // 需要 包含链表实现
+#include "ir/type.h"    // 需要 IRType
+#include "ir/value.h"   // 需要 IRValueKind
+#include "utils/bump.h" // 需要 BUMP_ALLOC_ZEROED
 #include <assert.h>
-#include <stdbool.h> // for bool
-#include <stdlib.h>
-#include <string.h>
+#include <math.h>   // for (float) conversion
+#include <string.h> // for memset
 
-// --- 静态 'undef' 缓存 ---
-// 我们为 i32 缓存一个 'undef' 实例
-
-static IRConstant g_undef_i32;
-static bool g_undef_i32_init = false;
-
-// (内部) 初始化常量基类
-static void
-init_constant_value(IRConstant *konst, IRType *type)
-{
-  konst->value.kind = IR_KIND_CONSTANT;
-  konst->value.name = NULL; // 常量没有 '%' 名字 (如 %foo)
-  konst->value.type = type;
-  list_init(&konst->value.uses);
-}
-
+/**
+ * @brief [内部] 创建一个新的 'undef' 常量。
+ */
 IRValueNode *
-ir_constant_get_undef(IRType *type)
+ir_constant_create_undef(IRContext *ctx, IRType *type)
 {
   assert(type != NULL);
 
-  // 1. 检查 i32 缓存
-  if (type->kind == IR_TYPE_I32)
-  {
-    if (!g_undef_i32_init)
-    {
-      init_constant_value(&g_undef_i32, type);
-      g_undef_i32.const_kind = CONST_KIND_UNDEF;
-      g_undef_i32_init = true;
-    }
-    return &g_undef_i32.value;
-  }
+  // 从永久 Arena 分配并零初始化
+  IRConstant *konst = BUMP_ALLOC_ZEROED(&ctx->permanent_arena, IRConstant);
+  if (!konst)
+    return NULL; // OOM
 
-  // 2. (TODO) 检查 void 缓存 (如果需要)
-  if (type->kind == IR_TYPE_VOID)
-  {
-    // 'void' 类型没有值，所以 'undef' 在语义上不适用
-    // 但如果需要，可以在这里添加
-    return NULL;
-  }
+  // --- 初始化基类 (IRValueNode) ---
+  konst->value.kind = IR_KIND_CONSTANT;
+  konst->value.type = type;
+  konst->value.name = NULL; // 常量没有名字
 
-  // 3. 为 'ptr' 类型 malloc
-  // (与 ir_type_get_ptr 逻辑一致)
-  if (type->kind == IR_TYPE_PTR)
-  {
-    IRConstant *konst = (IRConstant *)malloc(sizeof(IRConstant));
-    if (!konst)
-      return NULL;
+  // [修正] 显式初始化 'uses' 链表
+  list_init(&konst->value.uses);
 
-    init_constant_value(konst, type);
-    konst->const_kind = CONST_KIND_UNDEF;
-    return &konst->value;
-  }
+  // --- 初始化子类 (IRConstant) ---
+  konst->const_kind = CONST_KIND_UNDEF;
 
-  // (其他类型... 暂不支持)
-  assert(0 && "Unimplemented type for undef");
-  return NULL;
+  return (IRValueNode *)konst;
 }
 
+/**
+ * @brief [内部] 创建一个新的整数常量 (i1 到 i64)。
+ */
 IRValueNode *
-ir_constant_get_int(IRType *type, int32_t value)
+ir_constant_create_int(IRContext *ctx, IRType *type, int64_t value)
 {
-  assert(type != NULL && type->kind == IR_TYPE_I32);
+  assert(type != NULL);
+  assert(type->kind >= IR_TYPE_I1 && type->kind <= IR_TYPE_I64 && "Type must be an integer type");
 
-  IRConstant *konst = (IRConstant *)malloc(sizeof(IRConstant));
+  IRConstant *konst = BUMP_ALLOC_ZEROED(&ctx->permanent_arena, IRConstant);
   if (!konst)
-    return NULL;
+    return NULL; // OOM
 
-  init_constant_value(konst, type);
+  // --- 初始化基类 (IRValueNode) ---
+  konst->value.kind = IR_KIND_CONSTANT;
+  konst->value.type = type;
+  konst->value.name = NULL;
+
+  // [修正] 显式初始化 'uses' 链表
+  list_init(&konst->value.uses);
+
+  // --- 初始化子类 (IRConstant) ---
   konst->const_kind = CONST_KIND_INT;
-  konst->data.int_val = value;
+  konst->data.int_val = value; // 存储完整的 i64 值
 
-  return &konst->value;
+  return (IRValueNode *)konst;
 }
 
-void
-ir_constant_destroy(IRConstant *konst)
+/**
+ * @brief [内部] 创建一个新的浮点常量 (f32 或 f64)。
+ */
+IRValueNode *
+ir_constant_create_float(IRContext *ctx, IRType *type, double value)
 {
-  if (!konst)
-    return;
+  assert(type != NULL);
+  assert((type->kind == IR_TYPE_F32 || type->kind == IR_TYPE_F64) && "Type must be a float type");
 
-  // --- 保护静态缓存 ---
-  if (konst == &g_undef_i32)
+  IRConstant *konst = BUMP_ALLOC_ZEROED(&ctx->permanent_arena, IRConstant);
+  if (!konst)
+    return NULL; // OOM
+
+  // --- 初始化基类 (IRValueNode) ---
+  konst->value.kind = IR_KIND_CONSTANT;
+  konst->value.type = type;
+  konst->value.name = NULL;
+
+  // [修正] 显式初始化 'uses' 链表
+  list_init(&konst->value.uses);
+
+  // --- 初始化子类 (IRConstant) ---
+  konst->const_kind = CONST_KIND_FLOAT;
+
+  // 如果是 f32，我们将值截断并存为 double
+  if (type->kind == IR_TYPE_F32)
   {
-    // 这是一个静态缓存, 不要 free
-    return;
+    konst->data.float_val = (double)((float)value);
+  }
+  else
+  {
+    konst->data.float_val = value;
   }
 
-  // 确保它在被销毁前没有被使用
-  assert(list_empty(&konst->value.uses) && "Constant still in use when destroyed");
-
-  // 常量的 'name' 是 NULL, 不需要 free
-
-  // 释放 malloc'd 的常量 (e.g., int 或 ptr-undef)
-  free(konst);
+  return (IRValueNode *)konst;
 }

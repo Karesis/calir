@@ -1,4 +1,3 @@
-/* include/hashmap.h */
 #ifndef CHASHMAP_H
 #define CHASHMAP_H
 

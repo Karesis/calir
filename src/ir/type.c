@@ -1,125 +1,122 @@
-// src/ir/type.c
-
 #include "ir/type.h"
-#include <stdio.h>  // for snprintf
-#include <stdlib.h> // for malloc, free
-#include <string.h> // for strncpy
+#include "context.h"    // 需要 IRContext 结构体
+#include "utils/bump.h" // 需要 BUMP_ALLOC_ZEROED
+#include <assert.h>
+#include <string.h> // for snprintf, strlcat
 
-// --- 单例 (Singleton) 实例 ---
-
-// 'void' 类型的全局唯一定义
-static IRType g_void_type = {.kind = IR_TYPE_VOID, .pointee_type = NULL};
-
-// 'i32' 类型的全局唯一定义
-static IRType g_i32_type = {.kind = IR_TYPE_I32, .pointee_type = NULL};
-
-// --- Type Getters ---
-
+/**
+ * @brief [内部] 创建一个新的基本类型 (i32, void, ...)
+ */
 IRType *
-ir_type_get_void()
+ir_type_create_primitive(IRContext *ctx, IRTypeKind kind)
 {
-  return &g_void_type;
-}
+  // 基本类型不能是指针类型
+  assert(kind != IR_TYPE_PTR && "Use ir_type_create_ptr for pointer types");
 
-IRType *
-ir_type_get_i32()
-{
-  return &g_i32_type;
+  // 从永久 Arena 分配并零初始化
+  IRType *type = BUMP_ALLOC_ZEROED(&ctx->permanent_arena, IRType);
+  if (!type)
+  {
+    // OOM error
+    return NULL;
+  }
+
+  type->kind = kind;
+  type->pointee_type = NULL; // 零初始化已完成，这里是显式说明
+  return type;
 }
 
 /**
- * @brief 创建/获取一个指针类型
- *
- * 注意: 这是一个简化的实现。
- * 在一个完整的编译器中, 你应该有一个 "Type Context" (类型上下文)，
- * 它会缓存 (intern) 所有创建过的指针类型，
- * 确保两次 ir_type_get_ptr(ir_type_get_i32()) 调用返回*相同*的地址。
- *
- * 目前，我们每次都 malloc 是可以接受的。
+ * @brief [内部] 创建一个新的指针类型
  */
 IRType *
-ir_type_get_ptr(IRType *pointee_type)
+ir_type_create_ptr(IRContext *ctx, IRType *pointee_type)
 {
-  IRType *ptr_type = (IRType *)malloc(sizeof(IRType));
-  if (!ptr_type)
-  {
-    return NULL; // 内存分配失败
-  }
+  assert(pointee_type != NULL && "Pointer must point to a type");
 
-  ptr_type->kind = IR_TYPE_PTR;
-  ptr_type->pointee_type = pointee_type;
-
-  return ptr_type;
-}
-
-void
-ir_type_destroy(IRType *type)
-{
+  // 从永久 Arena 分配并零初始化
+  IRType *type = BUMP_ALLOC_ZEROED(&ctx->permanent_arena, IRType);
   if (!type)
   {
-    return;
+    // OOM error
+    return NULL;
   }
 
-  // 仅释放指针类型，因为它们是 malloc 出来的
-  if (type->kind == IR_TYPE_PTR)
-  {
-    free(type);
-  }
-
-  // 'void' 和 'i32' 是 static 存储，不应被 free
+  type->kind = IR_TYPE_PTR;
+  type->pointee_type = pointee_type;
+  return type;
 }
 
-// --- 调试 ---
+/*
+ * =================================================================
+ * --- 调试 API ---
+ * =================================================================
+ */
 
-void
-ir_type_to_string(IRType *type, char *buffer, size_t size)
+// 辅助函数，用于递归打印（例如 ptr(ptr(i32))）
+static void
+ir_type_to_string_recursive(IRType *type, char *buffer, size_t size)
 {
-  if (!type)
-  {
-    strncpy(buffer, "<null_type>", size);
-    if (size > 0)
-      buffer[size - 1] = '\0';
+  if (size == 0)
     return;
-  }
 
   switch (type->kind)
   {
   case IR_TYPE_VOID:
-    strncpy(buffer, "void", size);
+    strlcat(buffer, "void", size);
+    break;
+  case IR_TYPE_I1:
+    strlcat(buffer, "i1", size);
+    break;
+  case IR_TYPE_I8:
+    strlcat(buffer, "i8", size);
+    break;
+  case IR_TYPE_I16:
+    strlcat(buffer, "i16", size);
     break;
   case IR_TYPE_I32:
-    strncpy(buffer, "i32", size);
+    strlcat(buffer, "i32", size);
+    break;
+  case IR_TYPE_I64:
+    strlcat(buffer, "i64", size);
+    break;
+  case IR_TYPE_F32:
+    strlcat(buffer, "f32", size);
+    break;
+  case IR_TYPE_F64:
+    strlcat(buffer, "f64", size);
     break;
   case IR_TYPE_PTR:
-    // 我们可以只打印 "ptr"，或者递归地打印
-    // 像 "ptr to i32" (但 LLVM IR 风格通常是 "i32*")
-    // 让我们用一个更像 LLVM 的风格:
-    if (type->pointee_type)
-    {
-      char pointee_str[64];
-      // 递归调用 (注意：这可能会很深)
-      ir_type_to_string(type->pointee_type, pointee_str, sizeof(pointee_str));
-      snprintf(buffer, size, "%s*", pointee_str);
-    }
-    else
-    {
-      // 通用指针 (或 void*)
-      strncpy(buffer, "ptr", size);
-    }
+    strlcat(buffer, "ptr", size);
+    // (为了简洁，我们不像 LLVM 那样打印 ptr(ty))
+    // 如果需要，可以取消注释下面这行
+    // strlcat(buffer, "(", size);
+    // ir_type_to_string_recursive(type->pointee_type, buffer, size);
+    // strlcat(buffer, ")", size);
+    break;
+  case IR_TYPE_LABEL:
+    strlcat(buffer, "label", size);
     break;
   default:
-    strncpy(buffer, "<?_type>", size);
+    strlcat(buffer, "?", size);
     break;
   }
-  // 确保空终止
+}
+
+void
+ir_type_to_string(IRType *type, char *buffer, size_t size)
+{
   if (size > 0)
-    buffer[size - 1] = '\0';
+  {
+    buffer[0] = '\0'; // 确保缓冲区为空
+  }
+  ir_type_to_string_recursive(type, buffer, size);
 }
 
 void
 ir_type_dump(IRType *type, FILE *stream)
 {
-  char buffer[128]; // 为深度指针类型提供足够空间
+  char buffer[64];
   ir_type_to_string(type, buffer, sizeof(buffer));
   fprintf(stream, "%s", buffer);
 }
