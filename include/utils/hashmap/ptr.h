@@ -2,7 +2,7 @@
 #ifndef HASHMAP_PTR_H
 #define HASHMAP_PTR_H
 
-#include "utils/bump.h" // 你的 Bump Allocator
+#include "bump.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -17,7 +17,7 @@
  */
 
 // 不透明的指针哈希表结构体
-typedef struct PtrHashMap_t PtrHashMap;
+typedef struct PtrHashMap PtrHashMap;
 
 /**
  * @brief 创建一个新的 PtrHashMap。
