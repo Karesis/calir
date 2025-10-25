@@ -112,13 +112,14 @@ ir_value_replace_all_uses_with(IRValueNode *old_val, IRValueNode *new_val)
   IDList *iter, *temp;
   list_for_each_safe(&old_val->uses, iter, temp)
   {
-    // iter 是 IRUse->def_node
-    IRUse *use = list_entry(iter, IRUse, def_node);
+    // iter 是 IDList* (即 use->value_node)
+    // 我们用 list_entry 从成员 'value_node' 找到 'IRUse' 容器
+    IRUse *use = list_entry(iter, IRUse, value_node);
 
     // ir_use_set_value 会自动处理:
-    // 1. 从 old_val->uses 移除
+    // 1. 从 old_val->uses 移除 (list_del(&use->value_node))
     // 2. 更新 use->value = new_val
-    // 3. 添加到 new_val->uses
+    // 3. 添加到 new_val->uses (list_add_tail(&new_val->uses, &use->value_node))
     ir_use_set_value(use, new_val);
   }
 
