@@ -1,4 +1,4 @@
-#include "context.h"
+#include "ir/context.h"
 #include "ir/constant.h" // 需要 ir_constant_create_*
 #include "ir/type.h"     // 需要 ir_type_create_*
 #include "utils/bump.h"
