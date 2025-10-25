@@ -42,10 +42,16 @@ struct FLOAT_STRUCT_TYPE
  */
 
 static FLOAT_K_TYPE
-FLOAT_FUNC(get_empty_key)(void) { return FLOAT_EMPTY_K; }
+FLOAT_FUNC(get_empty_key)(void)
+{
+  return FLOAT_EMPTY_K;
+}
 
 static FLOAT_K_TYPE
-FLOAT_FUNC(get_tombstone_key)(void) { return FLOAT_TOMBSTONE_K; }
+FLOAT_FUNC(get_tombstone_key)(void)
+{
+  return FLOAT_TOMBSTONE_K;
+}
 
 static inline bool
 FLOAT_FUNC(key_is_equal)(FLOAT_K_TYPE k1, FLOAT_K_TYPE k2)
@@ -57,10 +63,16 @@ FLOAT_FUNC(key_is_equal)(FLOAT_K_TYPE k1, FLOAT_K_TYPE k2)
 }
 
 static inline bool
-FLOAT_FUNC(key_is_empty)(FLOAT_K_TYPE k) { return isnan(k); }
+FLOAT_FUNC(key_is_empty)(FLOAT_K_TYPE k)
+{
+  return isnan(k);
+}
 
 static inline bool
-FLOAT_FUNC(key_is_tombstone)(FLOAT_K_TYPE k) { return isinf(k); }
+FLOAT_FUNC(key_is_tombstone)(FLOAT_K_TYPE k)
+{
+  return isinf(k);
+}
 
 static inline bool
 FLOAT_FUNC(key_is_sentinel)(FLOAT_K_TYPE k)
@@ -88,7 +100,7 @@ FLOAT_FUNC(get_hash)(FLOAT_K_TYPE key)
 #define CHM_STRUCT_TYPE FLOAT_STRUCT_TYPE
 #define CHM_BUCKET_TYPE FLOAT_BUCKET_TYPE
 
-#include "hashmap/core.inc"
+#include "utils/hashmap/core.inc"
 
 /*
  * ========================================
@@ -136,13 +148,15 @@ FLOAT_FUNC(get)(const FLOAT_API_TYPE *map, FLOAT_K_TYPE key)
   return NULL;
 }
 
-bool FLOAT_FUNC(contains)(const FLOAT_API_TYPE *map, FLOAT_K_TYPE key)
+bool
+FLOAT_FUNC(contains)(const FLOAT_API_TYPE *map, FLOAT_K_TYPE key)
 {
   FLOAT_BUCKET_TYPE *bucket;
   return FLOAT_FUNC(find_bucket)(map, key, &bucket);
 }
 
-bool FLOAT_FUNC(remove)(FLOAT_API_TYPE *map, FLOAT_K_TYPE key)
+bool
+FLOAT_FUNC(remove)(FLOAT_API_TYPE *map, FLOAT_K_TYPE key)
 {
   FLOAT_BUCKET_TYPE *bucket;
   if (FLOAT_FUNC(find_bucket)(map, key, &bucket))
@@ -156,7 +170,8 @@ bool FLOAT_FUNC(remove)(FLOAT_API_TYPE *map, FLOAT_K_TYPE key)
   return false;
 }
 
-bool FLOAT_FUNC(put)(FLOAT_API_TYPE *map, FLOAT_K_TYPE key, void *value)
+bool
+FLOAT_FUNC(put)(FLOAT_API_TYPE *map, FLOAT_K_TYPE key, void *value)
 {
   // 检查哨兵值
   assert(!isnan(key) && "Key cannot be NaN (reserved for 'Empty')");

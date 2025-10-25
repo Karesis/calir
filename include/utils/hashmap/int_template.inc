@@ -1,5 +1,5 @@
 /*
- * src/hashmap/int_template.inc
+ * utils/hashmap/int_template.inc
  *
  * 为单一整数类型生成完整的哈希表实现。
  * * * 在包含此文件之前, 必须定义以下宏:
@@ -47,19 +47,34 @@ struct INT_STRUCT_TYPE
  */
 
 static INT_K_TYPE
-INT_FUNC(get_empty_key)(void) { return INT_EMPTY_K; }
+INT_FUNC(get_empty_key)(void)
+{
+  return INT_EMPTY_K;
+}
 
 static INT_K_TYPE
-INT_FUNC(get_tombstone_key)(void) { return INT_TOMBSTONE_K; }
+INT_FUNC(get_tombstone_key)(void)
+{
+  return INT_TOMBSTONE_K;
+}
 
 static inline bool
-INT_FUNC(key_is_equal)(INT_K_TYPE k1, INT_K_TYPE k2) { return k1 == k2; }
+INT_FUNC(key_is_equal)(INT_K_TYPE k1, INT_K_TYPE k2)
+{
+  return k1 == k2;
+}
 
 static inline bool
-INT_FUNC(key_is_empty)(INT_K_TYPE k) { return k == INT_EMPTY_K; }
+INT_FUNC(key_is_empty)(INT_K_TYPE k)
+{
+  return k == INT_EMPTY_K;
+}
 
 static inline bool
-INT_FUNC(key_is_tombstone)(INT_K_TYPE k) { return k == INT_TOMBSTONE_K; }
+INT_FUNC(key_is_tombstone)(INT_K_TYPE k)
+{
+  return k == INT_TOMBSTONE_K;
+}
 
 static inline bool
 INT_FUNC(key_is_sentinel)(INT_K_TYPE k)
@@ -87,7 +102,7 @@ INT_FUNC(get_hash)(INT_K_TYPE key)
 #define CHM_STRUCT_TYPE INT_STRUCT_TYPE
 #define CHM_BUCKET_TYPE INT_BUCKET_TYPE
 
-#include "hashmap/core.inc"
+#include "utils/hashmap/core.inc"
 
 /*
  * ========================================
@@ -129,13 +144,15 @@ INT_FUNC(get)(const INT_API_TYPE *map, INT_K_TYPE key)
   return NULL;
 }
 
-bool INT_FUNC(contains)(const INT_API_TYPE *map, INT_K_TYPE key)
+bool
+INT_FUNC(contains)(const INT_API_TYPE *map, INT_K_TYPE key)
 {
   INT_BUCKET_TYPE *bucket;
   return INT_FUNC(find_bucket)(map, key, &bucket);
 }
 
-bool INT_FUNC(remove)(INT_API_TYPE *map, INT_K_TYPE key)
+bool
+INT_FUNC(remove)(INT_API_TYPE *map, INT_K_TYPE key)
 {
   INT_BUCKET_TYPE *bucket;
   if (INT_FUNC(find_bucket)(map, key, &bucket))
@@ -149,7 +166,8 @@ bool INT_FUNC(remove)(INT_API_TYPE *map, INT_K_TYPE key)
   return false;
 }
 
-bool INT_FUNC(put)(INT_API_TYPE *map, INT_K_TYPE key, void *value)
+bool
+INT_FUNC(put)(INT_API_TYPE *map, INT_K_TYPE key, void *value)
 {
   // 检查哨兵值
   assert(key != INT_EMPTY_K && "Key cannot be the 'Empty' sentinel");

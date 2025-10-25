@@ -1,5 +1,5 @@
 /*
- * src/hashmap/core.inc
+ * utils/hashmap/core.inc
  *
  * 泛型哈希表核心实现模板。
  * * 在包含此文件之前，必须定义以下宏:
