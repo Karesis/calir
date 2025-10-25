@@ -53,52 +53,84 @@ ir_type_create_ptr(IRContext *ctx, IRType *pointee_type)
  * =================================================================
  */
 
+/**
+ * @brief [内部] 安全地追加字符串到缓冲区
+ *
+ * @param buffer 目标缓冲区
+ * @param pos_ptr 指向当前写入位置 (索引) 的指针
+ * @param size 缓冲区的总大小
+ * @param str 要追加的字符串
+ */
+static void
+safe_append(char *buffer, size_t *pos_ptr, size_t size, const char *str)
+{
+  // 检查是否还有空间 (至少 1 字节用于 NUL 终止符)
+  if (*pos_ptr >= size - 1)
+  {
+    return;
+  }
+
+  // 计算剩余空间
+  size_t space_left = size - *pos_ptr;
+
+  // 使用 snprintf 安全地追加
+  int written = snprintf(buffer + *pos_ptr, space_left, "%s", str);
+
+  if (written > 0)
+  {
+    // 更新位置
+    *pos_ptr += written;
+  }
+}
+
 // 辅助函数，用于递归打印（例如 ptr(ptr(i32))）
 static void
-ir_type_to_string_recursive(IRType *type, char *buffer, size_t size)
+ir_type_to_string_recursive(IRType *type, char *buffer, size_t *pos_ptr, size_t size)
 {
-  if (size == 0)
+  if (*pos_ptr >= size - 1)
+  {
     return;
+  }
 
   switch (type->kind)
   {
   case IR_TYPE_VOID:
-    strlcat(buffer, "void", size);
+    safe_append(buffer, pos_ptr, size, "void");
     break;
   case IR_TYPE_I1:
-    strlcat(buffer, "i1", size);
+    safe_append(buffer, pos_ptr, size, "i1");
     break;
   case IR_TYPE_I8:
-    strlcat(buffer, "i8", size);
+    safe_append(buffer, pos_ptr, size, "i8");
     break;
   case IR_TYPE_I16:
-    strlcat(buffer, "i16", size);
+    safe_append(buffer, pos_ptr, size, "i16");
     break;
   case IR_TYPE_I32:
-    strlcat(buffer, "i32", size);
+    safe_append(buffer, pos_ptr, size, "i32");
     break;
   case IR_TYPE_I64:
-    strlcat(buffer, "i64", size);
+    safe_append(buffer, pos_ptr, size, "i64");
     break;
   case IR_TYPE_F32:
-    strlcat(buffer, "f32", size);
+    safe_append(buffer, pos_ptr, size, "f32");
     break;
   case IR_TYPE_F64:
-    strlcat(buffer, "f64", size);
+    safe_append(buffer, pos_ptr, size, "f64");
+    break;
+  case IR_TYPE_LABEL: // [!!] 修正
+    safe_append(buffer, pos_ptr, size, "label");
     break;
   case IR_TYPE_PTR:
-    strlcat(buffer, "ptr", size);
+    safe_append(buffer, pos_ptr, size, "ptr");
     // (为了简洁，我们不像 LLVM 那样打印 ptr(ty))
-    // 如果需要，可以取消注释下面这行
-    // strlcat(buffer, "(", size);
-    // ir_type_to_string_recursive(type->pointee_type, buffer, size);
-    // strlcat(buffer, ")", size);
-    break;
-  case IR_TYPE_LABEL:
-    strlcat(buffer, "label", size);
+    // 如果需要，可以取消注释下面这几行
+    // safe_append(buffer, pos_ptr, size, "(");
+    // ir_type_to_string_recursive(type->pointee_type, buffer, pos_ptr, size);
+    // safe_append(buffer, pos_ptr, size, ")");
     break;
   default:
-    strlcat(buffer, "?", size);
+    safe_append(buffer, pos_ptr, size, "?"); // [!!] 修正
     break;
   }
 }
@@ -106,11 +138,21 @@ ir_type_to_string_recursive(IRType *type, char *buffer, size_t size)
 void
 ir_type_to_string(IRType *type, char *buffer, size_t size)
 {
-  if (size > 0)
+  if (size == 0)
+    return;
+
+  size_t pos = 0;
+  ir_type_to_string_recursive(type, buffer, &pos, size);
+
+  // 确保 NUL 终止符
+  if (pos >= size)
   {
-    buffer[0] = '\0'; // 确保缓冲区为空
+    buffer[size - 1] = '\0'; // 如果截断，强制 NUL
   }
-  ir_type_to_string_recursive(type, buffer, size);
+  else
+  {
+    buffer[pos] = '\0'; // 正常 NUL
+  }
 }
 
 void
