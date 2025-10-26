@@ -89,6 +89,7 @@ ir_context_init_caches(IRContext *ctx)
 
   // Type Caches
   CREATE_CACHE(ptr_hashmap_create, pointer_type_cache);
+  CREATE_CACHE(ptr_hashmap_create, array_type_cache);
 
   // Constant Caches
   CREATE_CACHE(i8_hashmap_create, i8_constant_cache);
@@ -261,6 +262,48 @@ ir_type_get_ptr(IRContext *ctx, IRType *pointee_type)
   ptr_hashmap_put(ctx->pointer_type_cache, (void *)pointee_type, (void *)new_ptr_type);
 
   return new_ptr_type;
+}
+
+/**
+ * @brief 创建/获取一个数组类型 (唯一化)
+ */
+IRType *
+ir_type_get_array(IRContext *ctx, IRType *element_type, size_t element_count)
+{
+  assert(ctx != NULL);
+  assert(element_type != NULL);
+
+  // 1. 查找外层 Map (Key: element_type)
+  SizeHashMap *inner_map = (SizeHashMap *)ptr_hashmap_get(ctx->array_type_cache, (void *)element_type);
+
+  if (!inner_map)
+  {
+    // 2. 未命中？创建新的内层 Map
+    inner_map = sz_hashmap_create(&ctx->permanent_arena, 8); // (8 是任意初始容量)
+    if (!inner_map)
+      return NULL; // OOM
+
+    // 存入外层 Map
+    ptr_hashmap_put(ctx->array_type_cache, (void *)element_type, (void *)inner_map);
+  }
+
+  // 3. 查找内层 Map (Key: element_count)
+  IRType *array_type = (IRType *)sz_hashmap_get(inner_map, element_count);
+
+  if (array_type)
+  {
+    return array_type; // 命中！
+  }
+
+  // 4. 未命中？创建新类型
+  array_type = ir_type_create_array(ctx, element_type, element_count);
+  if (!array_type)
+    return NULL; // OOM
+
+  // 5. 存入内层 Map
+  sz_hashmap_put(inner_map, element_count, (void *)array_type);
+
+  return array_type;
 }
 
 /*

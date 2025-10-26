@@ -50,6 +50,7 @@ struct IRContext
   F32HashMap *f32_constant_cache;   // Map<float, IRValueNode*>
   F64HashMap *f64_constant_cache;   // Map<double, IRValueNode*>
   PtrHashMap *undef_constant_cache; // Map<IRType*, IRValueNode* (undef)>
+  PtrHashMap *array_type_cache;     // Map<IRType* (elem_ty), PtrHashMap* (Map<size_t, IRType*>)>
 
   // String Interning
   StrHashMap *string_intern_cache; // Map<(char*, len), const char* (unique)>
@@ -124,6 +125,14 @@ IRType *ir_type_get_f64(IRContext *ctx);
  * @return 指向 'ptr' 类型的指针
  */
 IRType *ir_type_get_ptr(IRContext *ctx, IRType *pointee_type);
+
+/**
+ * @brief 创建/获取一个数组类型 (唯一化)
+ * @param ctx Context
+ * @param element_type 数组内部元素的类型
+ * @param element_count 数组内部元素的数量
+ */
+IRType *ir_type_get_array(IRContext *ctx, IRType *element_type, size_t element_count);
 
 // --- API: 常量 (Constants) ---
 
