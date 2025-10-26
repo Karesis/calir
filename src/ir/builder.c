@@ -298,3 +298,61 @@ ir_builder_create_store(IRBuilder *builder, IRValueNode *val, IRValueNode *ptr)
 
   return &inst->result;
 }
+
+// --- API: PHI 节点 ---
+
+IRValueNode *
+ir_builder_create_phi(IRBuilder *builder, IRType *type)
+{
+  assert(builder != NULL);
+  assert(builder->insertion_point != NULL && "Builder insertion point is not set");
+  assert(type != NULL && type->kind != IR_TYPE_VOID && "PHI type cannot be void");
+
+  IRContext *ctx = builder->context;
+
+  // 1. 从 ir_arena 分配 (类似 create_internal)
+  IRInstruction *inst = BUMP_ALLOC_ZEROED(&ctx->ir_arena, IRInstruction);
+  if (!inst)
+    return NULL; // OOM
+
+  // 2. 初始化基类 (IRValueNode)
+  inst->result.kind = IR_KIND_INSTRUCTION;
+  inst->result.type = type;
+  list_init(&inst->result.uses);
+
+  // 3. 初始化子类 (IRInstruction)
+  inst->opcode = IR_OP_PHI; // [!!]
+  inst->parent = builder->insertion_point;
+  list_init(&inst->list_node);
+  list_init(&inst->operands); // [!!] 初始为空
+
+  // 4. 分配名字
+  inst->result.name = builder_get_next_reg_name(builder);
+
+  // 5. 关键: 插入到基本块的 *头部*
+  list_add(&builder->insertion_point->instructions, &inst->list_node);
+
+  return &inst->result;
+}
+
+void
+ir_phi_add_incoming(IRValueNode *phi_node, IRValueNode *value, IRBasicBlock *incoming_bb)
+{
+  assert(phi_node != NULL && phi_node->kind == IR_KIND_INSTRUCTION);
+  assert(value != NULL);
+  assert(incoming_bb != NULL && incoming_bb->label_address.type->kind == IR_TYPE_LABEL);
+
+  IRInstruction *inst = (IRInstruction *)phi_node;
+  assert(inst->opcode == IR_OP_PHI && "Value is not a PHI node");
+  assert(inst->result.type == value->type && "Incoming value type mismatch PHI type");
+
+  // 1. 获取 Context
+  // 我们需要 Context 来创建 'Use' 边
+  // (仿照你的 ir_instruction_erase_from_parent 逻辑)
+  assert(inst->parent != NULL && inst->parent->parent != NULL && inst->parent->parent->parent != NULL);
+  IRContext *ctx = inst->parent->parent->parent->context;
+
+  // 2. 添加两个操作数: value 和 basic_block
+  ir_use_create(ctx, inst, value);
+  ir_use_create(ctx, inst, &incoming_bb->label_address);
+}

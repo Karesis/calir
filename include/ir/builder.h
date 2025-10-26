@@ -84,4 +84,27 @@ IRValueNode *ir_builder_create_load(IRBuilder *builder, IRType *result_type, IRV
 /** @brief 构建 'store <val>, <ptr>' (e.g., store i32 %a, ptr %p) */
 IRValueNode *ir_builder_create_store(IRBuilder *builder, IRValueNode *val, IRValueNode *ptr);
 
+// --- API: PHI 节点 ---
+
+/**
+ * @brief 构建 'phi <type>' (不带操作数)
+ *
+ * *重要*: 此指令将插入到当前基本块的 *开头*,
+ * 而不是 builder 的当前插入点。
+ *
+ * @param builder Builder
+ * @param type PHI 节点的结果类型 (e.g., i32)
+ * @return 指向新创建的 PHI 指令的 ValueNode
+ */
+IRValueNode *ir_builder_create_phi(IRBuilder *builder, IRType *type);
+
+/**
+ * @brief 向一个 PHI 节点添加一个 [value, basic_block] 对
+ *
+ * @param phi_node 必须是一个 IR_OP_PHI 指令的 ValueNode
+ * @param value 传入的值
+ * @param incoming_bb 传入值对应的基本块
+ */
+void ir_phi_add_incoming(IRValueNode *phi_node, IRValueNode *value, IRBasicBlock *incoming_bb);
+
 #endif // IR_BUILDER_H

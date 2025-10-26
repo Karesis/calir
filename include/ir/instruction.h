@@ -23,6 +23,7 @@ typedef enum
   IR_OP_ALLOCA,
   IR_OP_LOAD,
   IR_OP_STORE,
+  IR_OP_PHI, // phi <type> [ <val1>, <bb1> ], [ <val2>, <bb2> ], ...
 } IROpcode;
 
 // ICMP (Integer Compare) 谓词

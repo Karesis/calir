@@ -228,6 +228,44 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     ir_value_dump(op2, stream);
     break;
 
+  case IR_OP_PHI:
+    fprintf(stream, "phi ");
+    ir_type_dump(inst->result.type, stream); // 打印 "i32"
+    fprintf(stream, " ");
+
+    // 遍历操作数，每次跳 2 个
+    IDList *head = &inst->operands;
+    IDList *iter = head->next;
+    int i = 0;
+    while (iter != head)
+    {
+      if (i > 0)
+      {
+        fprintf(stream, ", "); // 在条目之间打印逗号
+      }
+
+      // 1. 获取 Value
+      IRUse *val_use = list_entry(iter, IRUse, user_node);
+      IRValueNode *val = val_use->value;
+
+      // 2. 获取 BasicBlock
+      iter = iter->next; // 移动到下一个
+      assert(iter != head && "PHI node must have [val, bb] pairs");
+      IRUse *bb_use = list_entry(iter, IRUse, user_node);
+      IRValueNode *bb = bb_use->value;
+
+      // 3. 打印 "[ %val, %bb_label ]"
+      fprintf(stream, "[ ");
+      ir_value_dump(val, stream);
+      fprintf(stream, ", ");
+      ir_value_dump(bb, stream); // 这会打印 "label %name"
+      fprintf(stream, " ]");
+
+      iter = iter->next; // 移动到下一对
+      i++;
+    }
+    break;
+
   default:
     fprintf(stream, "<?? opcode %d>", inst->opcode);
     break;
