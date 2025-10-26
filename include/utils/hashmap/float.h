@@ -34,13 +34,13 @@ CHASHMAP_FLOAT_TYPES(CHM_DECLARE_FLOAT_TYPEDEF)
                                                                                                                        \
   /**                                                                                                                  \
    * @brief 创建一个新的 [API_TYPE] 哈希表。                                                                 \
-   * @warning Key 'NaN' 和 'Inf' 是保留的哨兵值, 不能被存储。                                            \
+   * @warning Key 'NaN' 不能被存储 (由于 'NaN != NaN' 比较规则)。                                          \
    */                                                                                                                  \
   API_TYPE *PREFIX##_hashmap_create(Bump *arena, size_t initial_capacity);                                             \
                                                                                                                        \
   /**                                                                                                                  \
    * @brief 插入或更新一个键值对。                                                                          \
-   * @warning Key 不能是 NaN 或 Inf。                                                                             \
+   * @warning Key 不能是 NaN。                                                                                     \
    */                                                                                                                  \
   bool PREFIX##_hashmap_put(API_TYPE *map, K_TYPE key, void *value);                                                   \
                                                                                                                        \

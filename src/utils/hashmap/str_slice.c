@@ -1,4 +1,4 @@
-/* src/hashmap/str_slice.c */
+/* utils/hashmap/str_slice.c */
 #include "utils/hashmap/str_slice.h"
 #include "utils/bump.h"
 #include <assert.h>
@@ -7,6 +7,8 @@
 // 1. 包含 xxhash.h 并内联实现
 #define XXH_INLINE_ALL
 #include "utils/xxhash.h"
+
+#include "utils/hashmap/common.h"
 
 /*
  * ========================================
@@ -33,6 +35,7 @@ struct StrHashMap
 {
   Bump *arena; // 用于所有分配
   StrHashMapBucket *buckets;
+  uint8_t *states;
   size_t num_entries;
   size_t num_tombstones;
   size_t num_buckets; // 必须始终是 2 的幂
@@ -44,47 +47,15 @@ struct StrHashMap
  * ========================================
  */
 
-static StrSlice
-str_hashmap_get_empty_key(void)
-{
-  return (StrSlice){.body = NULL, .len = 0};
-}
-
-static StrSlice
-str_hashmap_get_tombstone_key(void)
-{
-  return (StrSlice){.body = (const char *)-1, .len = (size_t)-1};
-}
-
 static inline bool
 str_hashmap_key_is_equal(StrSlice k1, StrSlice k2)
 {
+  if (k1.len != k2.len)
+    return false;
   if (k1.body == k2.body)
     return true;
-  // 哨兵值不参与 memcmp
-  if (k1.body == NULL || k1.body == (const char *)-1)
-    return false;
-  if (k2.body == NULL || k2.body == (const char *)-1)
-    return false;
-  return (k1.len == k2.len) && (memcmp(k1.body, k2.body, k1.len) == 0);
-}
 
-static inline bool
-str_hashmap_key_is_empty(StrSlice k)
-{
-  return k.body == NULL;
-}
-
-static inline bool
-str_hashmap_key_is_tombstone(StrSlice k)
-{
-  return k.body == (const char *)-1;
-}
-
-static inline bool
-str_hashmap_key_is_sentinel(StrSlice k)
-{
-  return k.body == NULL || k.body == (const char *)-1;
+  return (memcmp(k1.body, k2.body, k1.len) == 0);
 }
 
 static inline uint64_t
@@ -104,7 +75,7 @@ str_hashmap_get_hash(StrSlice key)
 #define CHM_K_TYPE StrSlice
 #define CHM_V_TYPE void *
 #define CHM_API_TYPE StrHashMap
-#define CHM_STRUCT_TYPE StrHashMap_t
+#define CHM_STRUCT_TYPE StrHashMap
 #define CHM_BUCKET_TYPE StrHashMapBucket
 
 // 实例化泛型函数
@@ -126,19 +97,25 @@ StrHashMap *
 str_hashmap_create(Bump *arena, size_t initial_capacity)
 {
   assert(arena != NULL && "Bump arena cannot be NULL");
-  // 调用泛型的 get_min_buckets_for_entries
   size_t num_buckets = str_hashmap_get_min_buckets_for_entries(initial_capacity);
 
   StrHashMap *map = BUMP_ALLOC(arena, StrHashMap);
   if (!map)
     return NULL;
 
-  StrHashMapBucket *buckets = BUMP_ALLOC_SLICE_ZEROED(arena, StrHashMapBucket, num_buckets);
+  // Buckets 不需要清零
+  StrHashMapBucket *buckets = BUMP_ALLOC_SLICE(arena, StrHashMapBucket, num_buckets);
   if (!buckets)
     return NULL;
 
+  // States *必须* 清零
+  uint8_t *states = BUMP_ALLOC_SLICE_ZEROED(arena, uint8_t, num_buckets);
+  if (!states)
+    return NULL; // OOM
+
   map->arena = arena;
   map->buckets = buckets;
+  map->states = states; // <-- 设置 states 指针
   map->num_entries = 0;
   map->num_tombstones = 0;
   map->num_buckets = num_buckets;
@@ -149,7 +126,7 @@ str_hashmap_create(Bump *arena, size_t initial_capacity)
 void *
 str_hashmap_get(const StrHashMap *map, const char *key_body, size_t key_len)
 {
-  // API 特化: 将 (char*, len) 转换为内部 StrSlice
+  // 将 (char*, len) 转换为内部 StrSlice
   StrSlice key_to_find = {.body = key_body, .len = key_len};
   StrHashMapBucket *bucket;
 
@@ -175,26 +152,26 @@ str_hashmap_remove(StrHashMap *map, const char *key_body, size_t key_len)
   StrSlice key_to_find = {.body = key_body, .len = key_len};
   StrHashMapBucket *bucket;
 
-  // 调用泛型的 find_bucket
   if (str_hashmap_find_bucket(map, key_to_find, &bucket))
   {
-    bucket->key = str_hashmap_get_tombstone_key(); // 特化的哨兵
-    bucket->value = NULL;
+    // Key 存在, 将其槽位标记为墓碑
+    size_t bucket_idx = (size_t)(bucket - map->buckets);
+    map->states[bucket_idx] = BUCKET_TOMBSTONE;
+
+    bucket->value = NULL; // (良好实践)
     map->num_entries--;
     map->num_tombstones++;
     return true;
   }
-  return false;
+  return false; // Key 不存在
 }
 
 bool
 str_hashmap_put(StrHashMap *map, const char *key_body, size_t key_len, void *value)
 {
-  // API 特化: 将 (char*, len) 转换为内部 StrSlice
   StrSlice key_to_find = {.body = key_body, .len = key_len};
   StrHashMapBucket *bucket;
 
-  // 调用泛型的 find_bucket
   bool found = str_hashmap_find_bucket(map, key_to_find, &bucket);
 
   if (found)
@@ -208,18 +185,19 @@ str_hashmap_put(StrHashMap *map, const char *key_body, size_t key_len, void *val
   size_t total_load = map->num_entries + map->num_tombstones + 1;
   if (total_load * 4 >= map->num_buckets * 3)
   {
-    // 调用泛型的 grow
     if (!str_hashmap_grow(map))
     {
       return false; // OOM on grow
     }
-    // 重新 find
     found = str_hashmap_find_bucket(map, key_to_find, &bucket);
     assert(!found && "Key should not exist after grow");
     assert(bucket != NULL);
   }
 
-  if (str_hashmap_key_is_tombstone(bucket->key))
+  size_t bucket_idx = (size_t)(bucket - map->buckets);
+
+  // 检查是否复用墓碑
+  if (map->states[bucket_idx] == BUCKET_TOMBSTONE)
   {
     map->num_tombstones--;
   }
@@ -235,6 +213,7 @@ str_hashmap_put(StrHashMap *map, const char *key_body, size_t key_len, void *val
   bucket->key.body = new_key_body;
   bucket->key.len = key_len;
   bucket->value = value;
+  map->states[bucket_idx] = BUCKET_FILLED; // <-- 标记为 FILLED
   map->num_entries++;
 
   return true;
@@ -243,17 +222,13 @@ str_hashmap_put(StrHashMap *map, const char *key_body, size_t key_len, void *val
 bool
 str_hashmap_put_preallocated_key(StrHashMap *map, const char *key_body, size_t key_len, void *value)
 {
-  // API 特化: 将 (char*, len) 转换为内部 StrSlice
   StrSlice key_to_find = {.body = key_body, .len = key_len};
   StrHashMapBucket *bucket;
 
-  // 调用泛型的 find_bucket
   bool found = str_hashmap_find_bucket(map, key_to_find, &bucket);
 
   if (found)
   {
-    // Key 已经存在。我们只更新 value。
-    // (这在 interning 场景下不应发生, 但为了健壮性我们处理它)
     bucket->value = value;
     return true;
   }
@@ -263,28 +238,29 @@ str_hashmap_put_preallocated_key(StrHashMap *map, const char *key_body, size_t k
   size_t total_load = map->num_entries + map->num_tombstones + 1;
   if (total_load * 4 >= map->num_buckets * 3)
   {
-    // 调用泛型的 grow
     if (!str_hashmap_grow(map))
     {
       return false; // OOM on grow
     }
-    // 重新 find
     found = str_hashmap_find_bucket(map, key_to_find, &bucket);
     assert(!found && "Key should not exist after grow");
     assert(bucket != NULL);
   }
 
-  if (str_hashmap_key_is_tombstone(bucket->key))
+  size_t bucket_idx = (size_t)(bucket - map->buckets);
+
+  // 检查是否复用墓碑
+  if (map->states[bucket_idx] == BUCKET_TOMBSTONE)
   {
     map->num_tombstones--;
   }
 
-  // --- [关键区别] ---
   // 我们信任 key_body 已经 在 arena 中，并且是唯一的。
   // 我们 *不* 复制它，只存储指针。
   bucket->key.body = key_body;
   bucket->key.len = key_len;
   bucket->value = value;
+  map->states[bucket_idx] = BUCKET_FILLED; // <-- 标记为 FILLED
   map->num_entries++;
 
   return true;

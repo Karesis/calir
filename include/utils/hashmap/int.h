@@ -43,13 +43,12 @@ CHASHMAP_INT_TYPES(CHM_DECLARE_INT_TYPEDEF)
                                                                                                                        \
   /**                                                                                                                  \
    * @brief 创建一个新的 [API_TYPE] 哈希表。                                                                 \
-   * @warning Key '0' 和 '-1' (或 UINT_MAX) 是保留的哨兵值, 不能被存储。                                \
+   * (所有整数值现在都可以作为 Key 存储。)                                                              \
    */                                                                                                                  \
   API_TYPE *PREFIX##_hashmap_create(Bump *arena, size_t initial_capacity);                                             \
                                                                                                                        \
   /**                                                                                                                  \
    * @brief 插入或更新一个键值对。                                                                          \
-   * @warning Key 不能是 0 或 -1 (或 UINT_MAX)。                                                                 \
    */                                                                                                                  \
   bool PREFIX##_hashmap_put(API_TYPE *map, K_TYPE key, void *value);                                                   \
                                                                                                                        \

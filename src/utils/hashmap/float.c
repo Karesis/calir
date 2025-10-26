@@ -1,7 +1,6 @@
 #include "utils/hashmap/float.h"
 #include "utils/bump.h"
 #include <assert.h>
-#include <math.h> // <-- 包含 math.h
 #include <string.h>
 
 // 1. 包含 xxhash.h 并内联实现
@@ -24,8 +23,6 @@
 #define FLOAT_API_TYPE F32HashMap
 #define FLOAT_STRUCT_TYPE F32HashMap
 #define FLOAT_BUCKET_TYPE F32HashMapBucket
-#define FLOAT_EMPTY_K nanf("")     // 'float' 版本的 NaN
-#define FLOAT_TOMBSTONE_K INFINITY // 'float' 版本的 Inf
 #include "utils/hashmap/float_template.inc"
 
 /*
@@ -39,8 +36,6 @@
 #define FLOAT_API_TYPE F64HashMap
 #define FLOAT_STRUCT_TYPE F64HashMap
 #define FLOAT_BUCKET_TYPE F64HashMapBucket
-#define FLOAT_EMPTY_K nan("")      // 'double' 版本的 NaN
-#define FLOAT_TOMBSTONE_K HUGE_VAL // 'double' 版本的 Inf (HUGE_VAL 更兼容 C89)
 #include "utils/hashmap/float_template.inc"
 
 /*
