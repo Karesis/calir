@@ -16,6 +16,55 @@
  * =================================================================
  */
 
+// --- 匿名结构体缓存 (GenericHashMap) 的辅助工具 ---
+/**
+ * @brief [内部] 匿名结构体缓存的 "Key" 结构体。
+ *
+ * *重要*: 存储在 GenericHashMap 中的 Key 必须是*永久*的。
+ * 我们在 permanent_arena 中分配这个结构体。
+ */
+typedef struct
+{
+  IRType **members; // <-- 这指向 *另一个* 在 permanent_arena 中的数组
+  size_t count;
+} AnonStructKey;
+
+// 包含 xxhash.h 并内联实现
+#define XXH_INLINE_ALL
+#include "utils/xxhash.h"
+
+/**
+ * @brief [内部] GenericHashMap 的哈希函数。
+ * @param key 指向 AnonStructKey 的 (const void*) 指针。
+ */
+static uint64_t
+anon_struct_hash_fn(const void *key)
+{
+  const AnonStructKey *k = (const AnonStructKey *)key;
+  // 我们只哈希成员列表的 *内容* (指针数组)
+  return XXH3_64bits(k->members, k->count * sizeof(IRType *));
+}
+
+/**
+ * @brief [内部] GenericHashMap 的比较函数。
+ * @param key1 指向 AnonStructKey 1 的 (const void*) 指针。
+ * @param key2 指向 AnonStructKey 2 的 (const void*) 指针。
+ */
+static bool
+anon_struct_equal_fn(const void *key1, const void *key2)
+{
+  const AnonStructKey *k1 = (const AnonStructKey *)key1;
+  const AnonStructKey *k2 = (const AnonStructKey *)key2;
+
+  if (k1->count != k2->count)
+  {
+    return false;
+  }
+
+  // 比较两个指针数组的 *内容*
+  return memcmp(k1->members, k2->members, k1->count * sizeof(IRType *)) == 0;
+}
+
 /**
  * @brief 初始化所有单例类型 (i32, void, ...)
  * @return true 成功, false OOM
@@ -90,6 +139,15 @@ ir_context_init_caches(IRContext *ctx)
   // Type Caches
   CREATE_CACHE(ptr_hashmap_create, pointer_type_cache);
   CREATE_CACHE(ptr_hashmap_create, array_type_cache);
+  CREATE_CACHE(str_hashmap_create, named_struct_cache);
+
+  // 单独实现匿名结构体cache初始化
+  ctx->anon_struct_cache = generic_hashmap_create(&ctx->permanent_arena, INITIAL_CACHE_CAPACITY,
+                                                  anon_struct_hash_fn, // <-- 特殊的哈希函数
+                                                  anon_struct_equal_fn // <-- 特殊的比较函数
+  );
+  if (!ctx->anon_struct_cache)
+    return false;
 
   // Constant Caches
   CREATE_CACHE(i8_hashmap_create, i8_constant_cache);
@@ -304,6 +362,98 @@ ir_type_get_array(IRContext *ctx, IRType *element_type, size_t element_count)
   sz_hashmap_put(inner_map, element_count, (void *)array_type);
 
   return array_type;
+}
+
+/**
+ * @brief 创建/获取一个 *匿名* 结构体 (按成员列表唯一化)
+ */
+IRType *
+ir_type_get_anonymous_struct(IRContext *ctx, IRType **member_types, size_t member_count)
+{
+  assert(ctx != NULL);
+
+  // 1. [!!] 创建一个 *临时* 的 Key 用于查找 (在栈上)
+  AnonStructKey temp_key = {.members = member_types, .count = member_count};
+
+  // 2. [!!] 查找缓存
+  // (generic_hashmap_get 会使用 hash_fn 和 equal_fn 来比较 temp_key 的 *内容*)
+  IRType *struct_type = (IRType *)generic_hashmap_get(ctx->anon_struct_cache, &temp_key);
+
+  if (struct_type)
+  {
+    return struct_type; // 命中!
+  }
+
+  // 3. [!!] 未命中？创建新类型
+  // (ir_type_create_struct 会在 permanent_arena 中创建成员列表的 *永久* 副本)
+  struct_type = ir_type_create_struct(ctx, member_types, member_count, NULL);
+  if (!struct_type)
+    return NULL; // OOM
+
+  // 4. [!!] 创建一个 *永久* 的 Key 用于存储
+  // (这个 Key 也必须在 permanent_arena 中)
+  AnonStructKey *perm_key = BUMP_ALLOC(&ctx->permanent_arena, AnonStructKey);
+  if (!perm_key)
+    return NULL; // OOM
+
+  // Point perm_key 指向 *永久* 的成员列表 (由 create_struct 创建)
+  perm_key->count = struct_type->as.aggregate.member_count;
+  perm_key->members = struct_type->as.aggregate.member_types;
+
+  // 5. [!!] 存入缓存
+  // Key:   perm_key (指向永久 Key 结构体的指针)
+  // Value: struct_type (指向永久 IRType 的指针)
+  generic_hashmap_put(ctx->anon_struct_cache, (void *)perm_key, (void *)struct_type);
+
+  return struct_type;
+}
+
+/**
+ * @brief 创建/获取一个 *命名* 结构体 (按名字唯一化)
+ */
+IRType *
+ir_type_get_named_struct(IRContext *ctx, const char *name, IRType **member_types, size_t member_count)
+{
+  assert(ctx != NULL);
+  assert(name != NULL && "Named struct must have a name");
+
+  // 1. 查找缓存 (使用名字)
+  size_t name_len = strlen(name);
+  IRType *struct_type = (IRType *)str_hashmap_get(ctx->named_struct_cache, name, name_len);
+
+  if (struct_type)
+  {
+    // 命中！执行健全性检查
+    if (struct_type->as.aggregate.member_count != member_count)
+    {
+      fprintf(stderr, "Struct '%s' re-definition with different member count!\n", name);
+      assert(0);
+    }
+    for (size_t i = 0; i < member_count; i++)
+    {
+      if (struct_type->as.aggregate.member_types[i] != member_types[i])
+      {
+        fprintf(stderr, "Struct '%s' re-definition with different member types!\n", name);
+        assert(0);
+      }
+    }
+    return struct_type;
+  }
+
+  // 2. 未命中？创建新类型
+  // (ir_type_create_struct 内部会自动 intern 名字)
+  struct_type = ir_type_create_struct(ctx, member_types, member_count, name);
+  if (!struct_type)
+    return NULL; // OOM
+
+  // 3. 存入缓存
+  // (我们使用 preallocated_key, 因为名字已在 create 时被 intern)
+  const char *interned_name = struct_type->as.aggregate.name;
+  str_hashmap_put_preallocated_key(ctx->named_struct_cache, interned_name,
+                                   strlen(interned_name), // (如果 intern str 返回 len 会更好)
+                                   (void *)struct_type);
+
+  return struct_type;
 }
 
 /*
