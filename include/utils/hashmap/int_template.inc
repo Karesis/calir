@@ -120,9 +120,17 @@ INT_FUNC(create)(Bump *arena, size_t initial_capacity)
   if (!map)
     return NULL;
 
-  INT_BUCKET_TYPE *buckets = BUMP_ALLOC_SLICE_ZEROED(arena, INT_BUCKET_TYPE, num_buckets);
+  INT_BUCKET_TYPE *buckets = BUMP_ALLOC_SLICE(arena, INT_BUCKET_TYPE, num_buckets);
   if (!buckets)
     return NULL;
+
+  // 初始化所有槽位为空哨兵
+  for (size_t i = 0; i < num_buckets; i++)
+  {
+    buckets[i].key = INT_EMPTY_K;
+    // .value 可以不用管, BUMP_ALLOC 应该已经清零了,
+    // 或者只在 .key 不是哨兵时才关心 .value
+  }
 
   map->arena = arena;
   map->buckets = buckets;

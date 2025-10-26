@@ -27,7 +27,6 @@
 #define CHM_TRAIT(suffix) CHM_FUNC(CHM_PREFIX, key_##suffix)
 #define CHM_HASH_FUNC CHM_FUNC(CHM_PREFIX, get_hash)
 
-
 /*
  * ========================================
  * --- 内部核心逻辑 (泛型实现) ---
@@ -89,7 +88,7 @@ CHM_FUNC(CHM_PREFIX, find_bucket)(const CHM_API_TYPE *map, CHM_K_TYPE key, CHM_B
     CHM_BUCKET_TYPE *bucket = &map->buckets[bucket_idx];
 
     // 调用: [prefix]_hashmap_key_is_equal(bucket->key, key)
-    if (CHM_TRAIT(is_equal)(bucket->key, key)) 
+    if (CHM_TRAIT(is_equal)(bucket->key, key))
     {
       *found_bucket = bucket;
       return true;
@@ -119,9 +118,17 @@ CHM_FUNC(CHM_PREFIX, grow)(CHM_API_TYPE *map)
   CHM_BUCKET_TYPE *old_buckets = map->buckets;
   size_t new_num_buckets = CHM_FUNC(CHM_PREFIX, get_min_buckets_for_entries)(map->num_entries * 2);
 
-  CHM_BUCKET_TYPE *new_buckets = BUMP_ALLOC_SLICE_ZEROED(map->arena, CHM_BUCKET_TYPE, new_num_buckets);
+  CHM_BUCKET_TYPE *new_buckets = BUMP_ALLOC_SLICE(map->arena, CHM_BUCKET_TYPE, new_num_buckets);
   if (!new_buckets)
     return false; // OOM
+
+  // 手动初始化所有新槽位
+  // (调用由 *_template.inc 提供的 get_empty_key 函数)
+  const CHM_K_TYPE empty_key = CHM_FUNC(CHM_PREFIX, get_empty_key)();
+  for (size_t i = 0; i < new_num_buckets; i++)
+  {
+    new_buckets[i].key = empty_key;
+  }
 
   map->buckets = new_buckets;
   map->num_buckets = new_num_buckets;
@@ -131,7 +138,7 @@ CHM_FUNC(CHM_PREFIX, grow)(CHM_API_TYPE *map)
   for (size_t i = 0; i < old_num_buckets; i++)
   {
     CHM_BUCKET_TYPE *old_bucket = &old_buckets[i];
-    
+
     // 调用: [prefix]_hashmap_key_is_sentinel(old_bucket->key)
     if (!CHM_TRAIT(is_sentinel)(old_bucket->key))
     {
@@ -150,7 +157,6 @@ CHM_FUNC(CHM_PREFIX, grow)(CHM_API_TYPE *map)
   }
   return true;
 }
-
 
 // 清理宏, 防止污染
 #undef CHM_PREFIX

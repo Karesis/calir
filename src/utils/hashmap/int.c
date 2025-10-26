@@ -1,6 +1,7 @@
 #include "utils/hashmap/int.h"
 #include "utils/bump.h"
 #include <assert.h>
+#include <limits.h>
 #include <string.h>
 
 // 1. 包含 xxhash.h 并内联实现
@@ -25,8 +26,8 @@
 #define INT_API_TYPE I64HashMap
 #define INT_STRUCT_TYPE I64HashMap
 #define INT_BUCKET_TYPE I64HashMapBucket
-#define INT_EMPTY_K (int64_t)0
-#define INT_TOMBSTONE_K (int64_t)-1
+#define INT_EMPTY_K (INT64_MAX)
+#define INT_TOMBSTONE_K (INT64_MAX - 1)
 #include "utils/hashmap/int_template.inc"
 
 /* --- uint64_t --- */
@@ -53,8 +54,8 @@
 #define INT_API_TYPE I32HashMap
 #define INT_STRUCT_TYPE I32HashMap
 #define INT_BUCKET_TYPE I32HashMapBucket
-#define INT_EMPTY_K (int32_t)0
-#define INT_TOMBSTONE_K (int32_t)-1
+#define INT_EMPTY_K (INT32_MAX)
+#define INT_TOMBSTONE_K (INT32_MAX - 1)
 #include "utils/hashmap/int_template.inc"
 
 /* --- uint32_t --- */
@@ -81,8 +82,8 @@
 #define INT_API_TYPE I16HashMap
 #define INT_STRUCT_TYPE I16HashMap
 #define INT_BUCKET_TYPE I16HashMapBucket
-#define INT_EMPTY_K (int16_t)0
-#define INT_TOMBSTONE_K (int16_t)-1
+#define INT_EMPTY_K (INT16_MAX)
+#define INT_TOMBSTONE_K (INT16_MAX - 1)
 #include "utils/hashmap/int_template.inc"
 
 /* --- uint16_t --- */
@@ -109,8 +110,8 @@
 #define INT_API_TYPE I8HashMap
 #define INT_STRUCT_TYPE I8HashMap
 #define INT_BUCKET_TYPE I8HashMapBucket
-#define INT_EMPTY_K (int8_t)0
-#define INT_TOMBSTONE_K (int8_t)-1
+#define INT_EMPTY_K (INT8_MAX)
+#define INT_TOMBSTONE_K (INT8_MAX - 1)
 #include "utils/hashmap/int_template.inc"
 
 /* --- uint8_t --- */
