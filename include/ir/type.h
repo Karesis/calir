@@ -90,6 +90,16 @@ IRType *ir_type_create_ptr(IRContext *ctx, IRType *pointee_type);
  */
 IRType *ir_type_create_array(IRContext *ctx, IRType *element_type, size_t element_count);
 
+/**
+ * @brief [内部] 创建一个新的结构体类型
+ * @param ctx Context
+ * @param member_types 成员类型的数组 (将被拷贝)
+ * @param member_count 成员的数量
+ * @param name (可选) 结构体的名字 (将被 intern)
+ * @return 指向新类型的 IRType*
+ */
+IRType *ir_type_create_struct(IRContext *ctx, IRType **member_types, size_t member_count, const char *name);
+
 // --- 调试 API (保持不变) ---
 
 void ir_type_to_string(IRType *type, char *buffer, size_t size);
