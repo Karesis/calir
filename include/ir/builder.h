@@ -84,6 +84,20 @@ IRValueNode *ir_builder_create_load(IRBuilder *builder, IRType *result_type, IRV
 /** @brief 构建 'store <val>, <ptr>' (e.g., store i32 %a, ptr %p) */
 IRValueNode *ir_builder_create_store(IRBuilder *builder, IRValueNode *val, IRValueNode *ptr);
 
+/**
+ * @brief 构建 'getelementptr <ty>, <ptr>, <idx1>, <idx2>, ...'
+ *
+ * @param builder Builder
+ * @param source_type GEP 要索引的源类型 (例如 Array 或 Struct)
+ * @param base_ptr 指向该类型的基指针
+ * @param indices 索引的数组 (IRValueNode* 数组)
+ * @param num_indices 索引的数量
+ * @param inbounds 是否为 'inbounds' (安全访问)
+ * @return 指向计算出的新指针的 ValueNode
+ */
+IRValueNode *ir_builder_create_gep(IRBuilder *builder, IRType *source_type, IRValueNode *base_ptr,
+                                   IRValueNode **indices, size_t num_indices, bool inbounds);
+
 // --- API: PHI 节点 ---
 
 /**

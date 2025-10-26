@@ -266,6 +266,38 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     }
     break;
 
+  case IR_OP_GEP:
+    fprintf(stream, "getelementptr ");
+    if (inst->as.gep.inbounds)
+    {
+      fprintf(stream, "inbounds ");
+    }
+
+    // 1. 打印源类型
+    ir_type_dump(inst->as.gep.source_type, stream);
+    fprintf(stream, ", ");
+
+    // 2. 打印基指针 (操作数 0)
+    IRValueNode *base_ptr = get_operand(inst, 0);
+    assert(base_ptr != NULL);
+    ir_value_dump(base_ptr, stream); // "ptr %name"
+
+    // 3. 遍历打印所有索引 (操作数 1...N)
+    IDList *ghead = &inst->operands;
+    IDList *giter = ghead->next->next; // [!!] 跳过 base_ptr
+
+    while (giter != ghead)
+    {
+      IRUse *use = list_entry(giter, IRUse, user_node);
+      IRValueNode *index = use->value;
+
+      fprintf(stream, ", ");
+      ir_value_dump(index, stream); // "i32 %idx" 或 "i32 0"
+
+      giter = giter->next;
+    }
+    break;
+
   default:
     fprintf(stream, "<?? opcode %d>", inst->opcode);
     break;

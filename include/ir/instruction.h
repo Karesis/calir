@@ -24,6 +24,7 @@ typedef enum
   IR_OP_LOAD,
   IR_OP_STORE,
   IR_OP_PHI, // phi <type> [ <val1>, <bb1> ], [ <val2>, <bb2> ], ...
+  IR_OP_GEP  // getelementptr
 } IROpcode;
 
 // ICMP (Integer Compare) 谓词
@@ -56,7 +57,12 @@ typedef struct
     {
       IRICmpPredicate predicate;
     } icmp;
-
+    // 对应 IR_OP_GEP
+    struct
+    {
+      IRType *source_type; // GEP 'inbounds' <type>, <ptr> ...
+      bool inbounds;
+    } gep;
   } as;
 } IRInstruction;
 
