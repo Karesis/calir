@@ -76,7 +76,7 @@ ir_instruction_erase_from_parent(IRInstruction *inst)
   list_del(&inst->list_node);
 }
 
-// --- 调试 (实现基本不变) ---
+// --- 调试 ---
 
 void
 ir_instruction_dump(IRInstruction *inst, FILE *stream)
@@ -128,9 +128,6 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     assert(op1 && op2 && "Binary operator needs two operands");
 
     ir_type_dump(op1->type, stream);
-    // [修改] 假设 ir_value_dump 能正确处理 name
-    // (如果 ir_value_dump 也打印 '%', 这里需要调整)
-    // 假设 ir_value_dump 只打印 "type %name"
     fprintf(stream, " ");
     ir_value_dump(op1, stream);
     fprintf(stream, ", ");
