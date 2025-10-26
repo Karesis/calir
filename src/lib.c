@@ -32,6 +32,8 @@ build_test_function(IRModule *mod)
   // 4. 创建入口基本块
   // entry:
   IRBasicBlock *entry_bb = ir_basic_block_create(func, "entry");
+  IRBasicBlock *if_true_bb = ir_basic_block_create(func, "if_true");
+  IRBasicBlock *if_false_bb = ir_basic_block_create(func, "if_false");
 
   // 5. 创建 Builder 并设置插入点
   IRBuilder *builder = ir_builder_create(ctx);
@@ -39,25 +41,30 @@ build_test_function(IRModule *mod)
 
   // --- 6. 开始构建指令 ---
 
-  // %0 = add i32 %x, i32 %y
-  IRValueNode *add_res = ir_builder_create_add(builder, &arg_x->value, &arg_y->value);
+  // %0 = icmp eq i32 %x, %y
+  IRValueNode *cond = ir_builder_create_icmp(builder, IR_ICMP_EQ, &arg_x->value, &arg_y->value);
 
-  // [!! 新增测试 !!]
-  // %1 = icmp eq i32 %x, %y
-  IRValueNode *cmp_eq = ir_builder_create_icmp(builder,
-                                               IR_ICMP_EQ, // [!] 使用 'eq' 谓词
-                                               &arg_x->value, &arg_y->value);
+  // br i1 %0, label %if_true, label %if_false
+  // (注意：我们需要传递 BasicBlock 的 ValueNode)
+  ir_builder_create_cond_br(builder, cond, &if_true_bb->label_address, &if_false_bb->label_address);
 
-  // [!! 新增测试 !!]
-  // %2 = icmp slt i32 %0, %x   (比较 add_res 和 x)
-  IRValueNode *cmp_slt = ir_builder_create_icmp(builder,
-                                                IR_ICMP_SLT, // [!] 使用 'slt' 谓词
-                                                add_res, &arg_x->value);
+  // --- 7. 填充 'if_true' 块 ---
+  ir_builder_set_insertion_point(builder, if_true_bb);
 
-  // ret i32 %0  (我们还是返回 add 的结果)
-  ir_builder_create_ret(builder, add_res);
+  // (从 context 获取常量 1)
+  IRValueNode *const_1 = ir_constant_get_i32(ctx, 1);
+  // ret i32 1
+  ir_builder_create_ret(builder, const_1);
 
-  // --- 7. 清理 Builder ---
+  // --- 8. 填充 'if_false' 块 ---
+  ir_builder_set_insertion_point(builder, if_false_bb);
+
+  // (从 context 获取常量 0)
+  IRValueNode *const_0 = ir_constant_get_i32(ctx, 0);
+  // ret i32 0
+  ir_builder_create_ret(builder, const_0);
+
+  // --- 9. 清理 Builder ---
   ir_builder_destroy(builder);
 }
 

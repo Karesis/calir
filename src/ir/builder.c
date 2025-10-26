@@ -158,6 +158,37 @@ ir_builder_create_br(IRBuilder *builder, IRValueNode *target_bb)
   return &inst->result;
 }
 
+IRValueNode *
+ir_builder_create_cond_br(IRBuilder *builder, IRValueNode *cond, IRValueNode *true_bb, IRValueNode *false_bb)
+{
+  assert(builder != NULL);
+  assert(cond != NULL && true_bb != NULL && false_bb != NULL);
+
+  // [!!] 关键断言
+  assert(cond->type == ir_type_get_i1(builder->context) && "br condition must be i1");
+  assert(true_bb->type->kind == IR_TYPE_LABEL && "br target must be a label");
+  assert(false_bb->type->kind == IR_TYPE_LABEL && "br target must be a label");
+
+  // 1. 获取 void 类型 (br 指令没有结果值)
+  IRType *void_type = builder->context->type_void;
+
+  // 2. 调用内部工厂函数
+  IRInstruction *inst = ir_instruction_create_internal(builder,
+                                                       IR_OP_COND_BR, // [!!] 新的 Opcode
+                                                       void_type);
+
+  if (!inst)
+    return NULL; // OOM
+
+  // 3. 创建 Use 边 (链接 3 个操作数)
+  ir_use_create(builder->context, inst, cond);     // Operand 0: 条件
+  ir_use_create(builder->context, inst, true_bb);  // Operand 1: true 分支
+  ir_use_create(builder->context, inst, false_bb); // Operand 2: false 分支
+
+  // 4. 返回指令的 "结果" (一个无名、void 类型的 ValueNode)
+  return &inst->result;
+}
+
 // --- API: 二元运算 ---
 
 // 辅助函数

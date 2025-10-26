@@ -151,6 +151,24 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     ir_value_dump(op1, stream);
     break;
 
+  case IR_OP_COND_BR:
+    fprintf(stream, "br ");
+
+    // 获取 3 个操作数
+    IRValueNode *cond = get_operand(inst, 0);
+    IRValueNode *true_bb = get_operand(inst, 1);
+    IRValueNode *false_bb = get_operand(inst, 2);
+
+    assert(cond && true_bb && false_bb && "cond br needs 3 operands");
+
+    // 打印: br i1 %cond, label %true_bb, label %false_bb
+    ir_value_dump(cond, stream);
+    fprintf(stream, ", ");
+    ir_value_dump(true_bb, stream);
+    fprintf(stream, ", ");
+    ir_value_dump(false_bb, stream);
+    break;
+
   case IR_OP_ADD:
   case IR_OP_SUB:
     fprintf(stream, (inst->opcode == IR_OP_ADD) ? "add " : "sub ");

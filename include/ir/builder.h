@@ -58,6 +58,10 @@ IRValueNode *ir_builder_create_ret(IRBuilder *builder, IRValueNode *val);
 /** @brief 构建 'br <target_bb>' (无条件跳转) */
 IRValueNode *ir_builder_create_br(IRBuilder *builder, IRValueNode *target_bb);
 
+/** @brief 构建 'br i1 <cond>, label <true_bb>, label <false_bb>' (有条件跳转) */
+IRValueNode *ir_builder_create_cond_br(IRBuilder *builder, IRValueNode *cond, IRValueNode *true_bb,
+                                       IRValueNode *false_bb);
+
 // --- API: 二元运算 ---
 
 /** @brief 构建 'add <type> <lhs>, <rhs>' */

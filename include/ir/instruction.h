@@ -10,8 +10,9 @@
 typedef enum
 {
   // 终结者指令
-  IR_OP_RET, // return <val>
-  IR_OP_BR,  // branch <target_bb>
+  IR_OP_RET,     // return <val>
+  IR_OP_BR,      // branch <target_bb>
+  IR_OP_COND_BR, // branch <cond>, <true_bb>, <false_bb>
 
   // 二元运算
   IR_OP_ADD,  // add <type> <op1>, <op2>
