@@ -1,13 +1,11 @@
 #ifndef IR_CONSTANT_H
 #define IR_CONSTANT_H
 
+#include "ir/context.h"
+#include "ir/type.h"
 #include "ir/value.h" // 包含 IRValueNode, IRValueKind
 #include <stdbool.h>
 #include <stdint.h> // for int64_t, etc.
-
-// --- 前向声明 ---
-typedef struct IRContext IRContext;
-typedef struct IRType IRType;
 
 /**
  * @brief 区分不同类型的常量
