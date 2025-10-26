@@ -14,8 +14,39 @@
 
 // --- 内部辅助函数 (用于 dump) ---
 
+// 辅助函数：将 ICMP 谓词转换为字符串
+static const char *
+ir_icmp_predicate_to_string(IRICmpPredicate pred)
+{
+  switch (pred)
+  {
+  case IR_ICMP_EQ:
+    return "eq";
+  case IR_ICMP_NE:
+    return "ne";
+  case IR_ICMP_UGT:
+    return "ugt";
+  case IR_ICMP_UGE:
+    return "uge";
+  case IR_ICMP_ULT:
+    return "ult";
+  case IR_ICMP_ULE:
+    return "ule";
+  case IR_ICMP_SGT:
+    return "sgt";
+  case IR_ICMP_SGE:
+    return "sge";
+  case IR_ICMP_SLT:
+    return "slt";
+  case IR_ICMP_SLE:
+    return "sle";
+  default:
+    return "??";
+  }
+}
+
 /**
- * @brief (内部) 获取第 N 个操作数 (实现不变)
+ * @brief (内部) 获取第 N 个操作数
  */
 static IRValueNode *
 get_operand(IRInstruction *inst, int index)
@@ -35,10 +66,10 @@ get_operand(IRInstruction *inst, int index)
   return use->value;
 }
 
-// --- 生命周期 (新) ---
+// --- 生命周期  ---
 
 /**
- * @brief [新] 从其父基本块中安全地擦除一条指令
+ * @brief 从其父基本块中安全地擦除一条指令
  */
 void
 ir_instruction_erase_from_parent(IRInstruction *inst)
@@ -156,6 +187,24 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     op2 = get_operand(inst, 1); // 目标指针
     assert(op1 && op2 && "store needs value and pointer operands");
 
+    ir_value_dump(op1, stream);
+    fprintf(stream, ", ");
+    ir_value_dump(op2, stream);
+    break;
+
+  case IR_OP_ICMP:
+    // 1. 获取谓词字符串
+    const char *pred_str = ir_icmp_predicate_to_string(inst->as.icmp.predicate);
+
+    // 2. 获取操作数 (使用你已有的 get_operand)
+    op1 = get_operand(inst, 0); // lhs
+    op2 = get_operand(inst, 1); // rhs
+    assert(op1 && op2 && "icmp needs two operands");
+
+    // 3. 打印: icmp <pred> <ty> %lhs, %rhs
+    fprintf(stream, "icmp %s ", pred_str);
+    ir_type_dump(op1->type, stream); // 打印操作数类型
+    fprintf(stream, " ");
     ir_value_dump(op1, stream);
     fprintf(stream, ", ");
     ir_value_dump(op2, stream);

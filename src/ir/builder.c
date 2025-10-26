@@ -188,6 +188,37 @@ ir_builder_create_sub(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs)
   return builder_create_binary_op(builder, IR_OP_SUB, lhs, rhs);
 }
 
+IRValueNode *
+ir_builder_create_icmp(IRBuilder *builder, IRICmpPredicate pred, IRValueNode *lhs, IRValueNode *rhs)
+{
+  assert(builder != NULL);
+  assert(lhs != NULL && rhs != NULL);
+  assert(lhs->type == rhs->type && "ICMP operands must have the same type");
+
+  // 1. 获取结果类型 (关键: 总是 i1)
+  IRType *result_type = ir_type_get_i1(builder->context);
+
+  // 2. 调用你的内部工厂函数
+  IRInstruction *inst = ir_instruction_create_internal(builder,
+                                                       IR_OP_ICMP, // 新的 Opcode
+                                                       result_type // 结果类型是 i1
+  );
+
+  if (!inst)
+    return NULL; // OOM
+
+  // 3. [!!] 设置 ICMP 特定的数据
+  inst->as.icmp.predicate = pred;
+
+  // 4. 创建 Use 边 (链接操作数)
+  // (使用你已有的 ir_use_create)
+  ir_use_create(builder->context, inst, lhs); // Operand 0
+  ir_use_create(builder->context, inst, rhs); // Operand 1
+
+  // 5. 返回指令的结果 (ValueNode)
+  return &inst->result;
+}
+
 // --- API: 内存操作 ---
 
 IRValueNode *

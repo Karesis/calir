@@ -39,20 +39,23 @@ build_test_function(IRModule *mod)
 
   // --- 6. 开始构建指令 ---
 
-  // %0 = alloca i32
-  IRValueNode *alloca_inst = ir_builder_create_alloca(builder, i32_type);
-
-  // %1 = add i32 %x, i32 %y
+  // %0 = add i32 %x, i32 %y
   IRValueNode *add_res = ir_builder_create_add(builder, &arg_x->value, &arg_y->value);
 
-  // store i32 %1, ptr %0
-  ir_builder_create_store(builder, add_res, alloca_inst);
+  // [!! 新增测试 !!]
+  // %1 = icmp eq i32 %x, %y
+  IRValueNode *cmp_eq = ir_builder_create_icmp(builder,
+                                               IR_ICMP_EQ, // [!] 使用 'eq' 谓词
+                                               &arg_x->value, &arg_y->value);
 
-  // %2 = load i32, ptr %0
-  IRValueNode *load_res = ir_builder_create_load(builder, i32_type, alloca_inst);
+  // [!! 新增测试 !!]
+  // %2 = icmp slt i32 %0, %x   (比较 add_res 和 x)
+  IRValueNode *cmp_slt = ir_builder_create_icmp(builder,
+                                                IR_ICMP_SLT, // [!] 使用 'slt' 谓词
+                                                add_res, &arg_x->value);
 
-  // ret i32 %2
-  ir_builder_create_ret(builder, load_res);
+  // ret i32 %0  (我们还是返回 add 的结果)
+  ir_builder_create_ret(builder, add_res);
 
   // --- 7. 清理 Builder ---
   ir_builder_destroy(builder);

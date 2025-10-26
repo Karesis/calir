@@ -1,6 +1,7 @@
 #ifndef IR_BUILDER_H
 #define IR_BUILDER_H
 
+#include "ir/instruction.h"
 #include "ir/value.h" // 需要 IRValueNode
 #include <stddef.h>   // 需要 size_t
 
@@ -64,6 +65,9 @@ IRValueNode *ir_builder_create_add(IRBuilder *builder, IRValueNode *lhs, IRValue
 
 /** @brief 构建 'sub <type> <lhs>, <rhs>' */
 IRValueNode *ir_builder_create_sub(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs);
+
+/** @brief 构建 'icmp <pred> <type> <op1>, <op2>‘ */
+IRValueNode *ir_builder_create_icmp(IRBuilder *builder, IRICmpPredicate pred, IRValueNode *lhs, IRValueNode *rhs);
 
 // --- API: 内存操作 ---
 
