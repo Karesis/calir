@@ -56,6 +56,16 @@ FLOAT_FUNC(key_is_equal)(FLOAT_K_TYPE k1, FLOAT_K_TYPE k2)
 static inline uint64_t
 FLOAT_FUNC(get_hash)(FLOAT_K_TYPE key)
 {
+  // 规范化 (normalize) -0.0, 使其哈希值与 0.0 相同。
+  // C (IEEE 754) 规定 0.0 == -0.0 (由 is_equal 处理),
+  // 所以它们 *必须* 哈希到同一个槽位。
+  if (key == 0.0)
+  {
+    // 这会将 -0.0 (0x80...0) 转换为 0.0 (0x00...0)
+    // 而 0.0 (0x00...0) 保持 0.0 (0x00...0)
+    key = 0.0;
+  }
+
   // 哈希浮点数的位模式 (bit pattern)
   return XXH3_64bits(&key, sizeof(key));
 }
