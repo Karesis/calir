@@ -134,9 +134,9 @@ int main()
 
 define void @test_func(i32 %idx) {
 entry:
-  %point_ptr = alloca %point
-  %packet_ptr = alloca %data_packet
-  %1 = getelementptr inbounds %data_packet, ptr %packet_ptr, i32 0, i32 1, i32 %idx
+  %point_ptr = alloc %point
+  %packet_ptr = alloc %data_packet
+  %1 = gep inbounds %data_packet, ptr %packet_ptr, i32 0, i32 1, i32 %idx
   store i32 123, ptr %1
   ret void
 }

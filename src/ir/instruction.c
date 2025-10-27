@@ -184,7 +184,7 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     break;
 
   case IR_OP_ALLOCA:
-    fprintf(stream, "alloca ");
+    fprintf(stream, "alloc ");
     assert(inst->result.type->kind == IR_TYPE_PTR);
     ir_type_dump(inst->result.type->as.pointee_type, stream);
     break;
