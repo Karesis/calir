@@ -154,6 +154,57 @@ static bool verify_basic_block(VerifierContext *vctx, IRBasicBlock *bb);
 static bool verify_instruction(VerifierContext *vctx, IRInstruction *inst);
 
 /**
+ * @brief [内部] 检查一个终结者指令是否将 `target_bb` 作为其跳转目标之一。
+ *
+ * @param term 终结者指令 (必须是 IR_OP_BR 或 IR_OP_COND_BR)
+ * @param target_bb 我们正在寻找的目标基本块
+ * @return true 如果 'term' 跳转到 'target_bb', 否则 false
+ */
+static bool
+is_terminator_predecessor(IRInstruction *term, IRBasicBlock *target_bb)
+{
+  IRValueNode *target_val = &target_bb->label_address;
+
+  if (term->opcode == IR_OP_BR)
+  {
+    // 'br'只有一个目标
+    return (get_operand(term, 0) == target_val);
+  }
+  else if (term->opcode == IR_OP_COND_BR)
+  {
+    // 'cond_br'有两个目标
+    return (get_operand(term, 1) == target_val || get_operand(term, 2) == target_val);
+  }
+
+  // 不是一个 'br' (例如, 'ret'), 所以它不是任何块的前驱
+  return false;
+}
+
+/**
+ * @brief [内部] 检查 'pred_bb' 是否在 'phi_inst' 的传入块列表中。
+ *
+ * @param phi_inst PHI 指令
+ * @param pred_bb 我们要查找的前驱基本块
+ * @return true 如果在列表中找到, 否则 false
+ */
+static bool
+find_in_phi(IRInstruction *phi_inst, IRBasicBlock *pred_bb)
+{
+  IRValueNode *pred_val = &pred_bb->label_address;
+  int count = get_operand_count(phi_inst);
+
+  // 遍历 PHI 的操作数对, 只检查 [..., bb] 部分
+  for (int i = 1; i < count; i += 2)
+  {
+    if (get_operand(phi_inst, i) == pred_val)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * @brief 验证单条指令
  */
 static bool
@@ -349,16 +400,68 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
     VERIFY_ASSERT(op_count > 0, vctx, value, "'phi' node cannot be empty.");
     VERIFY_ASSERT(op_count % 2 == 0, vctx, value, "'phi' node must have an even number of operands ([val, bb] pairs).");
 
+    int phi_entry_count = op_count / 2;
+    IRFunction *func = vctx->current_function;
+    IRBasicBlock *current_bb = vctx->current_block;
+
+    // --- 1. 检查类型 和 检查重复条目 ---
     for (int i = 0; i < op_count; i += 2)
     {
       IRValueNode *val = get_operand(inst, i);
       IRValueNode *incoming_bb_val = get_operand(inst, i + 1);
+
+      // 检查类型
       VERIFY_ASSERT(val->type == result_type, vctx, val, "PHI incoming value type mismatch.");
       VERIFY_ASSERT(incoming_bb_val->type->kind == IR_TYPE_LABEL, vctx, incoming_bb_val,
                     "PHI incoming block must be a label type.");
 
-      // TODO: (高级) 检查 incoming_bb_val 是否是 vctx->current_block 的有效前驱
+      // 检查重复: 确保同一个 BB 没有被列出两次
+      for (int j = i + 2; j < op_count; j += 2)
+      {
+        IRValueNode *other_bb_val = get_operand(inst, j);
+        VERIFY_ASSERT(incoming_bb_val != other_bb_val, vctx, &inst->result,
+                      "PHI node contains duplicate entry for the same incoming block.");
+      }
     }
+
+    // --- 2. 检查完整性 (所有前驱都被覆盖) ---
+    // 遍历函数中的 *所有* 基本块，找到 'current_bb' 的实际前驱
+    int actual_pred_count = 0;
+    IDList *all_blocks_iter;
+    list_for_each(&func->basic_blocks, all_blocks_iter)
+    {
+      IRBasicBlock *potential_pred = list_entry(all_blocks_iter, IRBasicBlock, list_node);
+
+      // (一个块不能是它自己的前驱... 除非是循环, 终结者检查会处理这个)
+      if (potential_pred == current_bb)
+        continue;
+      // (跳过空块, 尽管它们不应该存在)
+      if (list_empty(&potential_pred->instructions))
+        continue;
+
+      // 获取这个块的终结者指令
+      IRInstruction *term = list_entry(potential_pred->instructions.prev, IRInstruction, list_node);
+
+      // 检查这个终结者是否跳转到 'current_bb'
+      if (is_terminator_predecessor(term, current_bb))
+      {
+        actual_pred_count++;
+
+        // 这个 `potential_pred` *必须* 在 PHI 节点中被列出
+        bool found_in_phi = find_in_phi(inst, potential_pred);
+        VERIFY_ASSERT(found_in_phi, vctx, &inst->result, "PHI node is missing an entry for predecessor block '%s'.",
+                      potential_pred->label_address.name);
+      }
+    }
+
+    // --- 3. 检查合理性 (没有多余的条目) ---
+    // 如果 1 (无重复) 和 2 (都找到) 通过了,
+    // 我们只需要检查条目总数是否匹配。
+    // 如果 PHI 条目比实际前驱多, 意味着它包含了一个 *不是* 前驱的无效条目。
+    VERIFY_ASSERT(phi_entry_count == actual_pred_count, vctx, &inst->result,
+                  "PHI node has incorrect number of entries. Found %d, but expected %d (actual predecessors).",
+                  phi_entry_count, actual_pred_count);
+
     break;
   }
   case IR_OP_GEP: {
