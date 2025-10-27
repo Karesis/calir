@@ -6,14 +6,10 @@
 CC = clang
 # CC = gcc
 
-# --- [新] 构建目标 ---
-# 默认目标 (calir IR 测试)
+# --- 构建目标 ---
+# 默认主目标 (calir IR 测试)
 TARGET_CALIR_NAME = calir_test
 TARGET_CALIR = $(BUILD_DIR)/$(TARGET_CALIR_NAME)
-
-# 可选目标 (hashmap 单元测试)
-TARGET_HASHMAP_NAME = test_hashmap
-TARGET_HASHMAP = $(BUILD_DIR)/$(TARGET_HASHMAP_NAME)
 
 # 目录
 BUILD_DIR = build
@@ -24,7 +20,6 @@ OBJ_DIR = $(BUILD_DIR)/obj
 # =================================================================
 
 # C 标志: std=c23, 警告, 调试信息
-# (使用 -g -O0 来确保 assert() 启用并获得最佳调试体验)
 CFLAGS_BASE = -std=c23 -Wall -Wextra -g -O0
 
 # 头文件包含路径 (-I)
@@ -52,21 +47,39 @@ CFLAGS_COMMON = $(CFLAGS_BASE) $(CPPFLAGS)
 # =================================================================
 
 # --- 库文件 ---
-# (自动找到新的 generic.c)
 UTILS_SRCS = $(wildcard src/utils/*.c) \
              $(wildcard src/utils/hashmap/*.c)
 IR_SRCS = $(wildcard src/ir/*.c)
+ANALYSIS_SRCS = $(wildcard src/analysis/*.c)
 
 # --- 主程序文件 ---
 MAIN_CALIR_SRC = src/main_test.c
-MAIN_HASHMAP_SRC = tests/test_hashmap.c
+
+# --- 自动化测试发现 ---
+# 1. 找到所有 test_*.c 源文件
+TEST_SRCS = $(wildcard tests/test_*.c)
+
+# 2. 将 .c 映射到 .o (对象文件)
+# e.g., tests/test_bitset.c -> build/obj/tests/test_bitset.o
+TEST_OBJS = $(patsubst tests/%.c, $(OBJ_DIR)/tests/%.o, $(TEST_SRCS))
+
+# 3. 将 .c 映射到可执行目标
+# e.g., tests/test_bitset.c -> build/test_bitset
+TEST_TARGETS = $(patsubst tests/%.c, $(BUILD_DIR)/%, $(TEST_SRCS))
+
+# 4. 创建 "run_test_*" 伪目标名称
+# e.g., tests/test_bitset.c -> run_test_bitset
+TEST_RUNNERS = $(patsubst tests/test_%.c, run_test_%, $(TEST_SRCS))
 
 # --- 将所有 .c 映射到 .o ---
 UTILS_OBJS = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(UTILS_SRCS))
 IR_OBJS = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(IR_SRCS))
+ANALYSIS_OBJS = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(ANALYSIS_SRCS))
 
 MAIN_CALIR_OBJ = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(MAIN_CALIR_SRC))
-MAIN_HASHMAP_OBJ = $(patsubst tests/%.c, $(OBJ_DIR)/tests/%.o, $(MAIN_HASHMAP_SRC))
+
+# --- 库对象 (所有测试都将链接它们) ---
+LIB_OBJS = $(UTILS_OBJS) $(IR_OBJS) $(ANALYSIS_OBJS)
 
 # --- 用于特定 CFLAGS 的对象集 ---
 BUMP_OBJ = $(OBJ_DIR)/utils/bump.o
@@ -80,18 +93,30 @@ HASHMAP_OBJS = $(filter $(OBJ_DIR)/utils/hashmap/%.o, $(UTILS_OBJS))
 .PHONY: all
 all: $(TARGET_CALIR)
 
-# [新] 链接 Calir IR 测试
-$(TARGET_CALIR): $(UTILS_OBJS) $(IR_OBJS) $(MAIN_CALIR_OBJ)
+# [新] "make test" 将构建所有测试
+.PHONY: test
+test: $(TEST_TARGETS)
+
+# 链接 Calir IR 测试
+$(TARGET_CALIR): $(UTILS_OBJS) $(IR_OBJS) $(ANALYSIS_OBJS) $(MAIN_CALIR_OBJ)
 	@echo "Linking Calir Test ($@)..."
 	@mkdir -p $(@D)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-# [新] 链接 Hashmap 单元测试 (可选)
-.PHONY: test_hashmap
-test_hashmap: $(TARGET_HASHMAP)
-
-$(TARGET_HASHMAP): $(UTILS_OBJS) $(MAIN_HASHMAP_OBJ)
-	@echo "Linking Hashmap Test ($@)..."
+# 自动化测试链接规则 
+# 这是一个静态模式规则
+# 它告诉 make 如何构建 *任何* 匹配 `$(TEST_TARGETS)` 列表的目标
+#
+# 依赖关系:
+# $@ (目标)     : build/test_bitset
+# $* (词干)     : test_bitset
+# $< (第一个依赖): $(OBJ_DIR)/tests/test_bitset.o
+# $^ (所有依赖): $(OBJ_DIR)/tests/test_bitset.o $(LIB_OBJS)
+#
+# 注意: 我们链接 *所有* 库对象 (LIB_OBJS)。
+# 这比为每个测试单独指定依赖更简单。
+$(TEST_TARGETS): $(BUILD_DIR)/%: $(OBJ_DIR)/tests/%.o $(LIB_OBJS)
+	@echo "Linking Test ($@)..."
 	@mkdir -p $(@D)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
@@ -100,8 +125,8 @@ $(TARGET_HASHMAP): $(UTILS_OBJS) $(MAIN_HASHMAP_OBJ)
 # =================================================================
 
 # --- 目标特定的 CFLAGS ---
-# (我们收集所有可能的 .o 文件)
-ALL_OBJS = $(UTILS_OBJS) $(IR_OBJS) $(MAIN_CALIR_OBJ) $(MAIN_HASHMAP_OBJ)
+# (将 MAIN_HASHMAP_OBJ 替换为 TEST_OBJS)
+ALL_OBJS = $(UTILS_OBJS) $(IR_OBJS) $(ANALYSIS_OBJS) $(MAIN_CALIR_OBJ) $(TEST_OBJS)
 
 # 默认情况下，所有对象都使用通用 CFLAGS
 $(ALL_OBJS): CFLAGS = $(CFLAGS_COMMON)
@@ -114,16 +139,16 @@ $(HASHMAP_OBJS): CFLAGS = $(CFLAGS_COMMON) $(CFLAGS_HASHMAP)
 
 
 # --- 通用编译规则 ---
+# (这些规则无需更改，它们已经很完美)
 
 # 规则 1: 编译 src/ 目录下的文件
-# (这会处理 utils, hashmap, ir, 和 main_test.c)
 $(OBJ_DIR)/%.o: src/%.c
 	@mkdir -p $(@D)
 	@echo "Compiling $<..."
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # 规则 2: 编译 tests/ 目录下的文件
-# (这会处理 test_hashmap.c)
+# (这将自动处理所有 test_*.c 文件)
 $(OBJ_DIR)/tests/%.o: tests/%.c
 	@mkdir -p $(@D)
 	@echo "Compiling $<..."
@@ -149,8 +174,21 @@ run: all
 	@echo "Running Calir test suite..."
 	./$(TARGET_CALIR)
 
-# [新] 运行 *hashmap* 测试
-.PHONY: run_hashmap
-run_hashmap: test_hashmap
-	@echo "Running Hashmap test suite..."
-	./$(TARGET_HASHMAP)
+# 自动化运行规则 
+
+# 定义所有 "run_test_*" 目标为伪目标
+.PHONY: $(TEST_RUNNERS) run_all_tests
+
+# 这是一个模式规则，用于创建 run_test_* 目标
+# 例如: 'make run_test_bitset'
+# 1. 它会匹配 'run_test_%' (e.g., run_test_bitset)
+# 2. 它依赖于 '$(BUILD_DIR)/test_%' (e.g., build/test_bitset)
+# 3. 它运行依赖的可执行文件
+$(TEST_RUNNERS): run_test_%: $(BUILD_DIR)/test_%
+	@echo "Running test suite ($<)..."
+	./$<
+
+# "make run_all_tests" 将运行 *所有* 测试
+run_all_tests: $(TEST_RUNNERS)
+	@echo "\nAll tests completed."
+
