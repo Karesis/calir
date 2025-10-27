@@ -68,9 +68,6 @@ cfg_build(IRFunction *func, Bump *arena)
   // 2. 初始化 CFG 自己的内部竞技场 (使用 bump_init，假设最小对齐为 1)
   bump_init(&cfg->arena);
 
-  // 3. 初始化 PtrHashMap (假设 API 如此)
-  cfg->block_to_node_map = ptrmap_create();
-
   // --- PASS 1: 创建节点并构建映射 ---
 
   // 统计有多少个块
@@ -80,6 +77,9 @@ cfg_build(IRFunction *func, Bump *arena)
   {
     cfg->num_nodes++;
   }
+
+  //    使用 CFG 自己的内部竞技场，并传入节点数量作为初始容量
+  cfg->block_to_node_map = ptr_hashmap_create(&cfg->arena, cfg->num_nodes);
 
   if (cfg->num_nodes == 0)
   {
@@ -114,7 +114,7 @@ cfg_build(IRFunction *func, Bump *arena)
     }
 
     // 填充 hashmap
-    ptrmap_put(cfg->block_to_node_map, bb, node);
+    ptr_hashmap_put(cfg->block_to_node_map, bb, node);
 
     current_id++;
   }
@@ -185,8 +185,8 @@ cfg_destroy(FunctionCFG *cfg)
   if (!cfg)
     return;
 
-  // 1. 销毁 PtrHashMap (假设 API 如此)
-  ptrmap_destroy(cfg->block_to_node_map);
+  // 1. 销毁 PtrHashMap
+  //    (它的内存属于 cfg->arena, 将在下一步被统一销毁)
 
   // 2. 销毁用于 CFG 节点、边 和 数组 的内部竞技场
   bump_destroy(&cfg->arena);
