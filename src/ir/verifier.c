@@ -2,6 +2,7 @@
 
 // 包含所有 IR 组件的完整定义
 #include "ir/basicblock.h"
+#include "ir/constant.h"
 #include "ir/context.h"
 #include "ir/function.h"
 #include "ir/global.h"
@@ -12,7 +13,8 @@
 #include "ir/value.h"
 #include "utils/id_list.h"
 
-#include <stdio.h> // for fprintf, stderr
+#include <stdint.h> // for uint64_t
+#include <stdio.h>  // for fprintf, stderr
 
 /*
  * =================================================================
@@ -180,7 +182,70 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
     VERIFY_ASSERT(use->value != NULL, vctx, value, "Instruction has a NULL operand (use->value is NULL).");
     VERIFY_ASSERT(use->value->type != NULL, vctx, use->value, "Instruction operand has NULL type.");
 
-    // TODO: 添加 SSA 支配性检查 (高级)
+    // --- SSA 支配性检查 (Intra-block) ---
+
+    // 规则: 一个 'def' (操作数) 必须支配它的 'use' (当前指令)
+
+    // 1. 跳过非指令的 'def' (常量, 参数, 全局变量等, 它们总是支配)
+    if (use->value->kind != IR_KIND_INSTRUCTION)
+    {
+      continue;
+    }
+
+    // 2. 跳过 PHI 节点 (它们有特殊的 SSA 规则, 在 'case IR_OP_PHI' 中单独检查)
+    // PHI 的 'use' 概念上发生在 *前驱块* 的末尾, 而不是当前块。
+    if (inst->opcode == IR_OP_PHI)
+    {
+      continue;
+    }
+
+    // 3. 跳过 'label' 类型的操作数 (用于 br/cond_br, 它们不是 SSA '值')
+    if (use->value->type->kind == IR_TYPE_LABEL)
+    {
+      continue;
+    }
+
+    // --- 核心检查 ---
+    IRInstruction *def_inst = container_of(use->value, IRInstruction, result);
+    IRBasicBlock *def_bb = def_inst->parent;
+    IRBasicBlock *use_bb = inst->parent; // inst 是 'use'
+
+    if (def_bb == use_bb)
+    {
+      // **Intra-block check (同块内检查)**
+      // 'def' 和 'use' 在同一个基本块中。
+      // 'def' 必须出现在 'use' *之前*。
+
+      bool def_found_before_use = false;
+      IDList *prev_node = inst->list_node.prev; // 从 'use' 指令的前一条开始
+
+      // 反向遍历, 直到撞到链表头
+      while (prev_node != &use_bb->instructions)
+      {
+        if (prev_node == &def_inst->list_node)
+        {
+          def_found_before_use = true;
+          break;
+        }
+        prev_node = prev_node->prev;
+      }
+
+      VERIFY_ASSERT(def_found_before_use, vctx, &inst->result,
+                    "SSA Violation: Instruction operand is used *before* it is defined in the same basic block.");
+    }
+    else
+    {
+      // **Inter-block check (跨块检查)**
+      // 'def' 和 'use' 在不同的基本块中。
+      // 规则: def_bb 必须 *支配* (dominate) use_bb。
+      //
+      // TODO (Advanced): Implement full inter-block dominance check.
+      // This requires:
+      // 1. Building the complete Control-Flow Graph (CFG) for the function.
+      // 2. Running an analysis to build the Dominator Tree.
+      // 3. Querying the tree: dominator_tree_dominates(def_bb, use_bb).
+    }
+    // --- [!!] 检查结束 [!!] ---
   }
   int op_count = get_operand_count(inst);
 
