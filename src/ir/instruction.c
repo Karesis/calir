@@ -77,24 +77,24 @@ ir_instruction_erase_from_parent(IRInstruction *inst)
   if (!inst)
     return;
 
-  // 1. [新] 获取 Context
+  // 1. 获取 Context
   //    inst -> BasicBlock -> Function -> Module -> Context
   assert(inst->parent != NULL && "Instruction has no parent BasicBlock");
   assert(inst->parent->parent != NULL && "BasicBlock has no parent Function");
   assert(inst->parent->parent->parent != NULL && "Function has no parent Module");
   IRContext *ctx = inst->parent->parent->parent->context;
 
-  // 2. [修改] 将所有对该指令结果的使用替换为 'undef'
+  // 2. 将所有对该指令结果的使用替换为 'undef'
   if (inst->result.type->kind != IR_TYPE_VOID && !list_empty(&inst->result.uses))
   {
-    // [修改] 调用新的 Context API
+    //  调用 Context API
     IRValueNode *undef = ir_constant_get_undef(ctx, inst->result.type);
     ir_value_replace_all_uses_with(&inst->result, undef);
   }
   assert(list_empty(&inst->result.uses) && "Instruction result still in use!");
 
-  // 3. [修改] 解开 (unlink) 所有 Operands (IRUse 边)
-  //    我们不再 "destroy" use, 只是 "unlink"
+  // 3. 解开 (unlink) 所有 Operands (IRUse 边)
+  //    不 "destroy" use, 只是 "unlink"
   IDList *iter, *temp;
   list_for_each_safe(&inst->operands, iter, temp)
   {
@@ -267,7 +267,7 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     break;
 
   case IR_OP_GEP:
-    fprintf(stream, "getelementptr ");
+    fprintf(stream, "gep ");
     if (inst->as.gep.inbounds)
     {
       fprintf(stream, "inbounds ");
