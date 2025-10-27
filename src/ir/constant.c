@@ -26,7 +26,7 @@ ir_constant_create_undef(IRContext *ctx, IRType *type)
   konst->value.type = type;
   konst->value.name = NULL; // 常量没有名字
 
-  // [修正] 显式初始化 'uses' 链表
+  // 显式初始化 'uses' 链表
   list_init(&konst->value.uses);
 
   // --- 初始化子类 (IRConstant) ---
