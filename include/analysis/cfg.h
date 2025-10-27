@@ -74,7 +74,6 @@ void cfg_destroy(FunctionCFG *cfg);
 static inline CFGNode *
 cfg_get_node(FunctionCFG *cfg, IRBasicBlock *bb)
 {
-  // 假设你的 PtrHashMap API 已经正确引入
   return (CFGNode *)ptr_hashmap_get(cfg->block_to_node_map, bb);
 }
 
