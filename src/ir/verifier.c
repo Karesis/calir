@@ -1,6 +1,7 @@
 #include "ir/verifier.h"
 
-// 包含所有 IR 组件的完整定义
+#include "analysis/cfg.h"
+#include "analysis/dom_tree.h"
 #include "ir/basicblock.h"
 #include "ir/constant.h"
 #include "ir/context.h"
@@ -11,6 +12,7 @@
 #include "ir/type.h"
 #include "ir/use.h"
 #include "ir/value.h"
+#include "utils/bump.h"
 #include "utils/id_list.h"
 
 #include <stdint.h> // for uint64_t
@@ -28,6 +30,8 @@ typedef struct
   IRFunction *current_function;
   IRBasicBlock *current_block;
   bool has_error;
+  DominatorTree *dom_tree; // 缓存支配树
+  Bump analysis_arena;     // 用于所有函数级分析的竞技场
 } VerifierContext;
 
 /**
@@ -287,16 +291,16 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
     else
     {
       // **Inter-block check (跨块检查)**
-      // 'def' 和 'use' 在不同的基本块中。
       // 规则: def_bb 必须 *支配* (dominate) use_bb。
-      //
-      // TODO (Advanced): Implement full inter-block dominance check.
-      // This requires:
-      // 1. Building the complete Control-Flow Graph (CFG) for the function.
-      // 2. Running an analysis to build the Dominator Tree.
-      // 3. Querying the tree: dominator_tree_dominates(def_bb, use_bb).
+
+      // (def_bb 在这里是一个 IRBasicBlock*)
+      bool dominates = dom_tree_dominates(vctx->dom_tree, def_bb, use_bb);
+
+      VERIFY_ASSERT(dominates, vctx, &inst->result,
+                    "SSA VIOLATION: Definition in block '%s' does not dominate use in block '%s'.",
+                    def_bb->label_address.name, use_bb->label_address.name);
     }
-    // --- [!!] 检查结束 [!!] ---
+    // --- 检查结束 ---
   }
   int op_count = get_operand_count(inst);
 
@@ -621,6 +625,11 @@ ir_verify_function(IRFunction *func)
 
   vctx.current_function = func; // 设置上下文
 
+  // 初始化分析
+  bump_init(&vctx.analysis_arena); // 初始化竞技场
+  FunctionCFG *cfg = NULL;
+  DominatorTree *doms = NULL;
+
   if (list_empty(&func->basic_blocks))
   {
     // 这是一个声明 (e.g., 'declare i32 @puts(ptr)')
@@ -632,8 +641,23 @@ ir_verify_function(IRFunction *func)
       VERIFY_ASSERT(arg->value.name == NULL, &vctx, &arg->value,
                     "Argument in a function *declaration* cannot have a name.");
     }
-    return !vctx.has_error; // 声明验证通过
+    bump_destroy(&vctx.analysis_arena); // 清理空分析的竞技场
+    return !vctx.has_error;             // 声明验证通过
   }
+
+  // --- 0. 运行分析遍 ---
+  // 仅对函数定义运行
+
+  // 1. 构建 CFG
+  cfg = cfg_build(func, &vctx.analysis_arena);
+
+  // 2. 构建支配树
+  doms = dom_tree_build(cfg, &vctx.analysis_arena);
+
+  vctx.dom_tree = doms; // <-- 存入上下文
+
+  // (如果 doms == NULL，说明 cfg 为空或入口块为空，
+  //  后续的 dom_tree_dominates 查询会安全地处理 NULL)
 
   // --- 1. 验证函数参数 ---
   IDList *arg_it;
@@ -657,9 +681,22 @@ ir_verify_function(IRFunction *func)
 
     if (!verify_basic_block(&vctx, bb))
     {
-      return false; // 错误已打印
+      // 错误退出时清理
+      if (doms)
+        dom_tree_destroy(doms); // (空操作，但保持对称)
+      if (cfg)
+        cfg_destroy(cfg);                 // (释放 cfg->arena)
+      bump_destroy(&vctx.analysis_arena); // 释放 vctx.analysis_arena
+      return false;                       // 错误已打印
     }
   }
+
+  // 成功退出时清理
+  if (doms)
+    dom_tree_destroy(doms);
+  if (cfg)
+    cfg_destroy(cfg);
+  bump_destroy(&vctx.analysis_arena);
 
   return !vctx.has_error;
 }
