@@ -1,4 +1,4 @@
-/* src/hashmap/ptr.c */
+/* utils/hashmap/ptr.c */
 #include "utils/hashmap/ptr.h"
 #include "utils/bump.h"
 #include <assert.h>
@@ -6,6 +6,8 @@
 
 #define XXH_INLINE_ALL
 #include "utils/xxhash.h"
+
+#include "utils/hashmap/common.h"
 
 /*
  * ========================================
@@ -24,6 +26,7 @@ struct PtrHashMap
 {
   Bump *arena;
   PtrHashMapBucket *buckets;
+  uint8_t *states;
   size_t num_entries;
   size_t num_tombstones;
   size_t num_buckets;
@@ -35,40 +38,10 @@ struct PtrHashMap
  * ========================================
  */
 
-static void *
-ptr_hashmap_get_empty_key(void)
-{
-  return NULL;
-}
-
-static void *
-ptr_hashmap_get_tombstone_key(void)
-{
-  return (void *)-1;
-}
-
 static inline bool
 ptr_hashmap_key_is_equal(void *k1, void *k2)
 {
   return k1 == k2;
-}
-
-static inline bool
-ptr_hashmap_key_is_empty(void *k)
-{
-  return k == NULL;
-}
-
-static inline bool
-ptr_hashmap_key_is_tombstone(void *k)
-{
-  return k == (void *)-1;
-}
-
-static inline bool
-ptr_hashmap_key_is_sentinel(void *k)
-{
-  return k == NULL || k == (void *)-1;
 }
 
 static inline uint64_t
@@ -88,7 +61,7 @@ ptr_hashmap_get_hash(void *key)
 #define CHM_K_TYPE void *
 #define CHM_V_TYPE void *
 #define CHM_API_TYPE PtrHashMap
-#define CHM_STRUCT_TYPE PtrHashMap_t
+#define CHM_STRUCT_TYPE PtrHashMap
 #define CHM_BUCKET_TYPE PtrHashMapBucket
 
 // 实例化泛型函数
@@ -110,19 +83,26 @@ PtrHashMap *
 ptr_hashmap_create(Bump *arena, size_t initial_capacity)
 {
   assert(arena != NULL && "Bump arena cannot be NULL");
-  // 调用泛型的 next_pow2
   size_t num_buckets = ptr_hashmap_get_min_buckets_for_entries(initial_capacity);
 
   PtrHashMap *map = BUMP_ALLOC(arena, PtrHashMap);
   if (!map)
     return NULL;
 
-  PtrHashMapBucket *buckets = BUMP_ALLOC_SLICE_ZEROED(arena, PtrHashMapBucket, num_buckets);
+  // Buckets 不需要清零, 状态由 'states' 数组管理
+  PtrHashMapBucket *buckets = BUMP_ALLOC_SLICE(arena, PtrHashMapBucket, num_buckets);
   if (!buckets)
     return NULL;
 
+  // States *必须* 清零 (BUMP_ALLOC_SLICE_ZEROED)
+  // 因为 BUCKET_EMPTY == 0
+  uint8_t *states = BUMP_ALLOC_SLICE_ZEROED(arena, uint8_t, num_buckets);
+  if (!states)
+    return NULL; // OOM
+
   map->arena = arena;
   map->buckets = buckets;
+  map->states = states; // <-- 设置 states 指针
   map->num_entries = 0;
   map->num_tombstones = 0;
   map->num_buckets = num_buckets;
@@ -146,58 +126,63 @@ bool
 ptr_hashmap_remove(PtrHashMap *map, void *key)
 {
   PtrHashMapBucket *bucket;
-  // 调用泛型的 find_bucket
   if (ptr_hashmap_find_bucket(map, key, &bucket))
   {
-    bucket->key = ptr_hashmap_get_tombstone_key(); // 特化的哨兵
-    bucket->value = NULL;
+    // Key 存在, 将其槽位标记为墓碑
+    size_t bucket_idx = (size_t)(bucket - map->buckets);
+    map->states[bucket_idx] = BUCKET_TOMBSTONE;
+
+    // (不再需要设置 bucket->key = TOMBSTONE_K)
+    bucket->value = NULL; // (良好实践)
     map->num_entries--;
     map->num_tombstones++;
     return true;
   }
-  return false;
+  return false; // Key 不存在
 }
 
 bool
 ptr_hashmap_put(PtrHashMap *map, void *key, void *value)
 {
-  assert(key != NULL && "Key cannot be NULL (reserved for Empty)");
-  assert(key != (void *)-1 && "Key cannot be -1 (reserved for Tombstone)");
-
   PtrHashMapBucket *bucket;
-  // 调用泛型的 find_bucket
   bool found = ptr_hashmap_find_bucket(map, key, &bucket);
 
   if (found)
   {
+    // Key 已存在, 更新 value
     bucket->value = value;
     return true;
   }
 
+  // Key 不存在, 'bucket' 指向我们应该插入的槽位
   assert(bucket != NULL && "find_bucket must return a valid slot");
 
+  // 检查是否需要扩容
   size_t total_load = map->num_entries + map->num_tombstones + 1;
   if (total_load * 4 >= map->num_buckets * 3)
   {
-    // 调用泛型的 grow
-    if (!ptr_hashmap_grow(map))
+    if (!ptr_hashmap_grow(map)) // grow() 已被重构为使用 states
     {
       return false; // OOM on grow
     }
-    found = ptr_hashmap_find_bucket(map, key, &bucket); // 重新 find
+    // 扩容后, 必须重新查找槽位
+    found = ptr_hashmap_find_bucket(map, key, &bucket);
     assert(!found && "Key should not exist after grow");
     assert(bucket != NULL);
   }
 
-  if (ptr_hashmap_key_is_tombstone(bucket->key))
+  size_t bucket_idx = (size_t)(bucket - map->buckets);
+
+  // 如果我们复用了墓碑, 减少墓碑计数
+  if (map->states[bucket_idx] == BUCKET_TOMBSTONE)
   {
     map->num_tombstones--;
   }
 
-  // --- 这是 `ptr` 的特化逻辑 ---
-  // Key 被直接存储
+  // 插入新条目
   bucket->key = key;
   bucket->value = value;
+  map->states[bucket_idx] = BUCKET_FILLED; // <-- 标记为 FILLED
   map->num_entries++;
 
   return true;

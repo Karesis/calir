@@ -10,18 +10,37 @@
 typedef enum
 {
   // 终结者指令
-  IR_OP_RET, // return <val>
-  IR_OP_BR,  // branch <target_bb>
+  IR_OP_RET,     // return <val>
+  IR_OP_BR,      // branch <target_bb>
+  IR_OP_COND_BR, // branch <cond>, <true_bb>, <false_bb>
 
   // 二元运算
-  IR_OP_ADD, // add <type> <op1>, <op2>
-  IR_OP_SUB, // sub <type> <op1>, <op2>
+  IR_OP_ADD,  // add <type> <op1>, <op2>
+  IR_OP_SUB,  // sub <type> <op1>, <op2>
+  IR_OP_ICMP, // icmp <pred> <type> <op1>, <op2>
 
   // 内存操作
   IR_OP_ALLOCA,
   IR_OP_LOAD,
   IR_OP_STORE,
+  IR_OP_PHI, // phi <type> [ <val1>, <bb1> ], [ <val2>, <bb2> ], ...
+  IR_OP_GEP  // getelementptr
 } IROpcode;
+
+// ICMP (Integer Compare) 谓词
+typedef enum
+{
+  IR_ICMP_EQ,  // 'eq' (equal)
+  IR_ICMP_NE,  // 'ne' (not equal)
+  IR_ICMP_UGT, // 'ugt' (unsigned greater than)
+  IR_ICMP_UGE, // 'uge' (unsigned greater or equal)
+  IR_ICMP_ULT, // 'ult' (unsigned less than)
+  IR_ICMP_ULE, // 'ule' (unsigned less or equal)
+  IR_ICMP_SGT, // 'sgt' (signed greater than)
+  IR_ICMP_SGE, // 'sge' (signed greater or equal)
+  IR_ICMP_SLT, // 'slt' (signed less than)
+  IR_ICMP_SLE, // 'sle' (signed less or equal)
+} IRICmpPredicate;
 
 // 指令
 typedef struct
@@ -32,6 +51,19 @@ typedef struct
   IROpcode opcode;
   IDList operands; // 所使用的所有节点
   IRBasicBlock *parent;
+  union {
+    // 对应 IR_OP_ICMP
+    struct
+    {
+      IRICmpPredicate predicate;
+    } icmp;
+    // 对应 IR_OP_GEP
+    struct
+    {
+      IRType *source_type; // GEP 'inbounds' <type>, <ptr> ...
+      bool inbounds;
+    } gep;
+  } as;
 } IRInstruction;
 
 /**

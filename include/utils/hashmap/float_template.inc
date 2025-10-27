@@ -1,5 +1,5 @@
 /*
- * src/hashmap/float_template.inc
+ * utils/hashmap/float_template.inc
  *
  * 为单一浮点类型生成完整的哈希表实现。
  * * * 在包含此文件之前, 必须定义以下宏:
@@ -10,9 +10,11 @@
  * - FLOAT_API_TYPE:    公开的 Map 类型 (例如: F32HashMap)
  * - FLOAT_STRUCT_TYPE: 内部的 Map 结构体类型 (例如: F32HashMap_t)
  * - FLOAT_BUCKET_TYPE: 内部的 Bucket 结构体类型 (例如: F32HashMapBucket)
- * - FLOAT_EMPTY_K:     作为 'Empty' 哨兵的 Key 值 (例如: nanf(""))
- * - FLOAT_TOMBSTONE_K: 作为 'Tombstone' 哨兵的 Key 值 (例如: INFINITY)
  */
+
+#include "utils/hashmap/common.h"
+#include <assert.h>
+#include <math.h>
 
 /*
  * ========================================
@@ -30,6 +32,7 @@ struct FLOAT_STRUCT_TYPE
 {
   Bump *arena;
   FLOAT_BUCKET_TYPE *buckets;
+  uint8_t *states;
   size_t num_entries;
   size_t num_tombstones;
   size_t num_buckets;
@@ -41,48 +44,28 @@ struct FLOAT_STRUCT_TYPE
  * ========================================
  */
 
-static FLOAT_K_TYPE
-FLOAT_FUNC(get_empty_key)(void)
-{
-  return FLOAT_EMPTY_K;
-}
-
-static FLOAT_K_TYPE
-FLOAT_FUNC(get_tombstone_key)(void)
-{
-  return FLOAT_TOMBSTONE_K;
-}
-
 static inline bool
 FLOAT_FUNC(key_is_equal)(FLOAT_K_TYPE k1, FLOAT_K_TYPE k2)
 {
   // 正常的浮点数比较。
-  // NaN == NaN 会返回 false, is_empty() 会处理 NaN。
-  // Inf == Inf 会返回 true, is_tombstone() 会处理 Inf。
+  // 'Inf == Inf' 为 true (可以被找到)
+  // 'NaN == NaN' 为 false (不能被找到, 这就是为什么 'put' 必须禁止 NaN)
   return k1 == k2;
-}
-
-static inline bool
-FLOAT_FUNC(key_is_empty)(FLOAT_K_TYPE k)
-{
-  return isnan(k);
-}
-
-static inline bool
-FLOAT_FUNC(key_is_tombstone)(FLOAT_K_TYPE k)
-{
-  return isinf(k);
-}
-
-static inline bool
-FLOAT_FUNC(key_is_sentinel)(FLOAT_K_TYPE k)
-{
-  return isnan(k) || isinf(k);
 }
 
 static inline uint64_t
 FLOAT_FUNC(get_hash)(FLOAT_K_TYPE key)
 {
+  // 规范化 (normalize) -0.0, 使其哈希值与 0.0 相同。
+  // C (IEEE 754) 规定 0.0 == -0.0 (由 is_equal 处理),
+  // 所以它们 *必须* 哈希到同一个槽位。
+  if (key == 0.0)
+  {
+    // 这会将 -0.0 (0x80...0) 转换为 0.0 (0x00...0)
+    // 而 0.0 (0x00...0) 保持 0.0 (0x00...0)
+    key = 0.0;
+  }
+
   // 哈希浮点数的位模式 (bit pattern)
   return XXH3_64bits(&key, sizeof(key));
 }
@@ -118,18 +101,19 @@ FLOAT_FUNC(create)(Bump *arena, size_t initial_capacity)
   if (!map)
     return NULL;
 
-  FLOAT_BUCKET_TYPE *buckets = BUMP_ALLOC_SLICE_ZEROED(arena, FLOAT_BUCKET_TYPE, num_buckets);
+  // Buckets 不需要清零
+  FLOAT_BUCKET_TYPE *buckets = BUMP_ALLOC_SLICE(arena, FLOAT_BUCKET_TYPE, num_buckets);
   if (!buckets)
     return NULL;
 
-  // 用 'Empty' (NaN) 哨兵值填充
-  for (size_t i = 0; i < num_buckets; i++)
-  {
-    buckets[i].key = FLOAT_EMPTY_K;
-  }
+  // States *必须* 清零
+  uint8_t *states = BUMP_ALLOC_SLICE_ZEROED(arena, uint8_t, num_buckets);
+  if (!states)
+    return NULL;
 
   map->arena = arena;
   map->buckets = buckets;
+  map->states = states; // <-- 设置 states 指针
   map->num_entries = 0;
   map->num_tombstones = 0;
   map->num_buckets = num_buckets;
@@ -140,6 +124,7 @@ FLOAT_FUNC(create)(Bump *arena, size_t initial_capacity)
 void *
 FLOAT_FUNC(get)(const FLOAT_API_TYPE *map, FLOAT_K_TYPE key)
 {
+  // 'get' 一个 NaN 键将永远返回 NULL, 这是符合逻辑的
   FLOAT_BUCKET_TYPE *bucket;
   if (FLOAT_FUNC(find_bucket)(map, key, &bucket))
   {
@@ -151,6 +136,7 @@ FLOAT_FUNC(get)(const FLOAT_API_TYPE *map, FLOAT_K_TYPE key)
 bool
 FLOAT_FUNC(contains)(const FLOAT_API_TYPE *map, FLOAT_K_TYPE key)
 {
+  // 'contains' 一个 NaN 键将永远返回 false
   FLOAT_BUCKET_TYPE *bucket;
   return FLOAT_FUNC(find_bucket)(map, key, &bucket);
 }
@@ -158,10 +144,14 @@ FLOAT_FUNC(contains)(const FLOAT_API_TYPE *map, FLOAT_K_TYPE key)
 bool
 FLOAT_FUNC(remove)(FLOAT_API_TYPE *map, FLOAT_K_TYPE key)
 {
+  // 'remove' 一个 NaN 键将永远返回 false
   FLOAT_BUCKET_TYPE *bucket;
   if (FLOAT_FUNC(find_bucket)(map, key, &bucket))
   {
-    bucket->key = FLOAT_TOMBSTONE_K; // Tombstone (Inf)
+    // Key 存在, 将其槽位标记为墓碑
+    size_t bucket_idx = (size_t)(bucket - map->buckets);
+    map->states[bucket_idx] = BUCKET_TOMBSTONE;
+
     bucket->value = NULL;
     map->num_entries--;
     map->num_tombstones++;
@@ -174,8 +164,7 @@ bool
 FLOAT_FUNC(put)(FLOAT_API_TYPE *map, FLOAT_K_TYPE key, void *value)
 {
   // 检查哨兵值
-  assert(!isnan(key) && "Key cannot be NaN (reserved for 'Empty')");
-  assert(!isinf(key) && "Key cannot be Inf (reserved for 'Tombstone')");
+  assert(!isnan(key) && "Key cannot be NaN (due to 'NaN != NaN' comparison rule)");
 
   FLOAT_BUCKET_TYPE *bucket;
   bool found = FLOAT_FUNC(find_bucket)(map, key, &bucket);
@@ -200,13 +189,18 @@ FLOAT_FUNC(put)(FLOAT_API_TYPE *map, FLOAT_K_TYPE key, void *value)
     assert(bucket != NULL);
   }
 
-  if (FLOAT_FUNC(key_is_tombstone)(bucket->key))
+  size_t bucket_idx = (size_t)(bucket - map->buckets);
+
+  // 检查是否复用墓碑
+  if (map->states[bucket_idx] == BUCKET_TOMBSTONE)
   {
     map->num_tombstones--;
   }
 
+  // 插入新条目
   bucket->key = key;
   bucket->value = value;
+  map->states[bucket_idx] = BUCKET_FILLED; // <-- 标记为 FILLED
   map->num_entries++;
 
   return true;
@@ -229,5 +223,3 @@ FLOAT_FUNC(size)(const FLOAT_API_TYPE *map)
 #undef FLOAT_API_TYPE
 #undef FLOAT_STRUCT_TYPE
 #undef FLOAT_BUCKET_TYPE
-#undef FLOAT_EMPTY_K
-#undef FLOAT_TOMBSTONE_K

@@ -14,8 +14,39 @@
 
 // --- 内部辅助函数 (用于 dump) ---
 
+// 辅助函数：将 ICMP 谓词转换为字符串
+static const char *
+ir_icmp_predicate_to_string(IRICmpPredicate pred)
+{
+  switch (pred)
+  {
+  case IR_ICMP_EQ:
+    return "eq";
+  case IR_ICMP_NE:
+    return "ne";
+  case IR_ICMP_UGT:
+    return "ugt";
+  case IR_ICMP_UGE:
+    return "uge";
+  case IR_ICMP_ULT:
+    return "ult";
+  case IR_ICMP_ULE:
+    return "ule";
+  case IR_ICMP_SGT:
+    return "sgt";
+  case IR_ICMP_SGE:
+    return "sge";
+  case IR_ICMP_SLT:
+    return "slt";
+  case IR_ICMP_SLE:
+    return "sle";
+  default:
+    return "??";
+  }
+}
+
 /**
- * @brief (内部) 获取第 N 个操作数 (实现不变)
+ * @brief (内部) 获取第 N 个操作数
  */
 static IRValueNode *
 get_operand(IRInstruction *inst, int index)
@@ -35,10 +66,10 @@ get_operand(IRInstruction *inst, int index)
   return use->value;
 }
 
-// --- 生命周期 (新) ---
+// --- 生命周期  ---
 
 /**
- * @brief [新] 从其父基本块中安全地擦除一条指令
+ * @brief 从其父基本块中安全地擦除一条指令
  */
 void
 ir_instruction_erase_from_parent(IRInstruction *inst)
@@ -46,24 +77,24 @@ ir_instruction_erase_from_parent(IRInstruction *inst)
   if (!inst)
     return;
 
-  // 1. [新] 获取 Context
+  // 1. 获取 Context
   //    inst -> BasicBlock -> Function -> Module -> Context
   assert(inst->parent != NULL && "Instruction has no parent BasicBlock");
   assert(inst->parent->parent != NULL && "BasicBlock has no parent Function");
   assert(inst->parent->parent->parent != NULL && "Function has no parent Module");
   IRContext *ctx = inst->parent->parent->parent->context;
 
-  // 2. [修改] 将所有对该指令结果的使用替换为 'undef'
+  // 2. 将所有对该指令结果的使用替换为 'undef'
   if (inst->result.type->kind != IR_TYPE_VOID && !list_empty(&inst->result.uses))
   {
-    // [修改] 调用新的 Context API
+    //  调用 Context API
     IRValueNode *undef = ir_constant_get_undef(ctx, inst->result.type);
     ir_value_replace_all_uses_with(&inst->result, undef);
   }
   assert(list_empty(&inst->result.uses) && "Instruction result still in use!");
 
-  // 3. [修改] 解开 (unlink) 所有 Operands (IRUse 边)
-  //    我们不再 "destroy" use, 只是 "unlink"
+  // 3. 解开 (unlink) 所有 Operands (IRUse 边)
+  //    不 "destroy" use, 只是 "unlink"
   IDList *iter, *temp;
   list_for_each_safe(&inst->operands, iter, temp)
   {
@@ -76,7 +107,7 @@ ir_instruction_erase_from_parent(IRInstruction *inst)
   list_del(&inst->list_node);
 }
 
-// --- 调试 (实现基本不变) ---
+// --- 调试 ---
 
 void
 ir_instruction_dump(IRInstruction *inst, FILE *stream)
@@ -120,6 +151,24 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     ir_value_dump(op1, stream);
     break;
 
+  case IR_OP_COND_BR:
+    fprintf(stream, "br ");
+
+    // 获取 3 个操作数
+    IRValueNode *cond = get_operand(inst, 0);
+    IRValueNode *true_bb = get_operand(inst, 1);
+    IRValueNode *false_bb = get_operand(inst, 2);
+
+    assert(cond && true_bb && false_bb && "cond br needs 3 operands");
+
+    // 打印: br i1 %cond, label %true_bb, label %false_bb
+    ir_value_dump(cond, stream);
+    fprintf(stream, ", ");
+    ir_value_dump(true_bb, stream);
+    fprintf(stream, ", ");
+    ir_value_dump(false_bb, stream);
+    break;
+
   case IR_OP_ADD:
   case IR_OP_SUB:
     fprintf(stream, (inst->opcode == IR_OP_ADD) ? "add " : "sub ");
@@ -128,9 +177,6 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     assert(op1 && op2 && "Binary operator needs two operands");
 
     ir_type_dump(op1->type, stream);
-    // [修改] 假设 ir_value_dump 能正确处理 name
-    // (如果 ir_value_dump 也打印 '%', 这里需要调整)
-    // 假设 ir_value_dump 只打印 "type %name"
     fprintf(stream, " ");
     ir_value_dump(op1, stream);
     fprintf(stream, ", ");
@@ -140,7 +186,7 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
   case IR_OP_ALLOCA:
     fprintf(stream, "alloca ");
     assert(inst->result.type->kind == IR_TYPE_PTR);
-    ir_type_dump(inst->result.type->pointee_type, stream);
+    ir_type_dump(inst->result.type->as.pointee_type, stream);
     break;
 
   case IR_OP_LOAD:
@@ -162,6 +208,94 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     ir_value_dump(op1, stream);
     fprintf(stream, ", ");
     ir_value_dump(op2, stream);
+    break;
+
+  case IR_OP_ICMP:
+    // 1. 获取谓词字符串
+    const char *pred_str = ir_icmp_predicate_to_string(inst->as.icmp.predicate);
+
+    // 2. 获取操作数 (使用你已有的 get_operand)
+    op1 = get_operand(inst, 0); // lhs
+    op2 = get_operand(inst, 1); // rhs
+    assert(op1 && op2 && "icmp needs two operands");
+
+    // 3. 打印: icmp <pred> <ty> %lhs, %rhs
+    fprintf(stream, "icmp %s ", pred_str);
+    ir_type_dump(op1->type, stream); // 打印操作数类型
+    fprintf(stream, " ");
+    ir_value_dump(op1, stream);
+    fprintf(stream, ", ");
+    ir_value_dump(op2, stream);
+    break;
+
+  case IR_OP_PHI:
+    fprintf(stream, "phi ");
+    ir_type_dump(inst->result.type, stream); // 打印 "i32"
+    fprintf(stream, " ");
+
+    // 遍历操作数，每次跳 2 个
+    IDList *head = &inst->operands;
+    IDList *iter = head->next;
+    int i = 0;
+    while (iter != head)
+    {
+      if (i > 0)
+      {
+        fprintf(stream, ", "); // 在条目之间打印逗号
+      }
+
+      // 1. 获取 Value
+      IRUse *val_use = list_entry(iter, IRUse, user_node);
+      IRValueNode *val = val_use->value;
+
+      // 2. 获取 BasicBlock
+      iter = iter->next; // 移动到下一个
+      assert(iter != head && "PHI node must have [val, bb] pairs");
+      IRUse *bb_use = list_entry(iter, IRUse, user_node);
+      IRValueNode *bb = bb_use->value;
+
+      // 3. 打印 "[ %val, %bb_label ]"
+      fprintf(stream, "[ ");
+      ir_value_dump(val, stream);
+      fprintf(stream, ", ");
+      ir_value_dump(bb, stream); // 这会打印 "label %name"
+      fprintf(stream, " ]");
+
+      iter = iter->next; // 移动到下一对
+      i++;
+    }
+    break;
+
+  case IR_OP_GEP:
+    fprintf(stream, "gep ");
+    if (inst->as.gep.inbounds)
+    {
+      fprintf(stream, "inbounds ");
+    }
+
+    // 1. 打印源类型
+    ir_type_dump(inst->as.gep.source_type, stream);
+    fprintf(stream, ", ");
+
+    // 2. 打印基指针 (操作数 0)
+    IRValueNode *base_ptr = get_operand(inst, 0);
+    assert(base_ptr != NULL);
+    ir_value_dump(base_ptr, stream); // "ptr %name"
+
+    // 3. 遍历打印所有索引 (操作数 1...N)
+    IDList *ghead = &inst->operands;
+    IDList *giter = ghead->next->next; // [!!] 跳过 base_ptr
+
+    while (giter != ghead)
+    {
+      IRUse *use = list_entry(giter, IRUse, user_node);
+      IRValueNode *index = use->value;
+
+      fprintf(stream, ", ");
+      ir_value_dump(index, stream); // "i32 %idx" 或 "i32 0"
+
+      giter = giter->next;
+    }
     break;
 
   default:

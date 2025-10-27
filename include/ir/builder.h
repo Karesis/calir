@@ -1,6 +1,7 @@
 #ifndef IR_BUILDER_H
 #define IR_BUILDER_H
 
+#include "ir/instruction.h"
 #include "ir/value.h" // 需要 IRValueNode
 #include <stddef.h>   // 需要 size_t
 
@@ -57,6 +58,10 @@ IRValueNode *ir_builder_create_ret(IRBuilder *builder, IRValueNode *val);
 /** @brief 构建 'br <target_bb>' (无条件跳转) */
 IRValueNode *ir_builder_create_br(IRBuilder *builder, IRValueNode *target_bb);
 
+/** @brief 构建 'br i1 <cond>, label <true_bb>, label <false_bb>' (有条件跳转) */
+IRValueNode *ir_builder_create_cond_br(IRBuilder *builder, IRValueNode *cond, IRValueNode *true_bb,
+                                       IRValueNode *false_bb);
+
 // --- API: 二元运算 ---
 
 /** @brief 构建 'add <type> <lhs>, <rhs>' */
@@ -64,6 +69,9 @@ IRValueNode *ir_builder_create_add(IRBuilder *builder, IRValueNode *lhs, IRValue
 
 /** @brief 构建 'sub <type> <lhs>, <rhs>' */
 IRValueNode *ir_builder_create_sub(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs);
+
+/** @brief 构建 'icmp <pred> <type> <op1>, <op2>‘ */
+IRValueNode *ir_builder_create_icmp(IRBuilder *builder, IRICmpPredicate pred, IRValueNode *lhs, IRValueNode *rhs);
 
 // --- API: 内存操作 ---
 
@@ -75,5 +83,42 @@ IRValueNode *ir_builder_create_load(IRBuilder *builder, IRType *result_type, IRV
 
 /** @brief 构建 'store <val>, <ptr>' (e.g., store i32 %a, ptr %p) */
 IRValueNode *ir_builder_create_store(IRBuilder *builder, IRValueNode *val, IRValueNode *ptr);
+
+/**
+ * @brief 构建 'getelementptr <ty>, <ptr>, <idx1>, <idx2>, ...'
+ *
+ * @param builder Builder
+ * @param source_type GEP 要索引的源类型 (例如 Array 或 Struct)
+ * @param base_ptr 指向该类型的基指针
+ * @param indices 索引的数组 (IRValueNode* 数组)
+ * @param num_indices 索引的数量
+ * @param inbounds 是否为 'inbounds' (安全访问)
+ * @return 指向计算出的新指针的 ValueNode
+ */
+IRValueNode *ir_builder_create_gep(IRBuilder *builder, IRType *source_type, IRValueNode *base_ptr,
+                                   IRValueNode **indices, size_t num_indices, bool inbounds);
+
+// --- API: PHI 节点 ---
+
+/**
+ * @brief 构建 'phi <type>' (不带操作数)
+ *
+ * *重要*: 此指令将插入到当前基本块的 *开头*,
+ * 而不是 builder 的当前插入点。
+ *
+ * @param builder Builder
+ * @param type PHI 节点的结果类型 (e.g., i32)
+ * @return 指向新创建的 PHI 指令的 ValueNode
+ */
+IRValueNode *ir_builder_create_phi(IRBuilder *builder, IRType *type);
+
+/**
+ * @brief 向一个 PHI 节点添加一个 [value, basic_block] 对
+ *
+ * @param phi_node 必须是一个 IR_OP_PHI 指令的 ValueNode
+ * @param value 传入的值
+ * @param incoming_bb 传入值对应的基本块
+ */
+void ir_phi_add_incoming(IRValueNode *phi_node, IRValueNode *value, IRBasicBlock *incoming_bb);
 
 #endif // IR_BUILDER_H

@@ -193,7 +193,15 @@ void bump_set_allocation_limit(Bump *bump, size_t limit);
  */
 size_t bump_get_allocated_bytes(Bump *bump);
 
-// 分配单个 T 实例
+/**
+ * @brief 分配单个 T 实例
+ *
+ * @param bump_ptr (Bump *) Arena 指针。
+ * [!!!] 注意：传入 (Bump *)，不要传入 (Bump **)。
+ * 例如：BUMP_ALLOC(my_arena, ...)  [正确]
+ * BUMP_ALLOC(&my_arena, ...) [错误]
+ * @param T 要分配的类型
+ */
 #define BUMP_ALLOC(bump_ptr, T) ((T *)bump_alloc((bump_ptr), sizeof(T), _Alignof(T)))
 
 // 分配 T 的数组（未初始化）

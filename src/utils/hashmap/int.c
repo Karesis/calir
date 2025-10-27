@@ -1,6 +1,7 @@
 #include "utils/hashmap/int.h"
 #include "utils/bump.h"
 #include <assert.h>
+#include <limits.h>
 #include <string.h>
 
 // 1. 包含 xxhash.h 并内联实现
@@ -25,8 +26,6 @@
 #define INT_API_TYPE I64HashMap
 #define INT_STRUCT_TYPE I64HashMap
 #define INT_BUCKET_TYPE I64HashMapBucket
-#define INT_EMPTY_K (int64_t)0
-#define INT_TOMBSTONE_K (int64_t)-1
 #include "utils/hashmap/int_template.inc"
 
 /* --- uint64_t --- */
@@ -36,8 +35,6 @@
 #define INT_API_TYPE U64HashMap
 #define INT_STRUCT_TYPE U64HashMap
 #define INT_BUCKET_TYPE U64HashMapBucket
-#define INT_EMPTY_K (uint64_t)0
-#define INT_TOMBSTONE_K (uint64_t)-1
 #include "utils/hashmap/int_template.inc"
 
 /*
@@ -53,8 +50,6 @@
 #define INT_API_TYPE I32HashMap
 #define INT_STRUCT_TYPE I32HashMap
 #define INT_BUCKET_TYPE I32HashMapBucket
-#define INT_EMPTY_K (int32_t)0
-#define INT_TOMBSTONE_K (int32_t)-1
 #include "utils/hashmap/int_template.inc"
 
 /* --- uint32_t --- */
@@ -64,8 +59,6 @@
 #define INT_API_TYPE U32HashMap
 #define INT_STRUCT_TYPE U32HashMap
 #define INT_BUCKET_TYPE U32HashMapBucket
-#define INT_EMPTY_K (uint32_t)0
-#define INT_TOMBSTONE_K (uint32_t)-1
 #include "utils/hashmap/int_template.inc"
 
 /*
@@ -81,8 +74,6 @@
 #define INT_API_TYPE I16HashMap
 #define INT_STRUCT_TYPE I16HashMap
 #define INT_BUCKET_TYPE I16HashMapBucket
-#define INT_EMPTY_K (int16_t)0
-#define INT_TOMBSTONE_K (int16_t)-1
 #include "utils/hashmap/int_template.inc"
 
 /* --- uint16_t --- */
@@ -92,8 +83,6 @@
 #define INT_API_TYPE U16HashMap
 #define INT_STRUCT_TYPE U16HashMap
 #define INT_BUCKET_TYPE U16HashMapBucket
-#define INT_EMPTY_K (uint16_t)0
-#define INT_TOMBSTONE_K (uint16_t)-1
 #include "utils/hashmap/int_template.inc"
 
 /*
@@ -109,8 +98,6 @@
 #define INT_API_TYPE I8HashMap
 #define INT_STRUCT_TYPE I8HashMap
 #define INT_BUCKET_TYPE I8HashMapBucket
-#define INT_EMPTY_K (int8_t)0
-#define INT_TOMBSTONE_K (int8_t)-1
 #include "utils/hashmap/int_template.inc"
 
 /* --- uint8_t --- */
@@ -120,8 +107,6 @@
 #define INT_API_TYPE U8HashMap
 #define INT_STRUCT_TYPE U8HashMap
 #define INT_BUCKET_TYPE U8HashMapBucket
-#define INT_EMPTY_K (uint8_t)0
-#define INT_TOMBSTONE_K (uint8_t)-1
 #include "utils/hashmap/int_template.inc"
 
 /*
@@ -137,8 +122,6 @@
 #define INT_API_TYPE SizeHashMap
 #define INT_STRUCT_TYPE SizeHashMap
 #define INT_BUCKET_TYPE SizeHashMapBucket
-#define INT_EMPTY_K (size_t)0
-#define INT_TOMBSTONE_K (size_t)-1
 #include "utils/hashmap/int_template.inc"
 
 /* --- intptr_t --- */
@@ -148,8 +131,6 @@
 #define INT_API_TYPE IPtrHashMap
 #define INT_STRUCT_TYPE IPtrHashMap
 #define INT_BUCKET_TYPE IPtrHashMapBucket
-#define INT_EMPTY_K (intptr_t)0
-#define INT_TOMBSTONE_K (intptr_t)-1
 #include "utils/hashmap/int_template.inc"
 
 /* --- uintptr_t --- */
@@ -159,8 +140,6 @@
 #define INT_API_TYPE UPtrHashMap
 #define INT_STRUCT_TYPE UPtrHashMap
 #define INT_BUCKET_TYPE UPtrHashMapBucket
-#define INT_EMPTY_K (uintptr_t)0
-#define INT_TOMBSTONE_K (uintptr_t)-1
 #include "utils/hashmap/int_template.inc"
 
 /*

@@ -1,7 +1,8 @@
 #include "ir/module.h"
 #include "ir/context.h"  // <-- [新] 核心依赖
 #include "ir/function.h" // 需要 function_dump
-#include "utils/bump.h"  // <-- [新] 需要 BUMP_ALLOC 和 BUMP_ALLOC_ZEROED
+#include "ir/global.h"
+#include "utils/bump.h" // <-- [新] 需要 BUMP_ALLOC 和 BUMP_ALLOC_ZEROED
 
 #include <assert.h>
 #include <stdlib.h>
@@ -45,7 +46,6 @@ ir_module_create(IRContext *ctx, const char *name)
 /**
  * @brief 将模块的 IR 打印到指定的流 (例如 stdout)
  *
- * (此函数保持不变, 仅更新依赖)
  */
 void
 ir_module_dump(IRModule *mod, FILE *stream)
@@ -59,9 +59,19 @@ ir_module_dump(IRModule *mod, FILE *stream)
   fprintf(stream, "; ModuleID = '%s'\n", mod->name);
   fprintf(stream, "\n");
 
-  // ... (全局变量的 dump 逻辑不变) ...
+  // 打印所有全局变量
+  IDList *global_iter;
+  list_for_each(&mod->globals, global_iter)
+  {
+    IRGlobalVariable *global = list_entry(global_iter, IRGlobalVariable, list_node);
+    ir_global_variable_dump(global, stream);
+  }
+  if (!list_empty(&mod->globals))
+  {
+    fprintf(stream, "\n"); // 在全局变量和函数之间加个空行
+  }
 
-  // 2. 打印所有函数 (依赖 ir_function_dump)
+  // 打印所有函数 (依赖 ir_function_dump)
   IDList *iter_func;
   list_for_each(&mod->functions, iter_func)
   {

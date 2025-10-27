@@ -258,7 +258,7 @@ alloc_layout_slow(Bump *bump, BumpLayout layout)
   // 6. 在新 Chunk 上分配 (快速路径)
   // 这一次 *必须* 成功
 
-  // (这里我们直接内联实现了 `try_alloc_layout_fast`)
+  // (这里直接内联实现了 `try_alloc_layout_fast`)
 
   ChunkFooter *footer = new_footer;
   unsigned char *ptr = footer->ptr;

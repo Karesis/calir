@@ -21,7 +21,8 @@ typedef enum
   IR_TYPE_F64,
   IR_TYPE_PTR,   // 指针类型
   IR_TYPE_LABEL, // 基本块标签类型
-  // 未来: IR_TYPE_STRUCT, IR_TYPE_FUNCTION
+  IR_TYPE_ARRAY, //
+  IR_TYPE_STRUCT // (先实现 Array)
 } IRTypeKind;
 
 /**
@@ -31,7 +32,27 @@ typedef struct IRType IRType;
 struct IRType
 {
   IRTypeKind kind;
-  IRType *pointee_type; // 仅用于 IR_TYPE_PTR
+  // 用于存储特定类型数据的联合
+  union {
+    // 对应 IR_TYPE_PTR
+    IRType *pointee_type;
+
+    // 对应 IR_TYPE_ARRAY
+    struct
+    {
+      IRType *element_type;
+      size_t element_count;
+    } array;
+
+    // 对应 IR_TYPE_STRUCT (稍后实现)
+    struct
+    {
+      IRType **member_types; // 成员类型列表
+      size_t member_count;   // 成员数量
+      const char *name;      // (可选) 结构体名 e.g., "my_struct"
+    } aggregate;
+
+  } as;
 };
 
 /*
@@ -59,6 +80,25 @@ IRType *ir_type_create_primitive(IRContext *ctx, IRTypeKind kind);
  * @return 指向新类型的 IRType*
  */
 IRType *ir_type_create_ptr(IRContext *ctx, IRType *pointee_type);
+
+/**
+ * @brief [内部] 创建一个新的数组类型
+ * @param ctx Context
+ * @param element_type 数组元素的类型
+ * @param element_count 数组元素的数量
+ * @return 指向新类型的 IRType*
+ */
+IRType *ir_type_create_array(IRContext *ctx, IRType *element_type, size_t element_count);
+
+/**
+ * @brief [内部] 创建一个新的结构体类型
+ * @param ctx Context
+ * @param member_types 成员类型的数组 (将被拷贝)
+ * @param member_count 成员的数量
+ * @param name (可选) 结构体的名字 (将被 intern)
+ * @return 指向新类型的 IRType*
+ */
+IRType *ir_type_create_struct(IRContext *ctx, IRType **member_types, size_t member_count, const char *name);
 
 // --- 调试 API (保持不变) ---
 

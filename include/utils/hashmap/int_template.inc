@@ -10,9 +10,10 @@
  * - INT_API_TYPE:    公开的 Map 类型 (例如: I64HashMap)
  * - INT_STRUCT_TYPE: 内部的 Map 结构体类型 (例如: I64HashMap_t)
  * - INT_BUCKET_TYPE: 内部的 Bucket 结构体类型 (例如: I64HashMapBucket)
- * - INT_EMPTY_K:     作为 'Empty' 哨兵的 Key 值 (例如: (int64_t)0)
- * - INT_TOMBSTONE_K: 作为 'Tombstone' 哨兵的 Key 值 (例如: (int64_t)-1)
  */
+
+// 包含状态定义
+#include "utils/hashmap/common.h"
 
 // --- 宏工具 (在 int.c 中定义) ---
 // #define _INT_PASTE3(a, b, c) a##b##c
@@ -35,6 +36,7 @@ struct INT_STRUCT_TYPE
 {
   Bump *arena;
   INT_BUCKET_TYPE *buckets;
+  uint8_t *states; // 状态数组
   size_t num_entries;
   size_t num_tombstones;
   size_t num_buckets;
@@ -46,40 +48,10 @@ struct INT_STRUCT_TYPE
  * ========================================
  */
 
-static INT_K_TYPE
-INT_FUNC(get_empty_key)(void)
-{
-  return INT_EMPTY_K;
-}
-
-static INT_K_TYPE
-INT_FUNC(get_tombstone_key)(void)
-{
-  return INT_TOMBSTONE_K;
-}
-
 static inline bool
 INT_FUNC(key_is_equal)(INT_K_TYPE k1, INT_K_TYPE k2)
 {
   return k1 == k2;
-}
-
-static inline bool
-INT_FUNC(key_is_empty)(INT_K_TYPE k)
-{
-  return k == INT_EMPTY_K;
-}
-
-static inline bool
-INT_FUNC(key_is_tombstone)(INT_K_TYPE k)
-{
-  return k == INT_TOMBSTONE_K;
-}
-
-static inline bool
-INT_FUNC(key_is_sentinel)(INT_K_TYPE k)
-{
-  return k == INT_EMPTY_K || k == INT_TOMBSTONE_K;
 }
 
 static inline uint64_t
@@ -120,12 +92,20 @@ INT_FUNC(create)(Bump *arena, size_t initial_capacity)
   if (!map)
     return NULL;
 
-  INT_BUCKET_TYPE *buckets = BUMP_ALLOC_SLICE_ZEROED(arena, INT_BUCKET_TYPE, num_buckets);
+  // Buckets 不需要清零, 状态由 'states' 数组管理
+  INT_BUCKET_TYPE *buckets = BUMP_ALLOC_SLICE(arena, INT_BUCKET_TYPE, num_buckets);
   if (!buckets)
     return NULL;
 
+  // States *必须* 清零 (BUMP_ALLOC_SLICE_ZEROED)
+  // 因为 BUCKET_EMPTY == 0
+  uint8_t *states = BUMP_ALLOC_SLICE_ZEROED(arena, uint8_t, num_buckets);
+  if (!states)
+    return NULL; // OOM
+
   map->arena = arena;
   map->buckets = buckets;
+  map->states = states; // <-- 设置 states 指针
   map->num_entries = 0;
   map->num_tombstones = 0;
   map->num_buckets = num_buckets;
@@ -157,33 +137,36 @@ INT_FUNC(remove)(INT_API_TYPE *map, INT_K_TYPE key)
   INT_BUCKET_TYPE *bucket;
   if (INT_FUNC(find_bucket)(map, key, &bucket))
   {
-    bucket->key = INT_TOMBSTONE_K;
-    bucket->value = NULL;
+    // Key 存在, 将其槽位标记为墓碑
+    size_t bucket_idx = (size_t)(bucket - map->buckets);
+    map->states[bucket_idx] = BUCKET_TOMBSTONE;
+
+    bucket->value = NULL; // (可选, 但良好实践)
+
     map->num_entries--;
     map->num_tombstones++;
     return true;
   }
-  return false;
+  return false; // Key 不存在
 }
 
 bool
 INT_FUNC(put)(INT_API_TYPE *map, INT_K_TYPE key, void *value)
 {
-  // 检查哨兵值
-  assert(key != INT_EMPTY_K && "Key cannot be the 'Empty' sentinel");
-  assert(key != INT_TOMBSTONE_K && "Key cannot be the 'Tombstone' sentinel");
-
   INT_BUCKET_TYPE *bucket;
   bool found = INT_FUNC(find_bucket)(map, key, &bucket);
 
   if (found)
   {
+    // Key 已存在, 更新 value
     bucket->value = value;
     return true;
   }
 
+  // Key 不存在, 'bucket' 指向我们应该插入的槽位
   assert(bucket != NULL && "find_bucket must return a valid slot");
 
+  // 检查是否需要扩容
   size_t total_load = map->num_entries + map->num_tombstones + 1;
   if (total_load * 4 >= map->num_buckets * 3)
   {
@@ -191,19 +174,24 @@ INT_FUNC(put)(INT_API_TYPE *map, INT_K_TYPE key, void *value)
     {
       return false; // OOM on grow
     }
+    // 扩容后, 必须重新查找槽位
     found = INT_FUNC(find_bucket)(map, key, &bucket);
     assert(!found && "Key should not exist after grow");
     assert(bucket != NULL);
   }
 
-  if (INT_FUNC(key_is_tombstone)(bucket->key))
+  size_t bucket_idx = (size_t)(bucket - map->buckets);
+
+  // 如果我们复用了墓碑, 减少墓碑计数
+  if (map->states[bucket_idx] == BUCKET_TOMBSTONE)
   {
     map->num_tombstones--;
   }
 
-  // 整数 Key, 直接存储
+  // 插入新条目
   bucket->key = key;
   bucket->value = value;
+  map->states[bucket_idx] = BUCKET_FILLED; // <-- 标记为 FILLED
   map->num_entries++;
 
   return true;
@@ -226,5 +214,3 @@ INT_FUNC(size)(const INT_API_TYPE *map)
 #undef INT_API_TYPE
 #undef INT_STRUCT_TYPE
 #undef INT_BUCKET_TYPE
-#undef INT_EMPTY_K
-#undef INT_TOMBSTONE_K
