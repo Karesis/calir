@@ -54,11 +54,6 @@ IRFunction *ir_function_create(IRModule *mod, const char *name, IRType *ret_type
  */
 IRArgument *ir_argument_create(IRFunction *func, IRType *type, const char *name);
 
-/**
- * @brief [已废弃] void ir_argument_destroy(IRArgument *arg);
- * 内存由 Arena 管理。
- */
-
 // --- 调试 ---
 void ir_function_dump(IRFunction *func, FILE *stream);
 
