@@ -53,6 +53,8 @@ lt_dfs(DominatorTree *tree, DomTreeNode *n, int *current_dfs_num)
   int n_num = *current_dfs_num;
   *current_dfs_num = n_num + 1;
 
+  assert(n_num <= tree->cfg->num_nodes && "DFS found more nodes than cfg->num_nodes!");
+
   n->dfs_num = n_num;
   n->semi_dom = n_num;        // 初始化 semi_dom[n] = n
   n->label = n;               // 初始化 label[n] = n
@@ -64,6 +66,9 @@ lt_dfs(DominatorTree *tree, DomTreeNode *n, int *current_dfs_num)
   {
     CFGEdge *succ_edge = list_entry(iter, CFGEdge, list_node);
     CFGNode *succ_cfg_node = succ_edge->node;
+
+    assert(succ_cfg_node->id >= 0 && succ_cfg_node->id < tree->cfg->num_nodes &&
+           "CFG successor ID is out of bounds (negative or >= num_nodes)!");
 
     // 通过 CFG id 找到对应的 DomTreeNode
     DomTreeNode *w = tree->nodes[succ_cfg_node->id];
@@ -181,7 +186,7 @@ lt_compute_semi_dominators(DominatorTree *tree)
     // 5. 将 n 添加到 semi_dom[n] 节点的 bucket 中
     //    (semi_dom[n] 此时是一个 dfs_num)
     DomTreeNode *s = tree->dfs_order[n->semi_dom];
-    BucketNode *bucket_node = BUMP_ALLOC(&tree->arena, BucketNode);
+    BucketNode *bucket_node = BUMP_ALLOC(tree->arena, BucketNode);
     bucket_node->node = n;
     list_add_tail(&s->bucket, &bucket_node->list_node);
 
@@ -260,7 +265,7 @@ lt_compute_idominators(DominatorTree *tree)
     // 4. 构建最终的 'children' 树
     if (n->idom)
     {
-      DomTreeChild *child_node = BUMP_ALLOC(&tree->arena, DomTreeChild);
+      DomTreeChild *child_node = BUMP_ALLOC(tree->arena, DomTreeChild);
       child_node->node = n;
       list_add_tail(&n->idom->children, &child_node->list_node);
     }
@@ -320,6 +325,10 @@ dom_tree_build(FunctionCFG *cfg, Bump *arena)
   // 步骤 1: DFS 遍历
   int dfs_counter = 1;
   lt_dfs(tree, tree->root, &dfs_counter);
+
+  // dfs_counter 现在的值是 (访问的节点数 + 1)
+  int visited_nodes = dfs_counter - 1;
+  assert(visited_nodes <= num_nodes && "DFS visited more nodes than cfg->num_nodes reported!");
 
   // (如果 dfs_counter <= num_nodes，说明有不可达块，
   //  L-T 算法会自动处理它们，它们不会在支配树中)
