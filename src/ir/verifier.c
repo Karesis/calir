@@ -362,14 +362,71 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
     break;
   }
   case IR_OP_GEP: {
-    VERIFY_ASSERT(op_count > 1, vctx, value, "'getelementptr' must have at least 2 operands (base_ptr, index).");
-    IRValueNode *base_ptr = get_operand(inst, 0);
-    VERIFY_ASSERT(base_ptr->type->kind == IR_TYPE_PTR, vctx, base_ptr, "GEP base operand must be a pointer.");
-    VERIFY_ASSERT(inst->as.gep.source_type == base_ptr->type->as.pointee_type, vctx, value,
-                  "GEP source_type mismatch with base_ptr pointee type.");
-    VERIFY_ASSERT(result_type->kind == IR_TYPE_PTR, vctx, value, "GEP result must be a pointer type.");
+    // --- GEP 索引验证开始 ---
 
-    // TODO: (高级) 遍历索引，根据 source_type 验证 GEP 是否合法
+    IRType *current_type = inst->as.gep.source_type;
+
+    // 遍历所有 *索引* (操作数 1 到 op_count-1)
+    for (int i = 1; i < op_count; i++)
+    {
+      IRValueNode *index_val = get_operand(inst, i);
+
+      // 1. 所有索引都必须是整数
+      bool is_int_type = (index_val->type->kind >= IR_TYPE_I8 && index_val->type->kind <= IR_TYPE_I64);
+      VERIFY_ASSERT(is_int_type, vctx, index_val, "GEP index must be an integer type (i8-i64).");
+
+      // 2. 第一个索引 (i == 1) 索引指针，不"剥离"类型。
+      // 我们在循环外已经验证了 source_type，所以这里 continue。
+      if (i == 1)
+      {
+        continue;
+      }
+
+      // 3. 索引 2 及以后 (i >= 2) 开始剥离类型。
+      //    current_type 必须是一个聚合类型。
+      switch (current_type->kind)
+      {
+      case IR_TYPE_ARRAY:
+        // 索引数组：类型变为元素类型
+        current_type = current_type->as.array.element_type;
+        break;
+
+      case IR_TYPE_STRUCT: {
+        // 索引结构体：
+
+        // 3a. 索引必须是常量
+        VERIFY_ASSERT(index_val->kind == IR_KIND_CONSTANT, vctx, index_val,
+                      "GEP index into a struct *must* be a constant integer.");
+
+        // 3b. 提取常量值 (这需要 #include "ir/constant.h")
+        IRConstant *k = (IRConstant *)index_val;
+        VERIFY_ASSERT(k->const_kind == CONST_KIND_INT, vctx, index_val,
+                      "GEP struct index is a constant, but not an *integer* constant.");
+
+        uint64_t member_idx = (uint64_t)k->data.int_val;
+
+        // 3c. 索引必须在界内
+        VERIFY_ASSERT(member_idx < current_type->as.aggregate.member_count, vctx, index_val,
+                      "GEP struct index is out of bounds.");
+
+        // 3d. 更新类型为成员类型
+        current_type = current_type->as.aggregate.member_types[member_idx];
+        break;
+      }
+      default:
+        // 错误：试图索引一个非聚合类型 (e.g., i32, ptr)
+        VERIFY_ERROR(vctx, &inst->result, "GEP is trying to index into a non-aggregate type (e.g., i32, ptr).");
+      }
+    }
+
+    // 4. 最终检查：
+    // 我们模拟计算出的 GEP 结果类型（`ptr to current_type`）
+    // 必须与指令上存储的结果类型（`result_type`）完全一致。
+    IRType *expected_result_type = ir_type_get_ptr(ctx, current_type);
+    VERIFY_ASSERT(result_type == expected_result_type, vctx, &inst->result,
+                  "GEP result type is incorrect. Builder calculation does not match verifier calculation.");
+
+    // --- GEP 验证结束 ---
     break;
   }
 
