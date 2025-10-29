@@ -134,10 +134,10 @@ int main()
 
 define void @test_func(i32 %idx) {
 entry:
-  %point_ptr = alloc %point
-  %packet_ptr = alloc %data_packet
-  %1 = gep inbounds %data_packet, ptr %packet_ptr, i32 0, i32 1, i32 %idx
-  store i32 123, ptr %1
+  %0 = alloc %point
+  %1 = alloc %data_packet
+  %2 = gep inbounds %data_packet, ptr %1, i32 0, i32 1, i32 %idx
+  store i32 123, ptr %2
   ret void
 }
 
