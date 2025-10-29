@@ -1,14 +1,6 @@
-恭喜！这是一个非常振奋人心的进展。
-
-看到你最新的测试输出，尤其是 `test_valid_ir (if-then-else with PHI)` 顺利通过，并且 `test_invalid_ir_ssa_dominance` 也**正确地**报告了 SSA 错误，这说明你**已经解决了**上次（`dom_tree_build` 中）遇到的 `bump_alloc` 断言失败问题。
-
-你的 `dom_tree.c`（Lengauer-Tarjan 算法）现在显然可以正确运行，并且 `verifier.c` 正在成功地使用它来验证 SSA 的核心规则（定义支配使用）。
-
-基于你提供的 `tree` 结构和测试结果，我对你项目（calir）的当前状态评估如下：
-
 ### 总体状态评估
 
-你已经成功地构建了一个 **SSA-based IR 的核心框架**。
+已成功地构建了一个 **SSA-based IR 的核心框架**。
 
 这个项目目前已经**超越了“玩具”阶段**，进入了一个功能完备的“IR 核心”阶段。你拥有了定义、构建、分析（CFG、DomTree）和**验证** IR 所需的绝大多数关键组件。
 
