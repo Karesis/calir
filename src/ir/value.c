@@ -4,10 +4,66 @@
 #include "ir/constant.h"
 #include "ir/type.h" // <-- 关键依赖, 用于 dump
 #include "ir/use.h"  // <-- 关键依赖, 用于 R-A-U-W
+#include "utils/id_list.h"
 
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+
+/**
+ * @brief [内部] 从一个 ValueNode 向上查找到 IRContext
+ *
+ * 这依赖于 container_of 宏 (来自 id_list.h) 和 parent 指针。
+ */
+static IRContext *
+get_context_from_value(IRValueNode *val)
+{
+
+  switch (val->kind)
+  {
+  case IR_KIND_INSTRUCTION: {
+    IRInstruction *inst = container_of(val, IRInstruction, result);
+    if (!inst->parent)
+      return NULL;
+    if (!inst->parent->parent)
+      return NULL;
+    if (!inst->parent->parent->parent)
+      return NULL;
+    return inst->parent->parent->parent->context;
+  }
+  case IR_KIND_BASIC_BLOCK: {
+    IRBasicBlock *bb = container_of(val, IRBasicBlock, label_address);
+    if (!bb->parent)
+      return NULL;
+    if (!bb->parent->parent)
+      return NULL;
+    return bb->parent->parent->context;
+  }
+  case IR_KIND_ARGUMENT: {
+    // 假设 IRArgument 定义在 function.h 中
+    typedef struct IRArgument IRArgument;
+    IRArgument *arg = container_of(val, IRArgument, value);
+    if (!arg->parent)
+      return NULL;
+    if (!arg->parent->parent)
+      return NULL;
+    return arg->parent->parent->context;
+  }
+  case IR_KIND_FUNCTION: {
+    IRFunction *func = container_of(val, IRFunction, entry_address);
+    if (!func->parent)
+      return NULL;
+    return func->parent->context;
+  }
+  // 常量和全局变量没有 'parent' 指针，
+  // 它们在创建时就知道 Context。
+  // (我们假设这个 API 不会用于重命名常量)
+  case IR_KIND_CONSTANT:
+  case IR_KIND_GLOBAL:
+  default:
+    return NULL; // 无法安全找到
+  }
+}
 
 /**
  * @brief 打印一个 Value 的引用 (e.g., "i32 %foo" or "label %entry")
@@ -75,16 +131,17 @@ ir_value_set_name(IRValueNode *val, const char *name)
 {
   assert(val != NULL);
 
-  // 释放旧名字 (如果有)
-  if (val->name)
-  {
-    free(val->name);
-  }
-
   // 复制新名字
   if (name)
   {
-    val->name = strdup(name);
+    // 2.1 找到 Context
+    IRContext *ctx = get_context_from_value(val);
+    assert(ctx != NULL && "Could not find IRContext from IRValueNode!");
+
+    // 2.2 [修正] 使用字符串驻留 (String Interning)
+    // (我们需要一个 (char*) 转换，因为 val->name 是 char*,
+    //  而 intern_str 返回 const char*)
+    val->name = (char *)ir_context_intern_str(ctx, name);
   }
   else
   {
