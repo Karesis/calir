@@ -193,6 +193,7 @@ main(void)
   assert(count_instructions(func, IR_OP_ALLOCA) == 0);
   assert(count_instructions(func, IR_OP_STORE) == 0);
   assert(count_instructions(func, IR_OP_LOAD) == 0);
+  printf("[DEBUG] count_instructions(func, IR_OP_PHI): %d\n", count_instructions(func, IR_OP_PHI));
   // 应该在 'merge' 块中插入了一个 PHI
   assert(count_instructions(func, IR_OP_PHI) == 1);
   printf("Instruction count checks PASSED.\n");
@@ -208,10 +209,21 @@ main(void)
       IDList *inst_node = bb->instructions.next;
       IRInstruction *phi = list_entry(inst_node, IRInstruction, list_node);
       assert(phi->opcode == IR_OP_PHI);
-      // PHI 应该有两个操作数 (use 边)
-      IRUse *use1 = list_entry(phi->operands.next, IRUse, user_node);
-      IRUse *use2 = list_entry(use1->user_node.next, IRUse, user_node);
-      assert(use2->user_node.next == &phi->operands && "PHI should have exactly 2 operands");
+      // PHI 应该有两个 *传入对* [val, bb]，
+      // 这意味着总共有 4 个操作数
+      IDList *head = &phi->operands;
+
+      IRUse *use1 = list_entry(head->next, IRUse, user_node);           // Pair 1 (Value from then)
+      IRUse *use2 = list_entry(use1->user_node.next, IRUse, user_node); // Pair 1 (Block 'then')
+      assert(use2->user_node.next != head && "PHI should have more than 2 operands");
+
+      IRUse *use3 = list_entry(use2->user_node.next, IRUse, user_node); // Pair 2 (Value from else)
+      IRUse *use4 = list_entry(use3->user_node.next, IRUse, user_node); // Pair 2 (Block 'else')
+
+      // 检查 use4 之后是否是链表头
+      printf("[DEBUG] use4->user_node.next: %p\n", use4->user_node.next);
+      printf("[DEBUG] &phi->operands: %p\n", &phi->operands);
+      assert(use4->user_node.next == head && "PHI should have exactly 2 pairs (4 operands)");
       printf("PHI node found in 'merge' block (good).\n");
     }
   }
