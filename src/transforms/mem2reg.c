@@ -212,7 +212,8 @@ compute_phi_placement(Mem2RegContext *ctx, AllocaInfo *info)
     if (bitset_test(info->def_blocks, b_id))
     {
       worklist_stack[worklist_count++] = b_id;
-      bitset_set(info->phi_blocks, b_id); // 保证 PHI 节点在所有 def 块中
+      // phi_blocks = IDF(Def Blocks), not Def Blocks U IDF(Def Blocks)
+      // bitset_set(info->phi_blocks, b_id); // 保证 PHI 节点在所有 def 块中
     }
   }
 
