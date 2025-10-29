@@ -176,8 +176,6 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     op2 = get_operand(inst, 1);
     assert(op1 && op2 && "Binary operator needs two operands");
 
-    ir_type_dump(op1->type, stream);
-    fprintf(stream, " ");
     ir_value_dump(op1, stream);
     fprintf(stream, ", ");
     ir_value_dump(op2, stream);
@@ -221,8 +219,6 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
 
     // 3. 打印: icmp <pred> <ty> %lhs, %rhs
     fprintf(stream, "icmp %s ", pred_str);
-    ir_type_dump(op1->type, stream); // 打印操作数类型
-    fprintf(stream, " ");
     ir_value_dump(op1, stream);
     fprintf(stream, ", ");
     ir_value_dump(op2, stream);

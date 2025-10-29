@@ -96,18 +96,16 @@ ir_function_dump(IRFunction *func, FILE *stream)
     return;
   }
 
-  // --- [!!] 升级 1: 检查是否为声明 ---
+  // --- 1. 准备 ---
   bool is_declaration = list_empty(&func->basic_blocks);
-
-  // 打印函数签名
   char type_str[32];
   ir_type_to_string(func->return_type, type_str, sizeof(type_str));
-  fprintf(stream, "define %s @%s(", type_str, func->entry_address.name);
 
-  // --- 打印 'declare' 或 'define' ---
+  // --- 2. 打印 'declare' 或 'define' 和签名 ---
+  // [!!] 修正 Bug 1: 只打印一次
   fprintf(stream, "%s %s @%s(", is_declaration ? "declare" : "define", type_str, func->entry_address.name);
 
-  // 2. 打印参数
+  // --- 3. 打印参数 ---
   IDList *arg_iter;
   int first_arg = 1;
   list_for_each(&func->arguments, arg_iter)
@@ -128,15 +126,26 @@ ir_function_dump(IRFunction *func, FILE *stream)
     first_arg = 0;
   }
 
-  fprintf(stream, ") {\n");
-
-  // 3. 打印所有基本块
-  IDList *bb_iter;
-  list_for_each(&func->basic_blocks, bb_iter)
+  // --- 4. 打印函数体 (或结束声明) ---
+  // [!!] 修正 Bug 2: 区分声明和定义
+  if (is_declaration)
   {
-    IRBasicBlock *bb = list_entry(bb_iter, IRBasicBlock, list_node);
-    ir_basic_block_dump(bb, stream); // <-- 依赖 basicblock.c
+    // 声明： declare ... (...)
+    fprintf(stream, ")\n");
   }
+  else
+  {
+    // 定义： define ... (...) { ... }
+    fprintf(stream, ") {\n");
 
-  fprintf(stream, "}\n");
+    // 打印所有基本块
+    IDList *bb_iter;
+    list_for_each(&func->basic_blocks, bb_iter)
+    {
+      IRBasicBlock *bb = list_entry(bb_iter, IRBasicBlock, list_node);
+      ir_basic_block_dump(bb, stream); // <-- 依赖 basicblock.c
+    }
+
+    fprintf(stream, "}\n");
+  }
 }

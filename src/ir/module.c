@@ -1,8 +1,8 @@
 #include "ir/module.h"
-#include "ir/context.h"  // <-- [新] 核心依赖
+#include "ir/context.h"  // 核心依赖
 #include "ir/function.h" // 需要 function_dump
 #include "ir/global.h"
-#include "utils/bump.h" // <-- [新] 需要 BUMP_ALLOC 和 BUMP_ALLOC_ZEROED
+#include "utils/bump.h" // 需要 BUMP_ALLOC 和 BUMP_ALLOC_ZEROED
 
 #include <assert.h>
 #include <stdlib.h>
@@ -35,7 +35,7 @@ ir_module_create(IRContext *ctx, const char *name)
     return NULL;
   }
 
-  // 4. [修改] BUMP_ALLOC_ZEROED 已将 prev/next 设为 NULL
+  // 4. BUMP_ALLOC_ZEROED 已将 prev/next 设为 NULL
   // 我们必须显式调用 list_init 使它们指向自己。
   list_init(&mod->functions);
   list_init(&mod->globals);
@@ -77,6 +77,5 @@ ir_module_dump(IRModule *mod, FILE *stream)
   {
     IRFunction *func = list_entry(iter_func, IRFunction, list_node);
     ir_function_dump(func, stream);
-    fprintf(stream, "\n");
   }
 }
