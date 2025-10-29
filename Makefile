@@ -52,6 +52,7 @@ UTILS_SRCS = $(wildcard src/utils/*.c) \
 IR_SRCS = $(wildcard src/ir/*.c)
 ANALYSIS_SRCS = $(wildcard src/analysis/*.c)
 TRANSFORM_SRCS = $(wildcard src/transforms/*.c)
+INTERPRETER_SRCS = $(wildcard src/interpreter/*.c)
 
 # --- 主程序文件 ---
 MAIN_CALIR_SRC = src/main_test.c
@@ -77,10 +78,11 @@ UTILS_OBJS = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(UTILS_SRCS))
 IR_OBJS = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(IR_SRCS))
 ANALYSIS_OBJS = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(ANALYSIS_SRCS))
 TRANSFORM_OBJS = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(TRANSFORM_SRCS))
+INTERPRETER_OBJS = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(INTERPRETER_SRCS))
 MAIN_CALIR_OBJ = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(MAIN_CALIR_SRC))
 
 # --- 库对象 (所有测试都将链接它们) ---
-LIB_OBJS = $(UTILS_OBJS) $(IR_OBJS) $(ANALYSIS_OBJS) $(TRANSFORM_OBJS)
+LIB_OBJS = $(UTILS_OBJS) $(IR_OBJS) $(ANALYSIS_OBJS) $(INTERPRETER_OBJS) $(TRANSFORM_OBJS)
 
 # --- 用于特定 CFLAGS 的对象集 ---
 BUMP_OBJ = $(OBJ_DIR)/utils/bump.o
@@ -127,7 +129,7 @@ $(TEST_TARGETS): $(BUILD_DIR)/%: $(OBJ_DIR)/tests/%.o $(LIB_OBJS)
 
 # --- 目标特定的 CFLAGS ---
 # (将 MAIN_HASHMAP_OBJ 替换为 TEST_OBJS)
-ALL_OBJS = $(UTILS_OBJS) $(IR_OBJS) $(ANALYSIS_OBJS) $(TRANSFORM_OBJS) $(MAIN_CALIR_OBJ) $(TEST_OBJS)
+ALL_OBJS = $(UTILS_OBJS) $(IR_OBJS) $(ANALYSIS_OBJS) $(TRANSFORM_OBJS) $(INTERPRETER_OBJS) $(MAIN_CALIR_OBJ) $(TEST_OBJS)
 
 # 默认情况下，所有对象都使用通用 CFLAGS
 $(ALL_OBJS): CFLAGS = $(CFLAGS_COMMON)
