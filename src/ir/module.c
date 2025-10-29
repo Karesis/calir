@@ -2,7 +2,9 @@
 #include "ir/context.h"  // 核心依赖
 #include "ir/function.h" // 需要 function_dump
 #include "ir/global.h"
+#include "ir/type.h"
 #include "utils/bump.h" // 需要 BUMP_ALLOC 和 BUMP_ALLOC_ZEROED
+#include "utils/hashmap.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -59,6 +61,40 @@ ir_module_dump(IRModule *mod, FILE *stream)
   fprintf(stream, "; ModuleID = '%s'\n", mod->name);
   fprintf(stream, "\n");
 
+  // 遍历并打印所有命名结构体
+  StrHashMap *struct_cache = mod->context->named_struct_cache;
+  if (struct_cache && str_hashmap_size(struct_cache) > 0)
+  {
+    StrHashMapIter iter = str_hashmap_iter(struct_cache);
+    StrHashMapEntry entry;
+
+    while (str_hashmap_iter_next(&iter, &entry))
+    {
+      IRType *type = (IRType *)entry.value;
+
+      // 确保它是一个正确的命名结构体
+      if (type->kind == IR_TYPE_STRUCT && type->as.aggregate.name)
+      {
+        // 打印: %point = type
+        fprintf(stream, "%%%s = type ", type->as.aggregate.name);
+
+        // 打印: { i32, ptr, %other_struct }
+        fprintf(stream, "{ ");
+        for (size_t i = 0; i < type->as.aggregate.member_count; i++)
+        {
+          if (i > 0)
+          {
+            fprintf(stream, ", ");
+          }
+          // ir_type_dump 会正确打印 i32, ptr, 或 %other_struct
+          ir_type_dump(type->as.aggregate.member_types[i], stream);
+        }
+        fprintf(stream, " }\n");
+      }
+    }
+    fprintf(stream, "\n"); // 在类型和全局变量之间加个空行
+  }
+
   // 打印所有全局变量
   IDList *global_iter;
   list_for_each(&mod->globals, global_iter)
@@ -71,7 +107,7 @@ ir_module_dump(IRModule *mod, FILE *stream)
     fprintf(stream, "\n"); // 在全局变量和函数之间加个空行
   }
 
-  // 打印所有函数 (依赖 ir_function_dump)
+  // 打印所有函数
   IDList *iter_func;
   list_for_each(&mod->functions, iter_func)
   {
