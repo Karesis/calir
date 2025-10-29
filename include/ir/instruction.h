@@ -67,12 +67,9 @@ typedef struct
 } IRInstruction;
 
 /**
- * @brief 销毁一条指令
- * * 这将自动解除 (unlink) 并销毁 (destroy) 它所有的 Use 边
- * (即它使用的所有 operands)。
- * @param inst 要销毁的指令
+ * @brief 从其父基本块中安全地擦除一条指令
  */
-void ir_instruction_destroy(IRInstruction *inst);
+void ir_instruction_erase_from_parent(IRInstruction *inst);
 
 // --- 调试 ---
 
