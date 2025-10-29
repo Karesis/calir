@@ -21,7 +21,7 @@
  * 2. 唯一化哈希表 (Caches)，用于确保类型和常量是唯一的。
  * 3. 单例对象 (Singletons)，如 'void' 和 'i32' 类型。
  *
- * 你的项目中所有其他 IR 结构 (Module, Function, Builder)
+ * 项目中所有其他 IR 结构 (Module, Function, Builder, 等等)
  * 都将持有一个指向此 IRContext 的指针。
  */
 
