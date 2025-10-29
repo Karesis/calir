@@ -21,8 +21,8 @@ typedef enum
   IR_TYPE_F64,
   IR_TYPE_PTR,   // 指针类型
   IR_TYPE_LABEL, // 基本块标签类型
-  IR_TYPE_ARRAY, //
-  IR_TYPE_STRUCT // (先实现 Array)
+  IR_TYPE_ARRAY,
+  IR_TYPE_STRUCT
 } IRTypeKind;
 
 /**
