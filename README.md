@@ -179,11 +179,11 @@ Issues and feedback are welcome\!
 
 The next core objectives are to implement an IR interpreter and build the full SSA transformation pipeline:
 
-  - [ ] **IR Interpreter (`ir/interpreter`)**
+  - [x] **IR Interpreter (`ir/interpreter`)**
       * **(High Priority)** Implement a simple tree-walking interpreter for the IR, to be used for execution and debugging (next assignment).
-  - [ ] **Dominance Frontier (`analysis/dom_frontier`)**
+  - [x] **Dominance Frontier (`analysis/dom_frontier`)**
       * The final analysis component needed for SSA construction.
-  - [ ] **Mem2Reg Pass (`transforms/mem2reg`)**
+  - [x] **Mem2Reg Pass (`transforms/mem2reg`)**
       * Implement the classic "memory to register" promotion pass, lifting `alloca`/`load`/`store` to PHI nodes.
   - [ ] **IR Text Parser (`ir/parser`)**
       * Ability to parse `.ll`-style text files back into in-memory IR.
