@@ -91,4 +91,36 @@ bool generic_hashmap_contains(const GenericHashMap *map, const void *key);
  */
 size_t generic_hashmap_size(const GenericHashMap *map);
 
+/*
+ * ========================================
+ * --- 迭代器 API ---
+ * ========================================
+ */
+
+/** @brief GenericHashMap 的一个条目 (Key/Value 对) */
+typedef struct
+{
+  const void *key; // Key 是一个 void*
+  void *value;
+} GenericHashMapEntry;
+
+/** @brief GenericHashMap 的迭代器状态 */
+typedef struct
+{
+  const GenericHashMap *map;
+  size_t index; /* 内部桶数组的当前索引 */
+} GenericHashMapIter;
+
+/**
+ * @brief 初始化一个哈希表迭代器。
+ */
+GenericHashMapIter generic_hashmap_iter(const GenericHashMap *map);
+
+/**
+ * @brief 推进迭代器并获取下一个条目。
+ * @return true 如果找到了下一个条目, entry_out 被填充。
+ * @return false 如果已到达末尾。
+ */
+bool generic_hashmap_iter_next(GenericHashMapIter *iter, GenericHashMapEntry *entry_out);
+
 #endif // HASHMAP_GENERIC_H

@@ -30,14 +30,36 @@
   X(uptr, uintptr_t, UPtrHashMap)
 
 /*
- * --- 1. 声明不透明的结构体类型 ---
+ * --- 声明不透明的结构体类型 ---
  */
 #define CHM_DECLARE_INT_TYPEDEF(PREFIX, K_TYPE, API_TYPE) typedef struct API_TYPE API_TYPE;
 CHASHMAP_INT_TYPES(CHM_DECLARE_INT_TYPEDEF)
 #undef CHM_DECLARE_INT_TYPEDEF
 
 /*
- * --- 2. 声明所有 API 函数 ---
+ * --- 声明迭代器结构体 ---
+ */
+#define CHM_DECLARE_INT_ITER_STRUCTS(PREFIX, K_TYPE, API_TYPE)                                                         \
+                                                                                                                       \
+  /** @brief [API_TYPE] 的一个条目 (Key/Value 对) */                                                                   \
+  typedef struct                                                                                                       \
+  {                                                                                                                    \
+    K_TYPE key;                                                                                                        \
+    void *value;                                                                                                       \
+  } API_TYPE##Entry;                                                                                                   \
+                                                                                                                       \
+  /** @brief [API_TYPE] 的迭代器状态 */                                                                                \
+  typedef struct                                                                                                       \
+  {                                                                                                                    \
+    const API_TYPE *map;                                                                                               \
+    size_t index; /* 内部桶数组的当前索引 */                                                                           \
+  } API_TYPE##Iter;
+
+CHASHMAP_INT_TYPES(CHM_DECLARE_INT_ITER_STRUCTS)
+#undef CHM_DECLARE_INT_ITER_STRUCTS
+
+/*
+ * --- 声明所有 API 函数 ---
  */
 #define CHM_DECLARE_INT_FUNCS(PREFIX, K_TYPE, API_TYPE)                                                                \
                                                                                                                        \
@@ -70,7 +92,17 @@ CHASHMAP_INT_TYPES(CHM_DECLARE_INT_TYPEDEF)
   /**                                                                                                                  \
    * @brief 获取哈希表中的条目数。                                                                          \
    */                                                                                                                  \
-  size_t PREFIX##_hashmap_size(const API_TYPE *map);
+  size_t PREFIX##_hashmap_size(const API_TYPE *map);                                                                   \
+                                                                                                                       \
+  /**                                                                                                                  \
+   * @brief 初始化一个哈希表迭代器。                                                                       \
+   */                                                                                                                  \
+  API_TYPE##Iter PREFIX##_hashmap_iter(const API_TYPE *map);                                                           \
+                                                                                                                       \
+  /**                                                                                                                  \
+   * @brief 推进迭代器并获取下一个条目。                                                                 \
+   */                                                                                                                  \
+  bool PREFIX##_hashmap_iter_next(API_TYPE##Iter *iter, API_TYPE##Entry *entry_out);
 
 CHASHMAP_INT_TYPES(CHM_DECLARE_INT_FUNCS)
 #undef CHM_DECLARE_INT_FUNCS

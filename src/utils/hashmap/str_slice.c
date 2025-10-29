@@ -271,3 +271,42 @@ str_hashmap_size(const StrHashMap *map)
 {
   return map->num_entries;
 }
+
+/*
+ * ========================================
+ * --- 5. 迭代器 API 实现 ---
+ * ========================================
+ */
+
+// 1. (FIX) 为 CHM_FUNC 定义粘贴宏
+#define _CHM_PASTE3(a, b, c) a##b##c
+#define CHM_PASTE3(a, b, c) _CHM_PASTE3(a, b, c)
+#define CHM_FUNC(prefix, suffix) CHM_PASTE3(prefix, _hashmap_, suffix)
+
+// 为 iterator.inc 设置 "模板参数"
+#define CHM_PREFIX str
+#define CHM_API_TYPE StrHashMap
+#define CHM_STRUCT_TYPE StrHashMap // 在 .c 文件中, StrHashMap 是完整类型
+#define CHM_BUCKET_TYPE StrHashMapBucket
+#define CHM_ENTRY_TYPE StrHashMapEntry // 来自 str_slice.h
+#define CHM_ITER_TYPE StrHashMapIter   // 来自 str_slice.h
+
+// 定义 CHM_ITER_ASSIGN_ENTRY 钩子
+// 将内部的 bucket->key (StrSlice) 拆分到公开的 entry_out (char*, size_t)
+#define CHM_ITER_ASSIGN_ENTRY(entry_out, bucket)                                                                       \
+  do                                                                                                                   \
+  {                                                                                                                    \
+    (entry_out)->key_body = (bucket)->key.body;                                                                        \
+    (entry_out)->key_len = (bucket)->key.len;                                                                          \
+    (entry_out)->value = (bucket)->value;                                                                              \
+  } while (0)
+
+// 包含通用实现
+#include "utils/hashmap/iterator.inc"
+
+// 立即清理钩子宏
+#undef CHM_ITER_ASSIGN_ENTRY
+
+#undef _CHM_PASTE3
+#undef CHM_PASTE3
+#undef CHM_FUNC

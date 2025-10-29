@@ -19,6 +19,19 @@
 // 不透明的指针哈希表结构体
 typedef struct PtrHashMap PtrHashMap;
 
+// 迭代器结构体
+typedef struct
+{
+  void *key;
+  void *value;
+} PtrHashMapEntry;
+
+typedef struct
+{
+  const PtrHashMap *map;
+  size_t index;
+} PtrHashMapIter;
+
 /**
  * @brief 创建一个新的 PtrHashMap。
  *
@@ -77,5 +90,9 @@ bool ptr_hashmap_contains(const PtrHashMap *map, void *key);
  * @return size_t 条目数。
  */
 size_t ptr_hashmap_size(const PtrHashMap *map);
+
+// 迭代器函数声明
+PtrHashMapIter ptr_hashmap_iter(const PtrHashMap *map);
+bool ptr_hashmap_iter_next(PtrHashMapIter *iter, PtrHashMapEntry *entry_out);
 
 #endif // HASHMAP_PTR_H

@@ -15,11 +15,7 @@
 
 // 包含所有 hashmap 的实现
 #include "utils/bump.h"
-#include "utils/hashmap/float.h"
-#include "utils/hashmap/generic.h"
-#include "utils/hashmap/int.h"
-#include "utils/hashmap/ptr.h"
-#include "utils/hashmap/str_slice.h"
+#include "utils/hashmap.h"
 
 // 1. --- 简单的测试框架 ---
 

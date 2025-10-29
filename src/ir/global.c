@@ -28,7 +28,7 @@ ir_global_variable_create(IRModule *mod, const char *name, IRType *allocated_typ
   // 初始值 (如果提供) 类型必须匹配
   assert(initializer == NULL || initializer->type == allocated_type);
 
-  // 2. [修改] 从 ir_arena 分配
+  // 2. 从 ir_arena 分配
   IRGlobalVariable *global = BUMP_ALLOC_ZEROED(&ctx->ir_arena, IRGlobalVariable);
   if (!global)
     return NULL;

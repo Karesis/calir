@@ -212,3 +212,31 @@ generic_hashmap_size(const GenericHashMap *map)
 {
   return map->num_entries;
 }
+
+/*
+ * ========================================
+ * --- 5. 迭代器 API 实现 ---
+ * ========================================
+ */
+
+// 1. (FIX) 为 CHM_FUNC 定义粘贴宏
+#define _CHM_PASTE3(a, b, c) a##b##c
+#define CHM_PASTE3(a, b, c) _CHM_PASTE3(a, b, c)
+#define CHM_FUNC(prefix, suffix) CHM_PASTE3(prefix, _hashmap_, suffix)
+
+// 2. 为 iterator.inc 设置 "模板参数"
+#define CHM_PREFIX generic
+#define CHM_API_TYPE GenericHashMap
+#define CHM_STRUCT_TYPE GenericHashMap
+#define CHM_BUCKET_TYPE GenericHashMapBucket
+#define CHM_ENTRY_TYPE GenericHashMapEntry // 来自 generic.h
+#define CHM_ITER_TYPE GenericHashMapIter   // 来自 generic.h
+
+// 3. 包含通用实现
+//    (现在 CHM_FUNC 已经被正确定义了)
+#include "utils/hashmap/iterator.inc"
+
+// 4. 清理本节定义的宏
+#undef _CHM_PASTE3
+#undef CHM_PASTE3
+#undef CHM_FUNC

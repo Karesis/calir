@@ -214,6 +214,40 @@ FLOAT_FUNC(size)(const FLOAT_API_TYPE *map)
 
 /*
  * ========================================
+ * --- 5. (新增) 迭代器 API 实现 ---
+ * ========================================
+ */
+
+// 1. 定义 CHM_FUNC, 重用 float.c 中定义的 FLOAT_PASTE3
+//    FLOAT_PASTE3 已经在 float.c 中定义
+#define CHM_FUNC(prefix, suffix) FLOAT_PASTE3(prefix, _hashmap_, suffix)
+
+// 2. 定义我们需要的两步粘贴宏 (用于 Entry/Iter 类型名)
+#define _CHM_PASTE(a, b) a##b
+#define CHM_PASTE(a, b) _CHM_PASTE(a, b)
+
+// 3. 为 iterator.inc 设置 "模板参数"
+#define CHM_PREFIX FLOAT_PREFIX
+#define CHM_API_TYPE FLOAT_API_TYPE
+#define CHM_STRUCT_TYPE FLOAT_STRUCT_TYPE
+#define CHM_BUCKET_TYPE FLOAT_BUCKET_TYPE
+
+// 4. 使用 CHM_PASTE 来正确展开 API_TYPE
+#define CHM_ENTRY_TYPE CHM_PASTE(FLOAT_API_TYPE, Entry)
+#define CHM_ITER_TYPE CHM_PASTE(FLOAT_API_TYPE, Iter)
+
+// 5. 包含 *已清理* 的通用实现
+#include "utils/hashmap/iterator.inc"
+
+// 6. 清理 *本节* 定义的宏
+#undef CHM_FUNC
+#undef _CHM_PASTE
+#undef CHM_PASTE
+#undef CHM_ENTRY_TYPE
+#undef CHM_ITER_TYPE
+
+/*
+ * ========================================
  * --- 5. 清理宏 ---
  * ========================================
  */

@@ -19,6 +19,20 @@
 // 不透明的字符串哈希表结构体
 typedef struct StrHashMap StrHashMap;
 
+// 迭代器结构体 (匹配公共 API)
+typedef struct
+{
+  const char *key_body;
+  size_t key_len;
+  void *value;
+} StrHashMapEntry;
+
+typedef struct
+{
+  const StrHashMap *map;
+  size_t index;
+} StrHashMapIter;
+
 /**
  * @brief 创建一个新的 StrHashMap。
  *
@@ -99,5 +113,9 @@ bool str_hashmap_contains(const StrHashMap *map, const char *key_body, size_t ke
  * @return size_t 条目数。
  */
 size_t str_hashmap_size(const StrHashMap *map);
+
+// 迭代器函数声明
+StrHashMapIter str_hashmap_iter(const StrHashMap *map);
+bool str_hashmap_iter_next(StrHashMapIter *iter, StrHashMapEntry *entry_out);
 
 #endif // HASHMAP_STR_SLICE_H

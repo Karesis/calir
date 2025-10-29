@@ -200,3 +200,31 @@ ptr_hashmap_size(const PtrHashMap *map)
 {
   return map->num_entries;
 }
+
+/*
+ * ========================================
+ * --- 5. 迭代器 API 实现 ---
+ * ========================================
+ */
+
+// 1. (FIX) 为 CHM_FUNC 定义粘贴宏
+#define _CHM_PASTE3(a, b, c) a##b##c
+#define CHM_PASTE3(a, b, c) _CHM_PASTE3(a, b, c)
+#define CHM_FUNC(prefix, suffix) CHM_PASTE3(prefix, _hashmap_, suffix)
+
+// 为 iterator.inc 设置 "模板参数"
+#define CHM_PREFIX ptr
+#define CHM_API_TYPE PtrHashMap
+#define CHM_STRUCT_TYPE PtrHashMap // 在 .c 文件中, PtrHashMap 是完整类型
+#define CHM_BUCKET_TYPE PtrHashMapBucket
+#define CHM_ENTRY_TYPE PtrHashMapEntry // 来自 ptr.h
+#define CHM_ITER_TYPE PtrHashMapIter   // 来自 ptr.h
+
+// (我们 *不* 定义 CHM_ITER_ASSIGN_ENTRY, 所以它会使用默认实现)
+
+// 包含通用实现
+#include "utils/hashmap/iterator.inc"
+
+#undef _CHM_PASTE3
+#undef CHM_PASTE3
+#undef CHM_FUNC

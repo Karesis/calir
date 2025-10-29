@@ -204,8 +204,41 @@ INT_FUNC(size)(const INT_API_TYPE *map)
 }
 
 /*
+ * ========================================
+ * --- 5. (修正) 迭代器 API 实现 ---
+ * ========================================
+ */
+
+// 1. (关键) 定义 CHM_FUNC, 重用 int.c 中定义的 INT_PASTE3
+//    (INT_PASTE3 和 INT_FUNC 已经在 int.c 中定义并可用)
+#define CHM_FUNC(prefix, suffix) INT_FUNC(suffix)
+
+// 2. (关键) 定义我们需要的两步粘贴宏 (用于 Entry/Iter 类型名)
+#define _CHM_PASTE(a, b) a##b
+#define CHM_PASTE(a, b) _CHM_PASTE(a, b)
+
+// 3. 为 iterator.inc 设置 "模板参数"
+#define CHM_PREFIX INT_PREFIX
+#define CHM_API_TYPE INT_API_TYPE
+#define CHM_STRUCT_TYPE INT_STRUCT_TYPE
+#define CHM_BUCKET_TYPE INT_BUCKET_TYPE
+
+// 4. 使用 CHM_PASTE 来正确展开 API_TYPE
+//    INT_API_TYPE##Entry -> (I64HashMap)Entry -> I64HashMapEntry
+#define CHM_ENTRY_TYPE CHM_PASTE(INT_API_TYPE, Entry)
+#define CHM_ITER_TYPE CHM_PASTE(INT_API_TYPE, Iter)
+
+// 5. 包含 *已清理* 的通用实现
+#include "utils/hashmap/iterator.inc"
+
+// 6. 清理 *本节* 定义的宏
+#undef CHM_FUNC
+#undef _CHM_PASTE
+#undef CHM_PASTE
+
+/*
  * ========================================
- * --- 5. 清理宏 ---
+ * --- 6. 清理宏 ---
  * ========================================
  */
 #undef INT_PREFIX
