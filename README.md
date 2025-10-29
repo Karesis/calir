@@ -41,83 +41,95 @@ The core of `Calico-IR` is the `IRContext` and `IRBuilder`. The following exampl
  * (This is a simplified example; see test files for complete code)
  * * Target: Build a function that uses GEP to access structs and arrays
  */
-
 #include "ir/builder.h"
 #include "ir/context.h"
 #include "ir/function.h"
+#include "ir/global.h"
 #include "ir/module.h"
 #include "ir/type.h"
 #include <stdio.h>
 
-// Build the function
+// Build the example IR structure
 static void
-build_test_function(IRModule *mod)
+build_test_example(IRModule *mod)
 {
-    IRContext *ctx = mod->context;
+  IRContext *ctx = mod->context;
 
-    // 1. Get/Create types
-    IRType *i32_type = ir_type_get_i32(ctx);
-    IRType *i64_type = ir_type_get_i64(ctx);
-    IRType *void_type = ir_type_get_void(ctx);
+  // 1. Get/Create types
+  IRType *i32_type = ir_type_get_i32(ctx);
+  IRType *i64_type = ir_type_get_i64(ctx);
+  IRType *void_type = ir_type_get_void(ctx);
 
-    // %point = type { i32, i64 }
-    IRType *point_members[2] = {i32_type, i64_type};
-    IRType *point_type = ir_type_get_named_struct(ctx, "point", point_members, 2);
+  // %point = type { i32, i64 }
+  IRType *point_members[2] = {i32_type, i64_type};
+  IRType *point_type = ir_type_get_named_struct(ctx, "point", point_members, 2);
 
-    // %array_type = [10 x i32]
-    IRType *array_type = ir_type_get_array(ctx, i32_type, 10);
+  // Create an anonymous array type: [10 x i32]
+  // Note: This type is "anonymous", so it will not be printed at the top
+  // level. Instead, it will be printed inline wherever it is used.
+  IRType *array_type = ir_type_get_array(ctx, i32_type, 10);
 
-    // %data_packet = type { %point, [10 x i32] }
-    IRType *packet_members[2] = {point_type, array_type};
-    IRType *data_packet_type = ir_type_get_named_struct(ctx, "data_packet", packet_members, 2);
+  // %data_packet = type { %point, [10 x i32] }
+  IRType *packet_members[2] = {point_type, array_type};
+  IRType *data_packet_type = ir_type_get_named_struct(ctx, "data_packet", packet_members, 2);
 
-    // 2. Create function and entry
-    // define void @test_func(i32 %idx)
-    IRFunction *func = ir_function_create(mod, "test_func", void_type);
-    IRArgument *arg_idx = ir_argument_create(func, i32_type, "idx");
+  // 2. [NEW] Create a Global Variable
+  // @g_data = common global [10 x i32] zeroinitializer
+  // We use the 'array_type' we just created.
+  ir_global_variable_create(mod,
+                            "g_data",   // Name
+                            array_type, // Type
+                            NULL);      // Initializer (NULL = common/zero)
 
-    IRBasicBlock *entry_bb = ir_basic_block_create(func, "entry");
-    IRBuilder *builder = ir_builder_create(ctx);
-    ir_builder_set_insertion_point(builder, entry_bb);
+  // 3. Create function and entry
+  // define void @test_func(i32 %idx)
+  IRFunction *func = ir_function_create(mod, "test_func", void_type);
+  IRArgument *arg_idx = ir_argument_create(func, i32_type, "idx");
 
-    // 3. Alloca 
-    // %point_ptr = alloca %point
-    IRValueNode *point_ptr = ir_builder_create_alloca(builder, point_type);
-    // %packet_ptr = alloca %data_packet
-    IRValueNode *packet_ptr = ir_builder_create_alloca(builder, data_packet_type);
-    
-    // 4. Create GEP and Load/Store
-    IRValueNode *const_0 = ir_constant_get_i32(ctx, 0);
-    IRValueNode *const_1 = ir_constant_get_i32(ctx, 1);
-    IRValueNode *const_123 = ir_constant_get_i32(ctx, 123);
+  IRBasicBlock *entry_bb = ir_basic_block_create(func, "entry");
+  IRBuilder *builder = ir_builder_create(ctx);
+  ir_builder_set_insertion_point(builder, entry_bb);
 
-    // %1 = getelementptr inbounds %data_packet, ptr %packet_ptr, i32 0, i32 1, i32 %idx
-    IRValueNode *gep_indices[] = {const_0, const_1, &arg_idx->value};
-    IRValueNode *elem_ptr = ir_builder_create_gep(builder, data_packet_type, packet_ptr, gep_indices, 3,
-                                                  true /* inbounds */); 
-    // store i32 123, ptr %1
-    ir_builder_create_store(builder, const_123, elem_ptr);
+  // 4. Alloca
+  // %point_ptr = alloc %point
+  IRValueNode *point_ptr = ir_builder_create_alloca(builder, point_type);
+  // %packet_ptr = alloc %data_packet
+  IRValueNode *packet_ptr = ir_builder_create_alloca(builder, data_packet_type);
 
-    // 5. Terminator
-    ir_builder_create_ret(builder, NULL); // ret void
-    ir_builder_destroy(builder);
+  // 5. Create GEP and Load/Store
+  IRValueNode *const_0 = ir_constant_get_i32(ctx, 0);
+  IRValueNode *const_1 = ir_constant_get_i32(ctx, 1);
+  IRValueNode *const_123 = ir_constant_get_i32(ctx, 123);
+
+  // %1 = gep inbounds %data_packet, ptr %packet_ptr, i32 0, i32 1, i32 %idx
+  IRValueNode *gep_indices[] = {const_0, const_1, &arg_idx->value};
+  IRValueNode *elem_ptr =
+    ir_builder_create_gep(builder, data_packet_type, packet_ptr, gep_indices, 3, true /* inbounds */);
+  // store i32 123, ptr %1
+  ir_builder_create_store(builder, const_123, elem_ptr);
+
+  // 6. Terminator
+  ir_builder_create_ret(builder, NULL); // ret void
+  ir_builder_destroy(builder);
 }
 
 // Main function
-int main()
+int
+main()
 {
-    IRContext *ctx = ir_context_create();
-    IRModule *mod = ir_module_create(ctx, "test_module");
+  IRContext *ctx = ir_context_create();
+  IRModule *mod = ir_module_create(ctx, "test_module");
 
-    build_test_function(mod);
+  // Build the globals and functions
+  build_test_example(mod);
 
-    // 4. [!!] Dump the IR for the entire module
-    printf("--- Calir IR Dump ---\n");
-    ir_module_dump(mod, stdout);
-    printf("--- Dump Complete ---\n");
+  // Dump the IR for the entire module
+  printf("--- Calir IR Dump ---\n");
+  ir_module_dump(mod, stdout);
+  printf("--- Dump Complete ---\n");
 
-    ir_context_destroy(ctx);
-    return 0;
+  ir_context_destroy(ctx);
+  return 0;
 }
 ````
 
@@ -125,12 +137,12 @@ int main()
 
 ```llvm
 --- Calir IR Dump ---
-
 ; ModuleID = 'test_module'
 
 %point = type { i32, i64 }
-%array_type = type [10 x i32]
-%data_packet = type { %point, %array_type }
+%data_packet = type { %point, [10 x i32] }
+
+@g_data = global [10 x i32] zeroinitializer
 
 define void @test_func(i32 %idx) {
 entry:
@@ -140,7 +152,6 @@ entry:
   store i32 123, ptr %2
   ret void
 }
-
 --- Dump Complete ---
 ```
 
