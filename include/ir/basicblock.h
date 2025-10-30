@@ -25,6 +25,13 @@ typedef struct IRBasicBlock
  */
 IRBasicBlock *ir_basic_block_create(IRFunction *func, const char *name);
 
+/**
+ * @brief 将一个基本块附加到其父函数的末尾
+ * @param func 父函数
+ * @param bb 要附加的基本块
+ */
+void ir_function_append_basic_block(IRFunction *func, IRBasicBlock *bb);
+
 // --- 调试 ---
 void ir_basic_block_dump(IRBasicBlock *bb, FILE *stream);
 

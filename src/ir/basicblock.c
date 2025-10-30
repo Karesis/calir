@@ -3,6 +3,7 @@
 #include "ir/function.h"
 #include "ir/instruction.h"
 #include "utils/bump.h"
+#include "utils/id_list.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -35,10 +36,17 @@ ir_basic_block_create(IRFunction *func, const char *name)
   // [修改] 使用 Context 中的单例 'label' 类型
   bb->label_address.type = ctx->type_label;
 
-  // 添加到父函数的基本块链表
-  list_add_tail(&func->basic_blocks, &bb->list_node);
-
   return bb;
+}
+
+void
+ir_function_append_basic_block(IRFunction *func, IRBasicBlock *bb)
+{
+  assert(func != NULL);
+  assert(bb != NULL);
+  assert(bb->parent == func && "Block being added to the wrong function?");
+  // TODO: 检查 bb 是否已在链表中?
+  list_add_tail(&func->basic_blocks, &bb->list_node);
 }
 
 // --- 调试 ---
