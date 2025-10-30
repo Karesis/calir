@@ -90,7 +90,7 @@ ir_instruction_create_internal(IRBuilder *builder, IROpcode opcode, IRType *type
   assert(builder->insertion_point != NULL && "Builder insertion point is not set");
   IRContext *ctx = builder->context;
 
-  // 1. [新] 从 ir_arena 分配
+  // 1. 从 ir_arena 分配
   IRInstruction *inst = BUMP_ALLOC_ZEROED(&ctx->ir_arena, IRInstruction);
   if (!inst)
     return NULL; // OOM
@@ -106,7 +106,7 @@ ir_instruction_create_internal(IRBuilder *builder, IROpcode opcode, IRType *type
   list_init(&inst->list_node);
   list_init(&inst->operands);
 
-  // 4. [新] 分配名字 (如果它有结果)
+  // 4. 分配名字 (如果它有结果)
   if (type->kind != IR_TYPE_VOID)
   {
     inst->result.name = builder_get_next_reg_name(builder);
@@ -244,7 +244,6 @@ ir_builder_create_icmp(IRBuilder *builder, IRICmpPredicate pred, IRValueNode *lh
   inst->as.icmp.predicate = pred;
 
   // 4. 创建 Use 边 (链接操作数)
-  // (使用你已有的 ir_use_create)
   ir_use_create(builder->context, inst, lhs); // Operand 0
   ir_use_create(builder->context, inst, rhs); // Operand 1
 
@@ -465,6 +464,41 @@ ir_builder_create_gep(IRBuilder *builder, IRType *source_type, IRValueNode *base
   for (size_t i = 0; i < num_indices; i++)
   {
     ir_use_create(ctx, inst, indices[i]);
+  }
+
+  return &inst->result;
+}
+
+// --- API: Call 指令 ---
+
+IRValueNode *
+ir_builder_create_call(IRBuilder *builder, IRValueNode *callee_func, IRValueNode **args, size_t num_args)
+{
+  assert(builder != NULL);
+  assert(callee_func != NULL);
+  assert(callee_func->kind == IR_KIND_FUNCTION && "callee must be a function");
+  assert(args != NULL || num_args == 0);
+
+  // [!! 关键 !!]
+  // 1. 从 callee (IRValueNode) 获取 IRFunction
+  IRFunction *func = container_of(callee_func, IRFunction, entry_address);
+
+  // 2. 结果类型是函数的返回类型
+  IRType *result_type = func->return_type;
+
+  // 3. 调用内部工厂
+  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_CALL, result_type);
+
+  if (!inst)
+    return NULL; // OOM
+
+  // 4. 创建 Use 边 (操作数 0 是 callee)
+  ir_use_create(builder->context, inst, callee_func);
+
+  // 5. 创建 Use 边 (操作数 1..N 是参数)
+  for (size_t i = 0; i < num_args; i++)
+  {
+    ir_use_create(builder->context, inst, args[i]);
   }
 
   return &inst->result;

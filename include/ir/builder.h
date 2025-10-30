@@ -121,4 +121,16 @@ IRValueNode *ir_builder_create_phi(IRBuilder *builder, IRType *type);
  */
 void ir_phi_add_incoming(IRValueNode *phi_node, IRValueNode *value, IRBasicBlock *incoming_bb);
 
+// --- API: CALL 节点
+/**
+ * @brief 构建 'call <callee>, <arg1>, <arg2>, ...'
+ *
+ * @param builder Builder
+ * @param callee_func 被调用的函数 (必须是 IR_KIND_FUNCTION)
+ * @param args 参数的数组 (IRValueNode* 数组)
+ * @param num_args 参数的数量
+ * @return 指向计算出的返回值的 ValueNode (如果 void 则无名)
+ */
+IRValueNode *ir_builder_create_call(IRBuilder *builder, IRValueNode *callee_func, IRValueNode **args, size_t num_args);
+
 #endif // IR_BUILDER_H

@@ -24,7 +24,8 @@ typedef enum
   IR_OP_LOAD,
   IR_OP_STORE,
   IR_OP_PHI, // phi <type> [ <val1>, <bb1> ], [ <val2>, <bb2> ], ...
-  IR_OP_GEP  // getelementptr
+  IR_OP_GEP, // gep
+  IR_OP_CALL // call
 } IROpcode;
 
 // ICMP (Integer Compare) 谓词

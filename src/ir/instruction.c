@@ -294,6 +294,36 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     }
     break;
 
+  case IR_OP_CALL: {
+    fprintf(stream, "call ");
+
+    // 1. 打印 Callee (操作数 0)
+    IRValueNode *callee = get_operand(inst, 0);
+    assert(callee != NULL && "call must have a callee");
+    ir_value_dump(callee, stream);
+
+    // 2. 遍历打印所有参数 (操作数 1...N)
+    fprintf(stream, "(");
+    IDList *chead = &inst->operands;
+    IDList *citer = chead->next->next; // [!!] 跳过 callee
+
+    int arg_idx = 0;
+    while (citer != chead)
+    {
+      if (arg_idx > 0)
+      {
+        fprintf(stream, ", ");
+      }
+      IRUse *use = list_entry(citer, IRUse, user_node);
+      ir_value_dump(use->value, stream); // "i32 %idx" 或 "i32 0"
+
+      citer = citer->next;
+      arg_idx++;
+    }
+    fprintf(stream, ")");
+    break;
+  }
+
   default:
     fprintf(stream, "<?? opcode %d>", inst->opcode);
     break;

@@ -537,6 +537,48 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
     break;
   }
 
+  case IR_OP_CALL: {
+    // 1. 验证至少有 Callee
+    VERIFY_ASSERT(op_count >= 1, vctx, value, "'call' must have at least 1 operand (the callee).");
+
+    // 2. 验证 Callee
+    IRValueNode *callee_val = get_operand(inst, 0);
+    VERIFY_ASSERT(callee_val->kind == IR_KIND_FUNCTION, vctx, callee_val,
+                  "'call' operand 0 (callee) must be a function.");
+
+    // 3. 验证结果类型
+    // (我们需要从 ValueNode* 获取 IRFunction* 来检查其 return_type)
+    IRFunction *callee_func = container_of(callee_val, IRFunction, entry_address);
+    VERIFY_ASSERT(result_type == callee_func->return_type, vctx, value,
+                  "'call' result type does not match callee's return type.");
+
+    // 4. 验证参数数量
+    size_t expected_arg_count = 0;
+    IDList *arg_iter;
+    list_for_each(&callee_func->arguments, arg_iter)
+    {
+      expected_arg_count++;
+    }
+    size_t provided_arg_count = op_count - 1;
+    VERIFY_ASSERT(provided_arg_count == expected_arg_count, vctx, value,
+                  "'call' argument count mismatch. Expected %zu, but got %zu.", expected_arg_count, provided_arg_count);
+
+    // 5. 验证参数类型 (逐个对比)
+    arg_iter = callee_func->arguments.next; // 重置迭代器
+    for (size_t i = 1; i < op_count; i++)
+    {
+      IRValueNode *provided_arg = get_operand(inst, i);
+      IRArgument *expected_arg_struct = list_entry(arg_iter, IRArgument, list_node);
+      IRType *expected_type = expected_arg_struct->value.type;
+
+      VERIFY_ASSERT(provided_arg->type == expected_type, vctx, provided_arg, "'call' argument %zu type mismatch.",
+                    (i - 1));
+
+      arg_iter = arg_iter->next; // 前进到下一个*预期*参数
+    }
+    break;
+  }
+
   default:
     VERIFY_ERROR(vctx, value, "Unknown instruction opcode: %d", inst->opcode);
   }
