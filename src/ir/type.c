@@ -189,11 +189,8 @@ ir_type_to_string_recursive(IRType *type, char *buffer, size_t *pos_ptr, size_t 
     break;
   case IR_TYPE_PTR:
     safe_append(buffer, pos_ptr, size, "ptr");
-    // (为了简洁，我们不像 LLVM 那样打印 ptr(ty))
-    // 如果需要，可以取消注释下面这几行
-    // safe_append(buffer, pos_ptr, size, "(");
-    // ir_type_to_string_recursive(type->pointee_type, buffer, pos_ptr, size);
-    // safe_append(buffer, pos_ptr, size, ")");
+    // 递归打印指针指向的类型
+    ir_type_to_string_recursive(type->as.pointee_type, buffer, pos_ptr, size);
     break;
 
   case IR_TYPE_ARRAY:
