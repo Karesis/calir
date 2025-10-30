@@ -1,76 +1,83 @@
-#ifndef CALIR_IR_PARSER_H
-#define CALIR_IR_PARSER_H
+/* include/ir/parser.h */
+#ifndef IR_PARSER_H
+#define IR_PARSER_H
 
-#include "ir/builder.h"
-#include "ir/context.h"
-#include "ir/lexer.h"
-#include "ir/module.h"
-#include "utils/hashmap.h"
-
-// 前向声明
-typedef struct IRContext IRContext;
-typedef struct IRModule IRModule;
-typedef struct IRFunction IRFunction;
-typedef struct IRBasicBlock IRBasicBlock;
-typedef struct Lexer Lexer;
-typedef struct IRBuilder IRBuilder;
-typedef struct PtrHashMap PtrHashMap;
+#include "ir/builder.h"    // For IRBuilder
+#include "ir/context.h"    // For IRContext
+#include "ir/function.h"   // For IRFunction
+#include "ir/lexer.h"      // For Lexer
+#include "ir/module.h"     // For IRModule
+#include "utils/bump.h"    // For Bump
+#include "utils/hashmap.h" // For PtrHashMap
+#include <stdbool.h>       // For bool
 
 /**
- * @brief IR 解析器
+ * @brief Parser 状态机
  *
- * 持有解析一个模块所需的全部状态。
+ * 封装了解析文本 IR 所需的所有状态。
+ * 它不是一个持久对象；它在 ir_parse_module 函数开始时创建，
+ * 在解析完成或失败时销毁。
  */
 typedef struct Parser
 {
-  Lexer *lexer;                 // 词法分析器 (Token 源)
-  IRContext *context;           // IR 上下文 (用于创建 Types/Constants)
-  IRBuilder *builder;           // IR 构建器 (用于创建 Instructions)
-  IRModule *module;             // 正在构建的模块
-  IRFunction *current_function; // 正在解析的当前函数
+  /** @brief 指向 Lexer 的指针，用于消耗 Token。*/
+  Lexer *lexer;
+
+  /** @brief 指向全局 IR 上下文的指针。*/
+  IRContext *context;
+
+  /** @brief 指向我们正在构建的目标模块的指针。*/
+  IRModule *module;
+
+  /** @brief 指向 IRBuilder 的指针，用于插入指令。*/
+  IRBuilder *builder;
+
+  /** @brief 指向当前正在解析的函数 (如果不在函数内部，则为 NULL)。*/
+  IRFunction *current_function;
 
   /**
-   * @brief [核心] 符号表 (Symbol Table)
+   * @brief 临时分配器。
+   * 用于分配 Parser 的临时数据，例如：
+   * 1. 当前函数的 local_value_map。
+   * 2. 解析 GEP 或 Call 指令时的临时参数数组。
    *
-   * 映射: const char* (来自 Lexer) -> IRValueNode*
-   * - "%foo" -> IRInstruction*, IRArgument*
-   * - "@bar" -> IRFunction*, IRGlobalVariable*
+   * 它在进入新函数时被重置 (bump_reset)。
    */
-  PtrHashMap *value_map;
+  Bump temp_arena;
 
   /**
-   * @brief 基本块映射 (用于前向引用)
-   * * 映射: const char* (label name) -> IRBasicBlock*
-   * 允许 'br label %later' 在 '%later:' 定义之前出现。
+   * @brief 全局符号表 (值映射)。
+   * Map<const char* (interned), IRValueNode*>
+   * 存储 @globals 和 @functions。
+   * 在 Parser 的生命周期内持续存在 (在 ir_arena 上分配)。
    */
-  PtrHashMap *bb_map;
+  PtrHashMap *global_value_map;
+
+  /**
+   * @brief 局部符号表 (值映射)。
+   * Map<const char* (interned), IRValueNode*>
+   * 存储 %locals, %args, 和 %labels。
+   * 在进入函数时创建 (在 temp_arena 上)，在退出函数时销毁。
+   */
+  PtrHashMap *local_value_map;
+
+  /** @brief 错误标志。如果解析过程中发生错误，则设置为 true。*/
+  bool has_error;
 
 } Parser;
 
-// --- Parser API ---
-
 /**
- * @brief 创建一个新的 Parser 实例
- * @param ctx IR 上下文
- * @param mod 要填充的 IR 模块
- * @return Parser* (必须由 ir_parser_destroy 释放)
- */
-Parser *ir_parser_create(IRContext *ctx, IRModule *mod);
-
-/**
- * @brief 销毁 Parser 实例
- * (注意: 不会销毁 Context 或 Module)
- * @param parser 要销毁的 Parser
- */
-void ir_parser_destroy(Parser *parser);
-
-/**
- * @brief [主 API] 解析一个 .cir 文本缓冲区并填充模块
+ * @brief 解析一个完整的 IR 模块
  *
- * @param parser Parser 实例
- * @param buffer 包含 .cir 文本的 C 字符串 (以 '\0' 结尾)
- * @return 如果解析成功返回 true，否则返回 false (并打印错误)
+ * 这是 Parser 的主入口点。
+ * 它接收一个包含 IR 文本的字符串缓冲区，并返回一个
+ * 构建好的 IRModule 对象 (在 Context 的 ir_arena 中)。
+ *
+ * @param ctx 全局 IR 上下文
+ * @param source_buffer 包含要解析的 IR 文本的 C 字符串
+ * @return IRModule* 如果解析成功，返回指向新模块的指针。
+ * @return NULL 如果解析失败 (例如语法错误)。
  */
-bool ir_parse_buffer(Parser *parser, const char *buffer);
+IRModule *ir_parse_module(IRContext *ctx, const char *source_buffer);
 
-#endif // CALIR_IR_PARSER_H
+#endif // IR_PARSER_H
