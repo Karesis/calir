@@ -17,10 +17,14 @@ typedef enum
   TK_EOF,     // 文件结束
 
   // --- 标识符和字面量 ---
-  TK_IDENT,           // e.g., define, i32, add, my_label
-  TK_GLOBAL_IDENT,    // e.g., @my_global, @main
-  TK_LOCAL_IDENT,     // e.g., %x, %0, %entry
-  TK_INTEGER_LITERAL, // e.g., 123, -42
+  TK_IDENT,        // e.g., define, i32, add, my_label
+  TK_GLOBAL_IDENT, // e.g., @my_global, @main
+  TK_LOCAL_IDENT,  // e.g., %x, %0, %entry
+
+  // 字面量
+  TK_INTEGER_LITERAL, // e.g., '123', '-42'
+  TK_FLOAT_LITERAL,   // [新] e.g., '1.23', '-0.5'
+  TK_STRING_LITERAL,  // [新] e.g., '"Hello\n"'
 
   // --- 标点符号 ---
   TK_EQ,        // =
@@ -50,12 +54,15 @@ typedef struct Token
   int line; // Token 所在的行号 (用于报错)
 
   union {
-    // 用于 TK_IDENT, TK_GLOBAL_IDENT, TK_LOCAL_IDENT
+    // 用于 TK_IDENT, TK_GLOBAL_IDENT, TK_LOCAL_IDENT, TK_STRING_LITERAL
     // 指针指向 Context->permanent_arena 中唯一的字符串
     const char *ident_val;
 
     // 用于 TK_INTEGER_LITERAL
     int64_t int_val;
+
+    // 用于 TK_FLOAT_LITERAL
+    double float_val;
   } as;
 } Token;
 
@@ -71,8 +78,8 @@ typedef struct Lexer
   const char *ptr;          // 当前解析到的字符位置
   int line;                 // 当前行号
 
-  Token current_token; // 当前的 Token
-  Token peek_token;    // [可选] 用于 LL(2) 预读，暂时不用
+  Token current; // 当前的 Token
+  Token peek;    // LL(2) 预读
 } Lexer;
 
 // --- Lexer API ---
@@ -92,6 +99,22 @@ void ir_lexer_init(Lexer *lexer, const char *buffer, IRContext *ctx);
  * (为了简单起见，我们先实现一个 LL(1) 的，只用 current_token)
  */
 void ir_lexer_next(Lexer *lexer);
+
+/**
+ * @brief 获取*当前* Token (K=1)
+ *
+ * @param lexer Lexer 实例
+ * @return const Token*
+ */
+const Token *ir_lexer_current_token(const Lexer *lexer);
+
+/**
+ * @brief 预读*下一个* Token (K=2)
+ *
+ * @param lexer Lexer 实例
+ * @return const Token*
+ */
+const Token *ir_lexer_peek_token(const Lexer *lexer);
 
 /**
  * @brief [辅助] "吃掉" 当前 Token，如果它匹配预期类型。

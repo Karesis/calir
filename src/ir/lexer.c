@@ -1,6 +1,7 @@
+/* src/ir/lexer.c */
 #include "ir/lexer.h"
-#include "ir/context.h"    // 需要 ir_context_intern_str_slice
-#include "utils/id_list.h" // 包含 container_of
+#include "ir/context.h"
+#include "utils/id_list.h" // 包含 container_of (虽然这里没用，但保持一致)
 
 #include <assert.h>
 #include <ctype.h>  // for isalpha, isdigit, isalnum
@@ -14,14 +15,12 @@
 static bool
 is_ident_start(char c)
 {
-  // 标识符（如 'add', 'i32', 'my_label'）必须以字母或下划线开头
   return isalpha(c) || c == '_';
 }
 
 static bool
 is_ident_continue(char c)
 {
-  // 后续字符可以是字母、数字、下划线或点 (e.g., %x.ptr)
   return isalnum(c) || c == '_' || c == '.';
 }
 
@@ -29,14 +28,12 @@ is_ident_continue(char c)
 // 辅助解析器 (Helper Parsers)
 // -----------------------------------------------------------------
 
-// 获取当前字符 (不消耗)
 static char
 current_char(Lexer *l)
 {
   return *l->ptr;
 }
 
-// 消耗当前字符并返回它
 static char
 advance(Lexer *l)
 {
@@ -48,7 +45,6 @@ advance(Lexer *l)
   return c;
 }
 
-// 获取下一个字符 (不消耗)
 static char
 peek_char(Lexer *l)
 {
@@ -59,7 +55,6 @@ peek_char(Lexer *l)
   return *(l->ptr + 1);
 }
 
-// 跳过注释 (从 ';' 到行尾)
 static void
 skip_comment(Lexer *l)
 {
@@ -69,7 +64,6 @@ skip_comment(Lexer *l)
   }
 }
 
-// 跳过所有空白字符和注释
 static void
 skip_whitespace(Lexer *l)
 {
@@ -91,14 +85,18 @@ skip_whitespace(Lexer *l)
       skip_comment(l);
       break;
     default:
-      return; // 遇到非空白字符，停止
+      return;
     }
   }
 }
 
-// 解析一个 TK_IDENT (e.g., 'define', 'i32', 'add')
+/**
+ * @brief [内部] 解析一个 TK_IDENT
+ * @param l Lexer
+ * @param out_token [输出] 存储结果的 Token
+ */
 static void
-parse_ident(Lexer *l)
+parse_ident(Lexer *l, Token *out_token)
 {
   const char *start = l->ptr;
   // (我们已经知道第一个字符是 ident_start)
@@ -110,26 +108,25 @@ parse_ident(Lexer *l)
   }
   size_t len = l->ptr - start;
 
-  l->current_token.type = TK_IDENT;
-  // [!!] 字符串驻留 (String Interning)
-  l->current_token.as.ident_val = ir_context_intern_str_slice(l->context, start, len);
+  out_token->type = TK_IDENT;
+  out_token->as.ident_val = ir_context_intern_str_slice(l->context, start, len);
 }
 
-// 解析一个 TK_GLOBAL_IDENT 或 TK_LOCAL_IDENT
-// (e.g., '@main', '%entry', '%0')
+/**
+ * @brief [内部] 解析 TK_GLOBAL_IDENT 或 TK_LOCAL_IDENT
+ * @param l Lexer
+ * @param type (TK_GLOBAL_IDENT 或 TK_LOCAL_IDENT)
+ * @param out_token [输出] 存储结果的 Token
+ */
 static void
-parse_global_or_local(Lexer *l, TokenType type)
+parse_global_or_local(Lexer *l, TokenType type, Token *out_token)
 {
-  // (我们已经知道第一个字符是 '@' 或 '%')
-  advance(l); // 跳过 '@' 或 '%'
 
   const char *start = l->ptr;
 
-  // [!!] 允许数字作为第一个字符 (e.g., %0)
   if (!is_ident_continue(current_char(l)))
   {
-    // 错误: 单独的 '@' 或 '%'
-    l->current_token.type = TK_ILLEGAL;
+    out_token->type = TK_ILLEGAL;
     return;
   }
 
@@ -139,15 +136,18 @@ parse_global_or_local(Lexer *l, TokenType type)
   }
   size_t len = l->ptr - start;
 
-  l->current_token.type = type;
-  l->current_token.as.ident_val = ir_context_intern_str_slice(l->context, start, len);
+  out_token->type = type;
+  out_token->as.ident_val = ir_context_intern_str_slice(l->context, start, len);
 }
 
-// 解析一个 TK_INTEGER_LITERAL (e.g., '123' or '-42')
+/**
+ * @brief [内部] 解析 TK_INTEGER_LITERAL 或 TK_FLOAT_LITERAL
+ * @param l Lexer
+ * @param out_token [输出] 存储结果的 Token
+ */
 static void
-parse_number(Lexer *l)
+parse_number(Lexer *l, Token *out_token)
 {
-  const char *start = l->ptr;
   bool is_negative = false;
 
   if (current_char(l) == '-')
@@ -157,19 +157,170 @@ parse_number(Lexer *l)
   }
 
   // (我们已经知道至少有一位数字)
-  int64_t val = 0;
+  int64_t int_part = 0;
   while (isdigit(current_char(l)))
   {
-    val = val * 10 + (current_char(l) - '0');
+    int_part = int_part * 10 + (advance(l) - '0');
+  }
+
+  // [新] 检查浮点数
+  if (current_char(l) == '.' && isdigit(peek_char(l)))
+  {
+    // 这是一个浮点数
+    advance(l); // 消耗 '.'
+
+    double frac_part = 0.0;
+    double div = 10.0;
+    while (isdigit(current_char(l)))
+    {
+      frac_part = frac_part + (advance(l) - '0') / div;
+      div *= 10.0;
+    }
+
+    out_token->type = TK_FLOAT_LITERAL;
+    double final_val = (double)int_part + frac_part;
+    out_token->as.float_val = is_negative ? -final_val : final_val;
+  }
+  else
+  {
+    // 这是一个整数
+    out_token->type = TK_INTEGER_LITERAL;
+    out_token->as.int_val = is_negative ? -int_part : int_part;
+  }
+
+  // 检查非法后缀 (e.g., "123foo")
+  if (is_ident_start(current_char(l)))
+  {
+    out_token->type = TK_ILLEGAL;
+  }
+}
+
+/**
+ * @brief [内部] 解析 TK_STRING_LITERAL
+ * @param l Lexer
+ * @param out_token [输出] 存储结果的 Token
+ */
+static void
+parse_string(Lexer *l, Token *out_token)
+{
+  const char *start = l->ptr;
+
+  // 循环直到找到结束的 '"'
+  // TODO: 当前不支持转义字符 (e.g., \" or \n)
+  while (current_char(l) != '"' && current_char(l) != '\0')
+  {
     advance(l);
   }
 
-  l->current_token.type = TK_INTEGER_LITERAL;
-  l->current_token.as.int_val = is_negative ? -val : val;
+  if (current_char(l) == '\0')
+  {
+    // 未闭合的字符串
+    out_token->type = TK_ILLEGAL;
+    return;
+  }
+
+  size_t len = l->ptr - start;
+  advance(l); // 消耗 '"'
+
+  out_token->type = TK_STRING_LITERAL;
+  // (我们 intern 字符串的 *内容*，不包括引号)
+  out_token->as.ident_val = ir_context_intern_str_slice(l->context, start, len);
 }
 
 // -----------------------------------------------------------------
-// 公共 API (Public API)
+// 核心扫描器 (Core Scanner)
+// -----------------------------------------------------------------
+
+/**
+ * @brief [!! 内部 !!] 扫描下一个 Token 并填充 out_token。
+ * (这是旧的 ir_lexer_next)
+ */
+static void
+lexer_scan_token(Lexer *l, Token *out_token)
+{
+  // 1. 跳过空白和注释
+  skip_whitespace(l);
+
+  // 2. 存储 Token 的起始行号
+  out_token->line = l->line;
+
+  // 3. 消耗一个字符并进行分派
+  char c = advance(l);
+
+  switch (c)
+  {
+  // --- 文件结束 ---
+  case '\0':
+    out_token->type = TK_EOF;
+    break;
+
+  // --- 标点符号 ---
+  case '=':
+    out_token->type = TK_EQ;
+    break;
+  case ',':
+    out_token->type = TK_COMMA;
+    break;
+  case ':':
+    out_token->type = TK_COLON;
+    break;
+  case '{':
+    out_token->type = TK_LBRACE;
+    break;
+  case '}':
+    out_token->type = TK_RBRACE;
+    break;
+  case '[':
+    out_token->type = TK_LBRACKET;
+    break;
+  case ']':
+    out_token->type = TK_RBRACKET;
+    break;
+  case '(':
+    out_token->type = TK_LPAREN;
+    break;
+  case ')':
+    out_token->type = TK_RPAREN;
+    break;
+
+  // --- 标识符 ---
+  case '@':
+    parse_global_or_local(l, TK_GLOBAL_IDENT, out_token);
+    break;
+  case '%':
+    parse_global_or_local(l, TK_LOCAL_IDENT, out_token);
+    break;
+
+  // [新] 字符串
+  case '"':
+    parse_string(l, out_token);
+    break;
+
+  // --- 默认情况 (标识符, 数字, 或非法字符) ---
+  default:
+    // 1. 普通标识符 (e.g., 'define', 'add')
+    if (is_ident_start(c))
+    {
+      l->ptr--; // 回退一步
+      parse_ident(l, out_token);
+    }
+    // 2. 数字 (e.g., '123', '-42', '1.23')
+    else if (isdigit(c) || (c == '-' && (isdigit(peek_char(l)) || peek_char(l) == '.')))
+    {
+      l->ptr--; // 回退一步
+      parse_number(l, out_token);
+    }
+    // 3. 非法字符
+    else
+    {
+      out_token->type = TK_ILLEGAL;
+    }
+    break;
+  }
+}
+
+// -----------------------------------------------------------------
+// 公共 API (Public API) - [!! 已升级 !!]
 // -----------------------------------------------------------------
 
 /**
@@ -184,92 +335,45 @@ ir_lexer_init(Lexer *lexer, const char *buffer, IRContext *ctx)
   lexer->ptr = buffer;
   lexer->line = 1;
 
-  // "启动" Lexer，加载第一个 Token
-  ir_lexer_next(lexer);
+  // [!! 核心 !!]
+  // 填充 K=1 和 K=2 (current 和 peek)
+  lexer_scan_token(lexer, &lexer->current);
+  lexer_scan_token(lexer, &lexer->peek);
 }
 
 /**
- * @brief "吃掉" 当前 Token，并让 Lexer 解析下一个 Token。
+ * @brief 消耗当前 Token，使 'peek' 成为 'current'。
  */
 void
 ir_lexer_next(Lexer *lexer)
 {
-  // 1. 跳过空白和注释
-  skip_whitespace(lexer);
+  // 1. 将 peek 移到 current
+  lexer->current = lexer->peek;
 
-  // 2. 存储 Token 的起始行号
-  lexer->current_token.line = lexer->line;
-
-  // 3. 消耗一个字符并进行分派
-  char c = advance(lexer);
-
-  switch (c)
+  // 2. 如果 current 不是 EOF，扫描下一个 token 到 peek
+  if (lexer->current.type != TK_EOF)
   {
-  // --- 文件结束 ---
-  case '\0':
-    lexer->current_token.type = TK_EOF;
-    break;
-
-  // --- 标点符号 ---
-  case '=':
-    lexer->current_token.type = TK_EQ;
-    break;
-  case ',':
-    lexer->current_token.type = TK_COMMA;
-    break;
-  case ':':
-    lexer->current_token.type = TK_COLON;
-    break;
-  case '{':
-    lexer->current_token.type = TK_LBRACE;
-    break;
-  case '}':
-    lexer->current_token.type = TK_RBRACE;
-    break;
-  case '[':
-    lexer->current_token.type = TK_LBRACKET;
-    break;
-  case ']':
-    lexer->current_token.type = TK_RBRACKET;
-    break;
-  case '(':
-    lexer->current_token.type = TK_LPAREN;
-    break;
-  case ')':
-    lexer->current_token.type = TK_RPAREN;
-    break;
-
-  // --- 标识符 ---
-  case '@':
-    parse_global_or_local(lexer, TK_GLOBAL_IDENT);
-    break;
-  case '%':
-    parse_global_or_local(lexer, TK_LOCAL_IDENT);
-    break;
-
-  // --- 默认情况 (标识符, 数字, 或非法字符) ---
-  default:
-    // 1. 普通标识符 (e.g., 'define', 'add')
-    if (is_ident_start(c))
-    {
-      // 我们多 'advance' 了一个字符，回退一步
-      lexer->ptr--;
-      parse_ident(lexer);
-    }
-    // 2. 数字 (e.g., '123', '-42')
-    else if (isdigit(c) || (c == '-' && isdigit(peek_char(lexer))))
-    {
-      // 回退一步
-      lexer->ptr--;
-      parse_number(lexer);
-    }
-    // 3. 非法字符
-    else
-    {
-      lexer->current_token.type = TK_ILLEGAL;
-    }
-    break;
+    lexer_scan_token(lexer, &lexer->peek);
   }
+  // (如果 current 是 EOF, peek 也会是 EOF)
+}
+
+/**
+ * @brief 获取*当前* Token (K=1)
+ */
+const Token *
+ir_lexer_current_token(const Lexer *lexer)
+{
+  return &lexer->current;
+}
+
+/**
+ * @brief 预读*下一个* Token (K=2)
+ */
+const Token *
+ir_lexer_peek_token(const Lexer *lexer)
+{
+  return &lexer->peek;
 }
 
 /**
@@ -278,11 +382,11 @@ ir_lexer_next(Lexer *lexer)
 bool
 ir_lexer_eat(Lexer *lexer, TokenType expected)
 {
-  if (lexer->current_token.type != expected)
+  if (lexer->current.type != expected)
   {
-    // [!!] Parser 应该在这里报错
-    // 为了安全，我们将 token 设为 ILLEGAL
-    lexer->current_token.type = TK_ILLEGAL;
+    // 'eat' 是一个高级辅助函数，它不应该将
+    // token 设为 ILLEGAL，它应该只报告 false。
+    // Parser 负责报告错误。
     return false;
   }
   // 消耗匹配的 Token
