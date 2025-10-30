@@ -18,17 +18,17 @@ ir_module_create(IRContext *ctx, const char *name)
 {
   assert(ctx != NULL && "IRContext cannot be NULL");
 
-  // 1. [修改] 从 ir_arena 分配
+  // 1. 从 ir_arena 分配
   IRModule *mod = BUMP_ALLOC_ZEROED(&ctx->ir_arena, IRModule);
   if (!mod)
   {
     return NULL; // OOM
   }
 
-  // 2. [新] 存储 Context 指针
+  // 2. 存储 Context 指针
   mod->context = ctx;
 
-  // 3. [修改] 唯一化(Intern)字符串, 而不是 strdup
+  // 3. 唯一化(Intern)字符串
   mod->name = ir_context_intern_str(ctx, name);
   if (!mod->name)
   {

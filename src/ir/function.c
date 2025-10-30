@@ -65,7 +65,7 @@ ir_function_create(IRModule *mod, const char *name, IRType *ret_type)
   func->parent = mod;
   func->return_type = ret_type;
 
-  // [修改] 显式初始化链表
+  // 显式初始化链表
   list_init(&func->list_node);
   list_init(&func->arguments);
   list_init(&func->basic_blocks);
@@ -102,7 +102,7 @@ ir_function_dump(IRFunction *func, FILE *stream)
   ir_type_to_string(func->return_type, type_str, sizeof(type_str));
 
   // --- 2. 打印 'declare' 或 'define' 和签名 ---
-  // [!!] 修正 Bug 1: 只打印一次
+  // 只打印一次
   fprintf(stream, "%s %s @%s(", is_declaration ? "declare" : "define", type_str, func->entry_address.name);
 
   // --- 3. 打印参数 ---
@@ -127,7 +127,7 @@ ir_function_dump(IRFunction *func, FILE *stream)
   }
 
   // --- 4. 打印函数体 (或结束声明) ---
-  // [!!] 修正 Bug 2: 区分声明和定义
+  // 区分声明和定义
   if (is_declaration)
   {
     // 声明： declare ... (...)

@@ -154,7 +154,7 @@ void *bump_alloc_layout(Bump *bump, BumpLayout layout);
 void *bump_alloc(Bump *bump, size_t size, size_t align);
 
 /**
- * @brief 便捷函数：分配并复制数据。
+ * @brief 便捷函数：分配并复制数据。(memcpy风格)
  *
  * @param bump Arena。
  * @param src 要复制的数据源。

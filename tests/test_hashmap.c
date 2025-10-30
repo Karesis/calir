@@ -256,10 +256,7 @@ uint64_t
 my_struct_hash(const void *key)
 {
   const MyStructKey *k = (const MyStructKey *)key;
-  // 简单的哈希:
-  // (我们假设 xxhash.h 已经被包含了, 并且可以被 test_hashmap.c 链接)
-  // 如果 xxhash.h 是 "inline all", 我们需要在这里再次包含它...
-  // 为了简单起见, 我们先用一个简单的 xor 哈希
+  // 简单的 xor 哈希:
   uint64_t tag_hash = 0;
   if (k->tag)
   {
@@ -344,9 +341,7 @@ test_generic_hashmap()
 int
 main(void)
 {
-  // --- [已根据你的 bump.h 修改] ---
   // 初始化一个全局 Arena 供所有测试使用
-  // (根据你的 bump.h, init 不带参数)
   bump_init(&global_arena);
 
   printf("=== Calir HashMap Test Suite ===\n");
@@ -363,7 +358,6 @@ main(void)
   printf("  TOTAL FAILS: %d\n", total_fails);
   printf("==================================\n");
 
-  // --- [已根据你的 bump.h 修改] ---
   // 销毁 Arena, 释放其分配的所有内存块
   // (这适用于由 bump_init 初始化的栈/全局 Arena)
   bump_destroy(&global_arena);
