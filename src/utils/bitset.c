@@ -1,6 +1,7 @@
 // src/utils/bitset.c
 #include "utils/bitset.h"
 #include <assert.h> // for assert()
+#include <stddef.h>
 #include <string.h> // for memset, memcpy, memcmp
 
 // --- 内部辅助宏 ---
@@ -178,12 +179,12 @@ bitset_difference(Bitset *dest, const Bitset *src1, const Bitset *src2)
   }
 }
 
-int
+size_t
 bitset_count_slow(const Bitset *bs)
 {
   // C 语言没有内置的 popcount，所以我们用一个慢速循环
   // (在 GCC/Clang 上, -O2 可能会将其优化为 popcnt 指令)
-  int count = 0;
+  size_t count = 0;
   for (size_t i = 0; i < bs->num_words; i++)
   {
     uint64_t word = bs->words[i];

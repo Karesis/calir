@@ -94,6 +94,6 @@ void bitset_difference(Bitset *dest, const Bitset *src1, const Bitset *src2);
 /**
  * @brief [调试用] 统计集合中 1 的数量 (较慢)
  */
-int bitset_count_slow(const Bitset *bs);
+size_t bitset_count_slow(const Bitset *bs);
 
 #endif // CALIR_UTILS_BITSET_H
