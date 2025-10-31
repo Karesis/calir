@@ -169,7 +169,7 @@ expect(Parser *p, TokenType type)
 static bool
 expect_ident(Parser *p, const char *ident_str)
 {
-  Token *tok = current_token(p);
+  const Token *tok = current_token(p);
 
   // [假设] Lexer 提供的 `as.ident_val` 是一个 null 结尾的 C 字符串
   if (tok->type == TK_IDENT && strcmp(tok->as.ident_val, ident_str) == 0)
@@ -343,7 +343,7 @@ static IRValueNode *parse_instruction(Parser *p, bool *out_is_terminator);
 static IRValueNode *parse_operation(Parser *p, Token *result_token, IRType *result_type, bool *out_is_terminator);
 static IRType *parse_type(Parser *p);
 static IRValueNode *parse_operand(Parser *p);
-static IRValueNode *parse_constant(Parser *p);
+// static IRValueNode *parse_constant(Parser *p);
 
 /**
  * @brief 主循环：解析模块的顶层元素。
@@ -395,7 +395,7 @@ typedef struct
 static void
 parse_top_level_element(Parser *p)
 {
-  Token *tok = current_token(p);
+  const Token *tok = current_token(p);
 
   switch (tok->type)
   {
@@ -836,7 +836,7 @@ parse_global_variable(Parser *p)
 
   // 5. [!! 已重构 !!] 解析*初始值* (使用 "设计 B")
   IRValueNode *initializer = NULL;
-  Token *val_tok = current_token(p);
+  const Token *val_tok = current_token(p);
 
   if (val_tok->type == TK_IDENT && strcmp(val_tok->as.ident_val, "zeroinitializer") == 0)
   {
@@ -952,7 +952,7 @@ parse_basic_block(Parser *p)
     if (p->has_error)
       return;
 
-    Token *tok = current_token(p);
+    const Token *tok = current_token(p);
     if (tok->type == TK_RBRACE)
       return;
 
@@ -1713,7 +1713,7 @@ static IRType *
 parse_array_type(Parser *p)
 {
   // (调用者已经消耗了 '[')
-  Token *count_tok = current_token(p);
+  const Token *count_tok = current_token(p);
   if (!expect(p, TK_INTEGER_LITERAL))
   {
     return NULL; // 错误: 缺少数组大小
@@ -1840,7 +1840,7 @@ parse_struct_type(Parser *p)
 static IRType *
 parse_type(Parser *p)
 {
-  Token *tok = current_token(p);
+  const Token *tok = current_token(p);
   IRType *base_type = NULL;
 
   switch (tok->type)
