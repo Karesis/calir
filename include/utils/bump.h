@@ -173,6 +173,22 @@ void *bump_alloc_copy(Bump *bump, const void *src, size_t size, size_t align);
  */
 char *bump_alloc_str(Bump *bump, const char *str);
 
+/**
+ * @brief 重新分配一块内存 (分配 + 复制)。
+ *
+ * 在 arena 中，这*几乎*总是会分配一块 *新* 内存，
+ * 复制 [old_ptr, old_ptr + old_size] 的内容，
+ * 并 "泄露" (abandon) 旧的 [old_ptr] 内存块。
+ *
+ * @param bump Arena。
+ * @param old_ptr 指向要 "重新分配" 的旧内存块。如果为 NULL，则等同于 bump_alloc。
+ * @param old_size *旧内存块中要复制的数据大小*。
+ * @param new_size *要分配的新内存块的总大小*。
+ * @param align 新内存块的对齐方式。
+ * @return void* 成功则返回指向*新*内存块的指针，失败返回 NULL。
+ */
+void *bump_realloc(Bump *bump, void *old_ptr, size_t old_size, size_t new_size, size_t align);
+
 /*
  * --- 容量和限制 ---
  */
@@ -217,5 +233,17 @@ size_t bump_get_allocated_bytes(Bump *bump);
 // 分配并零初始化 T 的数组
 #define BUMP_ALLOC_SLICE_ZEROED(bump_ptr, T, count)                                                                    \
   ((T *)memset(BUMP_ALLOC_SLICE((bump_ptr), T, (count)), 0, sizeof(T) * (count)))
+
+/**
+ * @brief 重新分配 T 的数组（分配 + 复制）。
+ *
+ * @param bump_ptr Arena 指针。
+ * @param T 元素类型。
+ * @param old_ptr 指向旧的 slice。
+ * @param old_count 要复制的 *元素* 数量 (来自旧 slice)。
+ * @param new_count 要分配的 *元素* 数量 (用于新 slice)。
+ */
+#define BUMP_REALLOC_SLICE(bump_ptr, T, old_ptr, old_count, new_count)                                                 \
+  ((T *)bump_realloc((bump_ptr), (old_ptr), sizeof(T) * (old_count), sizeof(T) * (new_count), _Alignof(T)))
 
 #endif

@@ -523,6 +523,44 @@ bump_alloc_str(Bump *bump, const char *str)
   return dest;
 }
 
+void *
+bump_realloc(Bump *bump, void *old_ptr, size_t old_size, size_t new_size, size_t align)
+{
+  // 1. 如果 old_ptr 为 NULL，等同于 alloc
+  if (old_ptr == NULL)
+  {
+    return bump_alloc(bump, new_size, align);
+  }
+
+  // 2. 如果 new_size 为 0，等同于 free (在 arena 中我们什么都不做，返回 NULL)
+  if (new_size == 0)
+  {
+    // realloc(ptr, 0) 的行为是实现定义的。
+    // 我们可以返回 NULL (像 free 一样) 或一个有效的 ZST 指针。
+    // 返回 NULL 更符合 "free" 的语义。
+    return NULL;
+  }
+
+  // 3. [!!] 关键: 分配新内存块 [!!]
+  // (这是 realloc 的 "慢速路径"，在 arena 中这通常是*唯一*路径)
+  void *new_ptr = bump_alloc(bump, new_size, align);
+  if (new_ptr == NULL)
+  {
+    return NULL; // OOM (内存溢出)
+  }
+
+  // 4. 复制旧数据
+  // 我们只复制 old_size 和 new_size 中较小的那个
+  size_t copy_size = (old_size < new_size) ? old_size : new_size;
+  if (copy_size > 0)
+  {
+    memcpy(new_ptr, old_ptr, copy_size);
+  }
+
+  // 5. 返回新指针 (旧指针被 "泄露" 在 arena 中)
+  return new_ptr;
+}
+
 /*
  * --- 容量和限制 ---
  */
