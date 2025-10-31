@@ -55,7 +55,7 @@ typedef enum
 typedef struct Token
 {
   TokenType type;
-  int line; // Token 所在的行号 (用于报错)
+  size_t line; // Token 所在的行号 (用于报错)
 
   union {
     // 用于 TK_IDENT, TK_GLOBAL_IDENT, TK_LOCAL_IDENT, TK_STRING_LITERAL
