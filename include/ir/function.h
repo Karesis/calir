@@ -13,12 +13,14 @@
 typedef struct IRFunction
 {
   IRValueNode entry_address; // 函数入口地址
-  IDList list_node;          // <-- 节点，用于加入 Module->functions 链表
+  IRModule *parent;          // <-- 指向父模块
 
-  IRType *return_type;
+  IRType *return_type;   // 缓存的返回类型 (e.g., i32)
+  IRType *function_type; // [!!] 新增: 完整的函数类型 (e.g., i32 (i32, f64))
+
+  IDList list_node;    // <-- 节点，用于加入 Module->functions 链表
   IDList arguments;    // 链表头 (元素是 IRArgument)
   IDList basic_blocks; // 链表头 (元素是 IRBasicBlock)
-  IRModule *parent;    // <-- 指向父模块
 } IRFunction;
 
 /**
@@ -32,27 +34,33 @@ typedef struct IRArgument
 } IRArgument;
 
 /**
- * @brief 创建一个新函数 (在 Arena 中)
- * @param mod 父模块 (用于获取 Context 和添加到链表)
- * @param name 函数名 (将被 intern)
- * @param ret_type 返回类型
- * @return 指向新函数的指针
+ * @brief [!!] API 恢复 !!
+ * 创建一个新函数 (在 Arena 中), *但不* 最终确定其类型。
+ *
+ * @param mod 父模块
+ * @param name 函数名
+ * @param ret_type *仅仅* 是返回类型 (e.g., i32)
+ * @return 指向新 IRFunction 的指针
  */
 IRFunction *ir_function_create(IRModule *mod, const char *name, IRType *ret_type);
 
 /**
- * @brief [已废弃] void ir_function_destroy(IRFunction *func);
- * 内存由 Arena 管理。
- */
-
-/**
- * @brief 创建一个函数参数 (在 Arena 中)
- * @param func 父函数 (用于获取 Context 和添加到链表)
- * @param type 参数类型
- * @param name 参数名 (将被 intern)
- * @return 指向新参数的指针
+ * @brief [!!] API 恢复 !!
+ * 向一个 *未定稿* 的函数添加一个参数。
  */
 IRArgument *ir_argument_create(IRFunction *func, IRType *type, const char *name);
+
+/**
+ * @brief [!!] 新增 API !!
+ *
+ * 在所有参数都已添加后，“定稿”函数的签名。
+ * 此函数会计算完整的 IR_TYPE_FUNCTION，并*最终*设置
+ * func->entry_address.type (以修复 'call' bug)。
+ *
+ * @param func 要定稿的函数
+ * @param is_variadic 是否为可变参数
+ */
+void ir_function_finalize_signature(IRFunction *func, bool is_variadic);
 
 // --- 调试 ---
 void ir_function_dump(IRFunction *func, FILE *stream);

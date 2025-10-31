@@ -1,6 +1,7 @@
 #ifndef TYPE_H
 #define TYPE_H
 
+#include <stdbool.h>
 #include <stddef.h> // for size_t
 #include <stdio.h>  // for FILE
 
@@ -19,10 +20,11 @@ typedef enum
   IR_TYPE_I64,
   IR_TYPE_F32,
   IR_TYPE_F64,
-  IR_TYPE_PTR,   // 指针类型
-  IR_TYPE_LABEL, // 基本块标签类型
+  IR_TYPE_LABEL,
+  IR_TYPE_PTR, // 指针类型
   IR_TYPE_ARRAY,
-  IR_TYPE_STRUCT
+  IR_TYPE_STRUCT,
+  IR_TYPE_FUNCTION
 } IRTypeKind;
 
 /**
@@ -44,7 +46,7 @@ struct IRType
       size_t element_count;
     } array;
 
-    // 对应 IR_TYPE_STRUCT (稍后实现)
+    // 对应 IR_TYPE_STRUCT
     struct
     {
       IRType **member_types; // 成员类型列表
@@ -52,6 +54,13 @@ struct IRType
       const char *name;      // (可选) 结构体名 e.g., "my_struct"
     } aggregate;
 
+    struct
+    {
+      IRType *return_type;
+      IRType **param_types; // 参数类型的数组
+      size_t param_count;   // 参数数量
+      bool is_variadic;     // 是否为可变参数 (e.g. printf)
+    } function;
   } as;
 };
 
@@ -99,6 +108,18 @@ IRType *ir_type_create_array(IRContext *ctx, IRType *element_type, size_t elemen
  * @return 指向新类型的 IRType*
  */
 IRType *ir_type_create_struct(IRContext *ctx, IRType **member_types, size_t member_count, const char *name);
+
+/**
+ * @brief [内部] 创建一个新的函数类型
+ * @param ctx Context
+ * @param return_type 返回类型
+ * @param param_types 参数类型的数组 (将被拷贝)
+ * @param param_count 参数的数量
+ * @param is_variadic 是否为可变参数
+ * @return 指向新类型的 IRType*
+ */
+IRType *ir_type_create_function(IRContext *ctx, IRType *return_type, IRType **param_types, size_t param_count,
+                                bool is_variadic);
 
 // --- 调试 API (保持不变) ---
 

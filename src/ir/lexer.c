@@ -282,7 +282,26 @@ lexer_scan_token(Lexer *l, Token *out_token)
   case ')':
     out_token->type = TK_RPAREN;
     break;
-
+  case '<':
+    out_token->type = TK_LT;
+    break;
+  case '>':
+    out_token->type = TK_GT;
+    break;
+    // 处理 '...'
+  case '.':
+    if (current_char(l) == '.' && peek_char(l) == '.')
+    {
+      advance(l); // 消耗第二个 '.'
+      advance(l); // 消耗第三个 '.'
+      out_token->type = TK_ELLIPSIS;
+    }
+    else
+    {
+      // '.' 或 '..' 都是非法的
+      out_token->type = TK_ILLEGAL;
+    }
+    break;
   // --- 标识符 ---
   case '@':
     parse_global_or_local(l, TK_GLOBAL_IDENT, out_token);
@@ -290,8 +309,11 @@ lexer_scan_token(Lexer *l, Token *out_token)
   case '%':
     parse_global_or_local(l, TK_LOCAL_IDENT, out_token);
     break;
+  case '$':
+    parse_global_or_local(l, TK_LABEL_IDENT, out_token);
+    break;
 
-  // [新] 字符串
+  // 字符串
   case '"':
     parse_string(l, out_token);
     break;
@@ -305,8 +327,10 @@ lexer_scan_token(Lexer *l, Token *out_token)
       parse_ident(l, out_token);
     }
     // 2. 数字 (e.g., '123', '-42', '1.23')
-    else if (isdigit(c) || (c == '-' && (isdigit(peek_char(l)) || peek_char(l) == '.')))
+    else if (isdigit(c) || (c == '-' && isdigit(peek_char(l))))
     {
+      // parse_number 仍然会处理 '-' 和 '.'
+      // 但我们只在 '-' 后面*明确*跟着数字时才进入
       l->ptr--; // 回退一步
       parse_number(l, out_token);
     }

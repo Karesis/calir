@@ -113,6 +113,46 @@ ir_type_create_struct(IRContext *ctx, IRType **member_types, size_t member_count
   return type;
 }
 
+/**
+ * @brief [!!] [内部] 创建一个新的函数类型
+ */
+IRType *
+ir_type_create_function(IRContext *ctx, IRType *return_type, IRType **param_types, size_t param_count, bool is_variadic)
+{
+  assert(ctx != NULL);
+  assert(return_type != NULL);
+  assert(param_types != NULL || param_count == 0);
+
+  // 1. 分配 Type 结构体本身
+  IRType *type = BUMP_ALLOC_ZEROED(&ctx->permanent_arena, IRType);
+  if (!type)
+    return NULL; // OOM
+
+  type->kind = IR_TYPE_FUNCTION;
+
+  // 2. 设置函数特定成员
+  type->as.function.return_type = return_type;
+  type->as.function.is_variadic = is_variadic;
+
+  // 3. 分配并拷贝参数类型数组 (逻辑同 struct)
+  if (param_count > 0)
+  {
+    // 在 permanent_arena 中创建这个数组的*副本*
+    type->as.function.param_types = BUMP_ALLOC_SLICE(&ctx->permanent_arena, IRType *, param_count);
+    if (!type->as.function.param_types)
+      return NULL; // OOM
+
+    memcpy(type->as.function.param_types, param_types, param_count * sizeof(IRType *));
+  }
+  else
+  {
+    type->as.function.param_types = NULL;
+  }
+  type->as.function.param_count = param_count;
+
+  return type;
+}
+
 /*
  * =================================================================
  * --- 调试 API ---
@@ -184,13 +224,14 @@ ir_type_to_string_recursive(IRType *type, char *buffer, size_t *pos_ptr, size_t 
   case IR_TYPE_F64:
     safe_append(buffer, pos_ptr, size, "f64");
     break;
-  case IR_TYPE_LABEL: // [!!] 修正
+  case IR_TYPE_LABEL:
     safe_append(buffer, pos_ptr, size, "label");
     break;
   case IR_TYPE_PTR:
-    safe_append(buffer, pos_ptr, size, "ptr");
+    safe_append(buffer, pos_ptr, size, "<");
     // 递归打印指针指向的类型
     ir_type_to_string_recursive(type->as.pointee_type, buffer, pos_ptr, size);
+    safe_append(buffer, pos_ptr, size, ">");
     break;
 
   case IR_TYPE_ARRAY:
@@ -235,6 +276,38 @@ ir_type_to_string_recursive(IRType *type, char *buffer, size_t *pos_ptr, size_t 
     safe_append(buffer, pos_ptr, size, " }");
     break;
 
+  case IR_TYPE_FUNCTION:
+    // 1. 打印返回类型 (e.g., "i32")
+    ir_type_to_string_recursive(type->as.function.return_type, buffer, pos_ptr, size);
+
+    // 2. 打印 "(..."
+    safe_append(buffer, pos_ptr, size, " (");
+
+    // 3. 循环打印参数类型
+    for (size_t i = 0; i < type->as.function.param_count; i++)
+    {
+      if (i > 0)
+      {
+        safe_append(buffer, pos_ptr, size, ", ");
+      }
+      // 递归打印 "i32", "<f64>", etc.
+      ir_type_to_string_recursive(type->as.function.param_types[i], buffer, pos_ptr, size);
+    }
+
+    // 4. (可选) 打印可变参数 '...'
+    if (type->as.function.is_variadic)
+    {
+      if (type->as.function.param_count > 0)
+      {
+        safe_append(buffer, pos_ptr, size, ", ");
+      }
+      safe_append(buffer, pos_ptr, size, "...");
+    }
+
+    // 5. 打印 ")"
+    safe_append(buffer, pos_ptr, size, ")");
+    break;
+
   default:
     safe_append(buffer, pos_ptr, size, "?");
     break;
@@ -264,7 +337,7 @@ ir_type_to_string(IRType *type, char *buffer, size_t size)
 void
 ir_type_dump(IRType *type, FILE *stream)
 {
-  char buffer[64];
+  char buffer[256];
   ir_type_to_string(type, buffer, sizeof(buffer));
   fprintf(stream, "%s", buffer);
 }

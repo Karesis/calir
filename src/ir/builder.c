@@ -2,6 +2,7 @@
 #include "ir/basicblock.h"
 #include "ir/constant.h"
 #include "ir/context.h"
+#include "ir/function.h"
 #include "ir/instruction.h"
 #include "ir/type.h"
 #include "ir/use.h"
@@ -84,7 +85,7 @@ builder_get_next_reg_name(IRBuilder *builder)
  * @return 指向新指令的指针
  */
 static IRInstruction *
-ir_instruction_create_internal(IRBuilder *builder, IROpcode opcode, IRType *type)
+ir_instruction_create_internal(IRBuilder *builder, IROpcode opcode, IRType *type, const char *name_hint)
 {
   assert(builder != NULL);
   assert(builder->insertion_point != NULL && "Builder insertion point is not set");
@@ -106,10 +107,19 @@ ir_instruction_create_internal(IRBuilder *builder, IROpcode opcode, IRType *type
   list_init(&inst->list_node);
   list_init(&inst->operands);
 
-  // 4. 分配名字 (如果它有结果)
+  // 4. [!!] [修复 4] 分配名字
   if (type->kind != IR_TYPE_VOID)
   {
-    inst->result.name = builder_get_next_reg_name(builder);
+    if (name_hint)
+    {
+      // 优先使用 'name_hint'
+      inst->result.name = ir_context_intern_str(ctx, name_hint);
+    }
+    else
+    {
+      // 否则回退到临时名字
+      inst->result.name = builder_get_next_reg_name(builder);
+    }
   }
   else
   {
@@ -134,7 +144,7 @@ IRValueNode *
 ir_builder_create_ret(IRBuilder *builder, IRValueNode *val)
 {
   IRType *void_type = builder->context->type_void;
-  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_RET, void_type);
+  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_RET, void_type, NULL);
 
   if (val)
   {
@@ -150,10 +160,10 @@ IRValueNode *
 ir_builder_create_br(IRBuilder *builder, IRValueNode *target_bb)
 {
   assert(target_bb != NULL);
-  assert(target_bb->type->kind == IR_TYPE_LABEL && "br target must be a label");
+  assert(target_bb->kind == IR_KIND_BASIC_BLOCK && "br target must be a Basic Block");
 
   IRType *void_type = builder->context->type_void;
-  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_BR, void_type);
+  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_BR, void_type, NULL);
 
   ir_use_create(builder->context, inst, target_bb);
 
@@ -166,10 +176,9 @@ ir_builder_create_cond_br(IRBuilder *builder, IRValueNode *cond, IRValueNode *tr
   assert(builder != NULL);
   assert(cond != NULL && true_bb != NULL && false_bb != NULL);
 
-  // [!!] 关键断言
   assert(cond->type == ir_type_get_i1(builder->context) && "br condition must be i1");
-  assert(true_bb->type->kind == IR_TYPE_LABEL && "br target must be a label");
-  assert(false_bb->type->kind == IR_TYPE_LABEL && "br target must be a label");
+  assert(true_bb->kind == IR_KIND_BASIC_BLOCK && "br target must be a label");
+  assert(false_bb->kind == IR_KIND_BASIC_BLOCK && "br target must be a label");
 
   // 1. 获取 void 类型 (br 指令没有结果值)
   IRType *void_type = builder->context->type_void;
@@ -177,7 +186,7 @@ ir_builder_create_cond_br(IRBuilder *builder, IRValueNode *cond, IRValueNode *tr
   // 2. 调用内部工厂函数
   IRInstruction *inst = ir_instruction_create_internal(builder,
                                                        IR_OP_COND_BR, // [!!] 新的 Opcode
-                                                       void_type);
+                                                       void_type, NULL);
 
   if (!inst)
     return NULL; // OOM
@@ -195,13 +204,13 @@ ir_builder_create_cond_br(IRBuilder *builder, IRValueNode *cond, IRValueNode *tr
 
 // 辅助函数
 static IRValueNode *
-builder_create_binary_op(IRBuilder *builder, IROpcode op, IRValueNode *lhs, IRValueNode *rhs)
+builder_create_binary_op(IRBuilder *builder, IROpcode op, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
 {
   assert(lhs != NULL && rhs != NULL);
   assert(lhs->type == rhs->type && "Binary operands must have the same type");
 
   // 结果类型与操作数类型相同
-  IRInstruction *inst = ir_instruction_create_internal(builder, op, lhs->type);
+  IRInstruction *inst = ir_instruction_create_internal(builder, op, lhs->type, name_hint);
 
   ir_use_create(builder->context, inst, lhs); // Operand 0
   ir_use_create(builder->context, inst, rhs); // Operand 1
@@ -210,19 +219,20 @@ builder_create_binary_op(IRBuilder *builder, IROpcode op, IRValueNode *lhs, IRVa
 }
 
 IRValueNode *
-ir_builder_create_add(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs)
+ir_builder_create_add(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
 {
-  return builder_create_binary_op(builder, IR_OP_ADD, lhs, rhs);
+  return builder_create_binary_op(builder, IR_OP_ADD, lhs, rhs, name_hint);
 }
 
 IRValueNode *
-ir_builder_create_sub(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs)
+ir_builder_create_sub(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
 {
-  return builder_create_binary_op(builder, IR_OP_SUB, lhs, rhs);
+  return builder_create_binary_op(builder, IR_OP_SUB, lhs, rhs, name_hint);
 }
 
 IRValueNode *
-ir_builder_create_icmp(IRBuilder *builder, IRICmpPredicate pred, IRValueNode *lhs, IRValueNode *rhs)
+ir_builder_create_icmp(IRBuilder *builder, IRICmpPredicate pred, IRValueNode *lhs, IRValueNode *rhs,
+                       const char *name_hint)
 {
   assert(builder != NULL);
   assert(lhs != NULL && rhs != NULL);
@@ -233,9 +243,9 @@ ir_builder_create_icmp(IRBuilder *builder, IRICmpPredicate pred, IRValueNode *lh
 
   // 2. 调用你的内部工厂函数
   IRInstruction *inst = ir_instruction_create_internal(builder,
-                                                       IR_OP_ICMP, // 新的 Opcode
-                                                       result_type // 结果类型是 i1
-  );
+                                                       IR_OP_ICMP,  // 新的 Opcode
+                                                       result_type, // 结果类型是 i1
+                                                       name_hint);
 
   if (!inst)
     return NULL; // OOM
@@ -254,7 +264,7 @@ ir_builder_create_icmp(IRBuilder *builder, IRICmpPredicate pred, IRValueNode *lh
 // --- API: 内存操作 ---
 
 IRValueNode *
-ir_builder_create_alloca(IRBuilder *builder, IRType *allocated_type)
+ir_builder_create_alloca(IRBuilder *builder, IRType *allocated_type, const char *name_hint)
 {
   assert(allocated_type != NULL);
   IRContext *ctx = builder->context;
@@ -262,23 +272,24 @@ ir_builder_create_alloca(IRBuilder *builder, IRType *allocated_type)
   // Alloca 的结果是一个指向 allocated_type 的指针
   IRType *ptr_type = ir_type_get_ptr(ctx, allocated_type);
 
-  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_ALLOCA, ptr_type);
+  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_ALLOCA, ptr_type, name_hint);
   // (Alloca 0 个操作数)
 
   return &inst->result;
 }
 
 IRValueNode *
-ir_builder_create_load(IRBuilder *builder, IRType *result_type, IRValueNode *ptr)
+ir_builder_create_load(IRBuilder *builder, IRValueNode *ptr, const char *name_hint)
 {
-  assert(result_type != NULL);
   assert(ptr != NULL);
   assert(ptr->type->kind == IR_TYPE_PTR && "load operand must be a pointer");
-  // (在真实编译器中, 还会检查 ptr->type->pointee_type == result_type)
 
-  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_LOAD, result_type);
+  // 自动推断结果类型
+  IRType *result_type = ptr->type->as.pointee_type;
+  assert(result_type != NULL);
 
-  ir_use_create(builder->context, inst, ptr); // Operand 0 (指针)
+  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_LOAD, result_type, name_hint);
+  ir_use_create(builder->context, inst, ptr);
 
   return &inst->result;
 }
@@ -289,10 +300,9 @@ ir_builder_create_store(IRBuilder *builder, IRValueNode *val, IRValueNode *ptr)
   assert(val != NULL);
   assert(ptr != NULL);
   assert(ptr->type->kind == IR_TYPE_PTR && "store target must be a pointer");
-  // (在真实编译器中, 还会检查 ptr->type->pointee_type == val->type)
 
   IRType *void_type = builder->context->type_void;
-  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_STORE, void_type);
+  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_STORE, void_type, NULL);
 
   ir_use_create(builder->context, inst, val); // Operand 0 (要存储的值)
   ir_use_create(builder->context, inst, ptr); // Operand 1 (目标指针)
@@ -303,7 +313,7 @@ ir_builder_create_store(IRBuilder *builder, IRValueNode *val, IRValueNode *ptr)
 // --- API: PHI 节点 ---
 
 IRValueNode *
-ir_builder_create_phi(IRBuilder *builder, IRType *type)
+ir_builder_create_phi(IRBuilder *builder, IRType *type, const char *name_hint)
 {
   assert(builder != NULL);
   assert(builder->insertion_point != NULL && "Builder insertion point is not set");
@@ -328,7 +338,14 @@ ir_builder_create_phi(IRBuilder *builder, IRType *type)
   list_init(&inst->operands); // [!!] 初始为空
 
   // 4. 分配名字
-  inst->result.name = builder_get_next_reg_name(builder);
+  if (name_hint)
+  {
+    inst->result.name = ir_context_intern_str(ctx, name_hint);
+  }
+  else
+  {
+    inst->result.name = builder_get_next_reg_name(builder);
+  }
 
   // 5. 关键: 插入到基本块的 *头部*
   list_add(&builder->insertion_point->instructions, &inst->list_node);
@@ -341,7 +358,7 @@ ir_phi_add_incoming(IRValueNode *phi_node, IRValueNode *value, IRBasicBlock *inc
 {
   assert(phi_node != NULL && phi_node->kind == IR_KIND_INSTRUCTION);
   assert(value != NULL);
-  assert(incoming_bb != NULL && incoming_bb->label_address.type->kind == IR_TYPE_LABEL);
+  assert(incoming_bb != NULL && incoming_bb->label_address.kind == IR_KIND_BASIC_BLOCK);
 
   IRInstruction *inst = (IRInstruction *)phi_node;
   assert(inst->opcode == IR_OP_PHI && "Value is not a PHI node");
@@ -392,7 +409,7 @@ gep_get_constant_index(IRValueNode *constant_val, uint64_t *out_value)
 
 IRValueNode *
 ir_builder_create_gep(IRBuilder *builder, IRType *source_type, IRValueNode *base_ptr, IRValueNode **indices,
-                      size_t num_indices, bool inbounds)
+                      size_t num_indices, bool inbounds, const char *name_hint)
 {
   assert(builder != NULL);
   assert(source_type != NULL);
@@ -450,7 +467,7 @@ ir_builder_create_gep(IRBuilder *builder, IRType *source_type, IRValueNode *base
   // --- GEP 结果类型计算算法 (结束) ---
 
   // 1. 调用内部工厂
-  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_GEP, result_type);
+  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_GEP, result_type, name_hint);
 
   if (!inst)
     return NULL; // OOM
@@ -472,30 +489,38 @@ ir_builder_create_gep(IRBuilder *builder, IRType *source_type, IRValueNode *base
 // --- API: Call 指令 ---
 
 IRValueNode *
-ir_builder_create_call(IRBuilder *builder, IRValueNode *callee_func, IRValueNode **args, size_t num_args)
+ir_builder_create_call(IRBuilder *builder, IRValueNode *callee_func, IRValueNode **args, size_t num_args,
+                       const char *name_hint)
 {
   assert(builder != NULL);
   assert(callee_func != NULL);
-  assert(callee_func->kind == IR_KIND_FUNCTION && "callee must be a function");
   assert(args != NULL || num_args == 0);
 
-  // [!! 关键 !!]
-  // 1. 从 callee (IRValueNode) 获取 IRFunction
-  IRFunction *func = container_of(callee_func, IRFunction, entry_address);
+  // 1. 获取 callee 的类型
+  IRType *callee_type = callee_func->type;
+  assert(callee_type->kind == IR_TYPE_PTR && "callee must be a pointer type");
 
-  // 2. 结果类型是函数的返回类型
-  IRType *result_type = func->return_type;
+  // 2. 获取指针指向的类型 (函数类型)
+  IRType *func_type = callee_type->as.pointee_type;
+  assert(func_type->kind == IR_TYPE_FUNCTION && "callee must be a pointer to a function type");
 
-  // 3. 调用内部工厂
-  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_CALL, result_type);
+  // 3. 从函数类型中提取返回类型
+  IRType *result_type = func_type->as.function.return_type;
 
+  // 4. 验证参数数量
+  assert((func_type->as.function.is_variadic && num_args >= func_type->as.function.param_count) ||
+         (!func_type->as.function.is_variadic && num_args == func_type->as.function.param_count) &&
+           "call argument count mismatch");
+
+  // 5. 调用内部工厂
+  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_CALL, result_type, name_hint);
   if (!inst)
     return NULL; // OOM
 
-  // 4. 创建 Use 边 (操作数 0 是 callee)
+  // 6. 创建 Use 边 (操作数 0 是 callee)
   ir_use_create(builder->context, inst, callee_func);
 
-  // 5. 创建 Use 边 (操作数 1..N 是参数)
+  // 7. 创建 Use 边 (操作数 1..N 是参数)
   for (size_t i = 0; i < num_args; i++)
   {
     ir_use_create(builder->context, inst, args[i]);

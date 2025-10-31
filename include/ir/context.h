@@ -58,6 +58,9 @@ struct IRContext
   // 缓存 2: Map<AnonStructKey*, IRType* (struct)>
   GenericHashMap *anon_struct_cache;
 
+  // func_ptr
+  GenericHashMap *function_type_cache;
+
   // String Interning
   StrHashMap *string_intern_cache; // Map<(char*, len), const char* (unique)>
 
@@ -149,6 +152,18 @@ IRType *ir_type_get_named_struct(IRContext *ctx, const char *name, IRType **memb
  * @brief 创建/获取一个 *匿名* 结构体 (按成员列表唯一化)
  */
 IRType *ir_type_get_anonymous_struct(IRContext *ctx, IRType **member_types, size_t member_count);
+
+/**
+ * @brief [!!] 新增: 创建/获取一个函数类型 (唯一化)
+ * @param ctx Context
+ * @param return_type 返回类型
+ * @param param_types 参数类型的数组
+ * @param param_count 参数的数量
+ * @param is_variadic 是否为可变参数
+ * @return 指向 'function' 类型的指针
+ */
+IRType *ir_type_get_function(IRContext *ctx, IRType *return_type, IRType **param_types, size_t param_count,
+                             bool is_variadic);
 
 // --- API: 常量 (Constants) ---
 

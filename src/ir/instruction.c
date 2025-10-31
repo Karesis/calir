@@ -1,3 +1,4 @@
+// src/ir/instruction.c
 #include "ir/instruction.h"
 #include "ir/basicblock.h" // 需要 BasicBlock->parent
 #include "ir/constant.h"   // 需要 ir_constant_get_undef
@@ -118,12 +119,13 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     return;
   }
 
-  // 1. 打印结果
+  // --- [MODIFIED] 1. 打印结果 (新规范: %name: type =) ---
   int has_result = (inst->result.type && inst->result.type->kind != IR_TYPE_VOID);
   if (has_result)
   {
-    // [修改] inst->result.name 现在是 const char* (interned)
-    fprintf(stream, "%%%s = ", inst->result.name);
+    // ir_value_dump_with_type 会打印 "%name: type"
+    ir_value_dump_with_type(&inst->result, stream);
+    fprintf(stream, " = ");
   }
 
   // 2. 打印 Opcode 和 Operands
@@ -133,10 +135,11 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
   {
   case IR_OP_RET:
     fprintf(stream, "ret ");
-    op1 = get_operand(inst, 0);
+    op1 = get_operand(inst, 0); // 可能是 NULL (ret void)
     if (op1)
     {
-      ir_value_dump(op1, stream);
+      // [NEW] 打印 "%val: i32"
+      ir_value_dump_with_type(op1, stream);
     }
     else
     {
@@ -148,25 +151,24 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     fprintf(stream, "br ");
     op1 = get_operand(inst, 0);
     assert(op1 && "br must have a target");
-    ir_value_dump(op1, stream);
+    // [NEW] ir_value_dump_with_type 会智能打印 "$label"
+    ir_value_dump_with_type(op1, stream);
     break;
 
   case IR_OP_COND_BR:
     fprintf(stream, "br ");
 
-    // 获取 3 个操作数
     IRValueNode *cond = get_operand(inst, 0);
     IRValueNode *true_bb = get_operand(inst, 1);
     IRValueNode *false_bb = get_operand(inst, 2);
-
     assert(cond && true_bb && false_bb && "cond br needs 3 operands");
 
-    // 打印: br i1 %cond, label %true_bb, label %false_bb
-    ir_value_dump(cond, stream);
+    // [NEW] 打印 "br %cmp: i1, $true_bb, $false_bb"
+    ir_value_dump_with_type(cond, stream); // 打印 %cmp: i1
     fprintf(stream, ", ");
-    ir_value_dump(true_bb, stream);
+    ir_value_dump_with_type(true_bb, stream); // 打印 $true_bb
     fprintf(stream, ", ");
-    ir_value_dump(false_bb, stream);
+    ir_value_dump_with_type(false_bb, stream); // 打印 $false_bb
     break;
 
   case IR_OP_ADD:
@@ -176,14 +178,17 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     op2 = get_operand(inst, 1);
     assert(op1 && op2 && "Binary operator needs two operands");
 
-    ir_value_dump(op1, stream);
+    // [NEW] 打印 "add %a: i32, 20: i32"
+    ir_value_dump_with_type(op1, stream);
     fprintf(stream, ", ");
-    ir_value_dump(op2, stream);
+    ir_value_dump_with_type(op2, stream);
     break;
 
   case IR_OP_ALLOCA:
     fprintf(stream, "alloc ");
     assert(inst->result.type->kind == IR_TYPE_PTR);
+    // [OK] 结果 (%p: <i32>) 已由 preamble 打印
+    // [OK] ir_type_dump 已被重构, 这里会正确打印 'i32'
     ir_type_dump(inst->result.type->as.pointee_type, stream);
     break;
 
@@ -191,10 +196,7 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     fprintf(stream, "load ");
     op1 = get_operand(inst, 0); // 指针
     assert(op1 && "load needs a pointer operand");
-
-    ir_type_dump(inst->result.type, stream);
-    fprintf(stream, ", ");
-    ir_value_dump(op1, stream);
+    ir_value_dump_with_type(op1, stream); // 打印 "%p: <i32>"
     break;
 
   case IR_OP_STORE:
@@ -203,33 +205,30 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
     op2 = get_operand(inst, 1); // 目标指针
     assert(op1 && op2 && "store needs value and pointer operands");
 
-    ir_value_dump(op1, stream);
+    // [NEW] 打印 "store 10: i32, %p: <i32>"
+    ir_value_dump_with_type(op1, stream);
     fprintf(stream, ", ");
-    ir_value_dump(op2, stream);
+    ir_value_dump_with_type(op2, stream);
     break;
 
   case IR_OP_ICMP:
-    // 1. 获取谓词字符串
     const char *pred_str = ir_icmp_predicate_to_string(inst->as.icmp.predicate);
-
-    // 2. 获取操作数 (使用你已有的 get_operand)
     op1 = get_operand(inst, 0); // lhs
     op2 = get_operand(inst, 1); // rhs
     assert(op1 && op2 && "icmp needs two operands");
 
-    // 3. 打印: icmp <pred> <ty> %lhs, %rhs
+    // [!! 已修复 (设计 B) !!]
+    // 打印: "icmp slt %a: i32, %b: i32"
     fprintf(stream, "icmp %s ", pred_str);
-    ir_value_dump(op1, stream);
+    ir_value_dump_with_type(op1, stream); // 打印 "%a: i32"
     fprintf(stream, ", ");
-    ir_value_dump(op2, stream);
+    ir_value_dump_with_type(op2, stream); // 打印 "%b: i32"
     break;
 
   case IR_OP_PHI:
     fprintf(stream, "phi ");
-    ir_type_dump(inst->result.type, stream); // 打印 "i32"
-    fprintf(stream, " ");
+    // [NEW] 结果类型 (%phi.res: i32) 已由 preamble 打印
 
-    // 遍历操作数，每次跳 2 个
     IDList *head = &inst->operands;
     IDList *iter = head->next;
     int i = 0;
@@ -240,21 +239,19 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
         fprintf(stream, ", "); // 在条目之间打印逗号
       }
 
-      // 1. 获取 Value
       IRUse *val_use = list_entry(iter, IRUse, user_node);
       IRValueNode *val = val_use->value;
 
-      // 2. 获取 BasicBlock
       iter = iter->next; // 移动到下一个
       assert(iter != head && "PHI node must have [val, bb] pairs");
       IRUse *bb_use = list_entry(iter, IRUse, user_node);
       IRValueNode *bb = bb_use->value;
 
-      // 3. 打印 "[ %val, %bb_label ]"
+      // [NEW] 打印 "[ %val: i32, $bb_label ]"
       fprintf(stream, "[ ");
-      ir_value_dump(val, stream);
+      ir_value_dump_with_type(val, stream); // 打印 "%val: i32"
       fprintf(stream, ", ");
-      ir_value_dump(bb, stream); // 这会打印 "label %name"
+      ir_value_dump_with_type(bb, stream); // 打印 "$bb_label"
       fprintf(stream, " ]");
 
       iter = iter->next; // 移动到下一对
@@ -269,40 +266,39 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
       fprintf(stream, "inbounds ");
     }
 
-    // 1. 打印源类型
-    ir_type_dump(inst->as.gep.source_type, stream);
-    fprintf(stream, ", ");
-
-    // 2. 打印基指针 (操作数 0)
-    IRValueNode *base_ptr = get_operand(inst, 0);
-    assert(base_ptr != NULL);
-    ir_value_dump(base_ptr, stream); // "ptr %name"
-
-    // 3. 遍历打印所有索引 (操作数 1...N)
+    // [NEW] 遍历所有操作数 (base + indices)
     IDList *ghead = &inst->operands;
-    IDList *giter = ghead->next->next; // [!!] 跳过 base_ptr
+    IDList *giter = ghead->next;
 
     while (giter != ghead)
     {
       IRUse *use = list_entry(giter, IRUse, user_node);
-      IRValueNode *index = use->value;
+      IRValueNode *operand = use->value;
 
-      fprintf(stream, ", ");
-      ir_value_dump(index, stream); // "i32 %idx" 或 "i32 0"
+      ir_value_dump_with_type(operand, stream); // 打印 "%p: <%MyStruct>", "0: i32" 等
 
       giter = giter->next;
+      if (giter != ghead)
+      {
+        fprintf(stream, ", "); // 在索引之间打印逗号
+      }
     }
     break;
 
   case IR_OP_CALL: {
     fprintf(stream, "call ");
+    // [NEW] 结果 (%ret: i32) 已由 preamble 打印
 
-    // 1. 打印 Callee (操作数 0)
     IRValueNode *callee = get_operand(inst, 0);
     assert(callee != NULL && "call must have a callee");
-    ir_value_dump(callee, stream);
 
-    // 2. 遍历打印所有参数 (操作数 1...N)
+    // [!! 已修复 (Bug B) !!]
+    // 添加 "有效冗余" 的函数指针类型
+    // 打印: "call <i32(i32)> @my_print(...)"
+    ir_type_dump(callee->type, stream); // 打印 "<i32(i32)>"
+    fprintf(stream, " ");
+    ir_value_dump_name(callee, stream); // 打印 "@my_print"
+
     fprintf(stream, "(");
     IDList *chead = &inst->operands;
     IDList *citer = chead->next->next; // [!!] 跳过 callee
@@ -315,7 +311,8 @@ ir_instruction_dump(IRInstruction *inst, FILE *stream)
         fprintf(stream, ", ");
       }
       IRUse *use = list_entry(citer, IRUse, user_node);
-      ir_value_dump(use->value, stream); // "i32 %idx" 或 "i32 0"
+      // [NEW] 打印 "%arg: i32"
+      ir_value_dump_with_type(use->value, stream);
 
       citer = citer->next;
       arg_idx++;

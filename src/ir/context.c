@@ -66,6 +66,61 @@ anon_struct_equal_fn(const void *key1, const void *key2)
 }
 
 /**
+ * @brief [内部] 函数类型缓存的 "Key" 结构体。
+ * (同 AnonStructKey, 必须永久存储)
+ */
+typedef struct
+{
+  IRType *return_type;
+  IRType **param_types; // 指向 *永久* 数组
+  size_t param_count;
+  bool is_variadic;
+} FunctionTypeKey;
+
+/**
+ * @brief [内部] GenericHashMap 的哈希函数 (用于函数类型)。
+ */
+static uint64_t
+function_type_hash_fn(const void *key)
+{
+  const FunctionTypeKey *k = (const FunctionTypeKey *)key;
+
+  // 1. 哈希参数列表
+  uint64_t hash = XXH3_64bits(k->param_types, k->param_count * sizeof(IRType *));
+
+  // 2. 混合 (mix in) 返回类型和可变参数标志
+  hash = XXH3_64bits_withSeed(&k->return_type, sizeof(k->return_type), hash);
+  hash = XXH3_64bits_withSeed(&k->is_variadic, sizeof(k->is_variadic), hash);
+
+  return hash;
+}
+
+/**
+ * @brief [内部] GenericHashMap 的比较函数 (用于函数类型)。
+ */
+static bool
+function_type_equal_fn(const void *key1, const void *key2)
+{
+  const FunctionTypeKey *k1 = (const FunctionTypeKey *)key1;
+  const FunctionTypeKey *k2 = (const FunctionTypeKey *)key2;
+
+  // 1. 检查简单字段
+  if (k1->return_type != k2->return_type || k1->param_count != k2->param_count || k1->is_variadic != k2->is_variadic)
+  {
+    return false;
+  }
+
+  // 2. 检查空参数情况
+  if (k1->param_count == 0)
+  {
+    return true; // (k2->param_count 也为 0)
+  }
+
+  // 3. 比较参数列表 (指针数组) 的 *内容*
+  return memcmp(k1->param_types, k2->param_types, k1->param_count * sizeof(IRType *)) == 0;
+}
+
+/**
  * @brief 初始化所有单例类型 (i32, void, ...)
  * @return true 成功, false OOM
  */
@@ -147,6 +202,14 @@ ir_context_init_caches(IRContext *ctx)
                                                   anon_struct_equal_fn // <-- 特殊的比较函数
   );
   if (!ctx->anon_struct_cache)
+    return false;
+
+  // 初始化函数类型缓存
+  ctx->function_type_cache = generic_hashmap_create(&ctx->permanent_arena, INITIAL_CACHE_CAPACITY,
+                                                    function_type_hash_fn, // <-- 新的哈希
+                                                    function_type_equal_fn // <-- 新的比较
+  );
+  if (!ctx->function_type_cache)
     return false;
 
   // Constant Caches
@@ -454,6 +517,55 @@ ir_type_get_named_struct(IRContext *ctx, const char *name, IRType **member_types
                                    (void *)struct_type);
 
   return struct_type;
+}
+
+/**
+ * @brief [!!] 新增: 创建/获取一个函数类型 (唯一化)
+ * (复制 ir_type_get_anonymous_struct 的逻辑)
+ */
+IRType *
+ir_type_get_function(IRContext *ctx, IRType *return_type, IRType **param_types, size_t param_count, bool is_variadic)
+{
+  assert(ctx != NULL);
+  assert(return_type != NULL);
+
+  // 1. [!!] 创建一个 *临时* 的 Key 用于查找 (在栈上)
+  // (param_types 指向调用者的、可能是临时的数组)
+  FunctionTypeKey temp_key = {
+    .return_type = return_type, .param_types = param_types, .param_count = param_count, .is_variadic = is_variadic};
+
+  // 2. [!!] 查找缓存 (使用 hash_fn 和 equal_fn)
+  IRType *func_type = (IRType *)generic_hashmap_get(ctx->function_type_cache, &temp_key);
+
+  if (func_type)
+  {
+    return func_type; // 命中!
+  }
+
+  // 3. [!!] 未命中？创建新类型
+  // (ir_type_create_function 会在 permanent_arena 中创建 param_types 的 *永久* 副本)
+  func_type = ir_type_create_function(ctx, return_type, param_types, param_count, is_variadic);
+  if (!func_type)
+    return NULL; // OOM
+
+  // 4. [!!] 创建一个 *永久* 的 Key 用于存储
+  // (这个 Key 也必须在 permanent_arena 中)
+  FunctionTypeKey *perm_key = BUMP_ALLOC(&ctx->permanent_arena, FunctionTypeKey);
+  if (!perm_key)
+    return NULL; // OOM
+
+  // 5. [!!] Point perm_key 指向 *永久* 的成员 (由 create_function 创建)
+  perm_key->return_type = func_type->as.function.return_type;
+  perm_key->param_types = func_type->as.function.param_types; // <-- 指向永久副本
+  perm_key->param_count = func_type->as.function.param_count;
+  perm_key->is_variadic = func_type->as.function.is_variadic;
+
+  // 6. [!!] 存入缓存
+  // Key:   perm_key (指向永久 Key 结构体的指针)
+  // Value: func_type (指向永久 IRType 的指针)
+  generic_hashmap_put(ctx->function_type_cache, (void *)perm_key, (void *)func_type);
+
+  return func_type;
 }
 
 /*

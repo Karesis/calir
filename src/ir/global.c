@@ -22,8 +22,10 @@ ir_global_variable_create(IRModule *mod, const char *name, IRType *allocated_typ
   // 1. [!!] 健全性检查 (Sanity Checks)
   assert(allocated_type != NULL && allocated_type->kind != IR_TYPE_VOID);
 
-  // 初始值 (如果提供) 必须是一个常量
-  assert(initializer == NULL || initializer->kind == IR_KIND_CONSTANT);
+  // 初始值 (如果提供) 必须是一个 "全局链接" 的常量
+  assert(initializer == NULL || initializer->kind == IR_KIND_CONSTANT || // e.g., 10, undef
+         initializer->kind == IR_KIND_FUNCTION ||                        // e.g., @my_func
+         initializer->kind == IR_KIND_GLOBAL);                           // e.g., @other_global
 
   // 初始值 (如果提供) 类型必须匹配
   assert(initializer == NULL || initializer->type == allocated_type);
@@ -43,8 +45,8 @@ ir_global_variable_create(IRModule *mod, const char *name, IRType *allocated_typ
 
   // 5. 初始化 IRValueNode 基类
   global->value.kind = IR_KIND_GLOBAL;
-  global->value.name = ir_context_intern_str(ctx, name); // [修改] Intern 名字
-  list_init(&global->value.uses);                        // [修改] 显式初始化
+  global->value.name = ir_context_intern_str(ctx, name); // Intern 名字
+  list_init(&global->value.uses);                        // 显式初始化
 
   // 6. [!!] 设置 Value 的类型
   // 全局变量的 "Value" 是它的 *地址*，所以它的类型是一个 *指针*
@@ -69,26 +71,30 @@ ir_global_variable_dump(IRGlobalVariable *global, FILE *stream)
     return;
   }
 
+  // --- [修改点] ---
+
   // 1. 打印名字
-  // e.g., @my_global
-  fprintf(stream, "@%s = ", global->value.name);
+  // [NEW] 使用 ir_value_dump_name, 它会正确打印 "@my_global"
+  ir_value_dump_name(&global->value, stream);
+  fprintf(stream, " = ");
 
   // 2. 打印 "global" 和类型
-  // e.g., global i32
-  char type_str[128]; // (假设 128 足够长)
-  ir_type_to_string(global->allocated_type, type_str, sizeof(type_str));
-  fprintf(stream, "global %s ", type_str);
+  // [NEW] 移除 type_str[128] 缓冲区
+  fprintf(stream, "global ");
+  // [NEW] 直接将类型打印到流
+  ir_type_dump(global->allocated_type, stream);
 
   // 3. 打印初始值
   if (global->initializer)
   {
-    // ir_value_dump 应该能正确处理常量 (e.g., "i32 5")
-    ir_value_dump(global->initializer, stream);
+    fprintf(stream, " ");
+    // [NEW] 使用 ir_value_dump_with_type,
+    // 它会正确打印 "123: i32" 或 "undef: <i32>"
+    ir_value_dump_with_type(global->initializer, stream);
   }
   else
   {
-    // LLVM 风格的默认初始值
-    fprintf(stream, "zeroinitializer");
+    fprintf(stream, " zeroinitializer");
   }
 
   fprintf(stream, "\n");

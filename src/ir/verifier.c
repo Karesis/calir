@@ -254,12 +254,6 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
       continue;
     }
 
-    // 3. 跳过 'label' 类型的操作数 (用于 br/cond_br, 它们不是 SSA '值')
-    if (use->value->type->kind == IR_TYPE_LABEL)
-    {
-      continue;
-    }
-
     // --- 核心检查 ---
     IRInstruction *def_inst = container_of(use->value, IRInstruction, result);
     IRBasicBlock *def_bb = def_inst->parent;
@@ -325,7 +319,7 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
   case IR_OP_BR: {
     VERIFY_ASSERT(op_count == 1, vctx, value, "'br' instruction must have exactly 1 operand (target_bb).");
     IRValueNode *target = get_operand(inst, 0);
-    VERIFY_ASSERT(target->type->kind == IR_TYPE_LABEL, vctx, target, "'br' operand must be a label type.");
+    VERIFY_ASSERT(target->kind == IR_KIND_BASIC_BLOCK, vctx, target, "'br' operand must be a Basic Block.");
     break;
   }
   case IR_OP_COND_BR: {
@@ -335,9 +329,9 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
     IRValueNode *false_bb = get_operand(inst, 2);
 
     VERIFY_ASSERT(cond->type->kind == IR_TYPE_I1, vctx, cond, "'cond_br' condition must be of type i1.");
-    VERIFY_ASSERT(true_bb->type->kind == IR_TYPE_LABEL, vctx, true_bb, "'cond_br' true target must be a label type.");
-    VERIFY_ASSERT(false_bb->type->kind == IR_TYPE_LABEL, vctx, false_bb,
-                  "'cond_br' false target must be a label type.");
+    VERIFY_ASSERT(true_bb->kind == IR_KIND_BASIC_BLOCK, vctx, true_bb, "'cond_br' true target must be a Basic Block.");
+    VERIFY_ASSERT(false_bb->kind == IR_KIND_BASIC_BLOCK, vctx, false_bb,
+                  "'cond_br' false target must be a Basic Block.");
     break;
   }
 
@@ -416,8 +410,8 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
 
       // 检查类型
       VERIFY_ASSERT(val->type == result_type, vctx, val, "PHI incoming value type mismatch.");
-      VERIFY_ASSERT(incoming_bb_val->type->kind == IR_TYPE_LABEL, vctx, incoming_bb_val,
-                    "PHI incoming block must be a label type.");
+      VERIFY_ASSERT(incoming_bb_val->kind == IR_KIND_BASIC_BLOCK, vctx, incoming_bb_val,
+                    "PHI incoming block must be a Basic Block.");
 
       // 检查重复: 确保同一个 BB 没有被列出两次
       for (int j = i + 2; j < op_count; j += 2)
@@ -541,41 +535,51 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
     // 1. 验证至少有 Callee
     VERIFY_ASSERT(op_count >= 1, vctx, value, "'call' must have at least 1 operand (the callee).");
 
-    // 2. 验证 Callee
+    // 2. 验证 Callee 类型
     IRValueNode *callee_val = get_operand(inst, 0);
-    VERIFY_ASSERT(callee_val->kind == IR_KIND_FUNCTION, vctx, callee_val,
-                  "'call' operand 0 (callee) must be a function.");
+    VERIFY_ASSERT(callee_val->type->kind == IR_TYPE_PTR, vctx, callee_val, "'call' callee must be a pointer type.");
 
-    // 3. 验证结果类型
-    // (我们需要从 ValueNode* 获取 IRFunction* 来检查其 return_type)
-    IRFunction *callee_func = container_of(callee_val, IRFunction, entry_address);
-    VERIFY_ASSERT(result_type == callee_func->return_type, vctx, value,
-                  "'call' result type does not match callee's return type.");
+    IRType *callee_pointee_type = callee_val->type->as.pointee_type;
+    VERIFY_ASSERT(callee_pointee_type->kind == IR_TYPE_FUNCTION, vctx, callee_val,
+                  "'call' callee must be a *pointer to a function type*.");
 
-    // 4. 验证参数数量
-    size_t expected_arg_count = 0;
-    IDList *arg_iter;
-    list_for_each(&callee_func->arguments, arg_iter)
-    {
-      expected_arg_count++;
-    }
+    // 3. 提取函数类型 (我们已验证它是 IR_TYPE_FUNCTION)
+    IRType *func_type = callee_pointee_type;
+
+    // 4. 验证结果类型
+    VERIFY_ASSERT(result_type == func_type->as.function.return_type, vctx, value,
+                  "'call' result type does not match callee's function type return type.");
+
+    // 5. 验证参数数量
+    size_t expected_arg_count = func_type->as.function.param_count;
     size_t provided_arg_count = op_count - 1;
-    VERIFY_ASSERT(provided_arg_count == expected_arg_count, vctx, value,
-                  "'call' argument count mismatch. Expected %zu, but got %zu.", expected_arg_count, provided_arg_count);
+    bool is_variadic = func_type->as.function.is_variadic;
 
-    // 5. 验证参数类型 (逐个对比)
-    arg_iter = callee_func->arguments.next; // 重置迭代器
-    for (size_t i = 1; i < op_count; i++)
+    if (is_variadic)
     {
-      IRValueNode *provided_arg = get_operand(inst, i);
-      IRArgument *expected_arg_struct = list_entry(arg_iter, IRArgument, list_node);
-      IRType *expected_type = expected_arg_struct->value.type;
-
-      VERIFY_ASSERT(provided_arg->type == expected_type, vctx, provided_arg, "'call' argument %zu type mismatch.",
-                    (i - 1));
-
-      arg_iter = arg_iter->next; // 前进到下一个*预期*参数
+      VERIFY_ASSERT(provided_arg_count >= expected_arg_count, vctx, value,
+                    "'call' to variadic function expected at least %zu args, but got %zu.", expected_arg_count,
+                    provided_arg_count);
     }
+    else
+    {
+      VERIFY_ASSERT(provided_arg_count == expected_arg_count, vctx, value,
+                    "'call' argument count mismatch. Expected %zu, but got %zu.", expected_arg_count,
+                    provided_arg_count);
+    }
+
+    // 6. 验证 *固定* 参数的类型 (逐个对比)
+    for (size_t i = 0; i < expected_arg_count; i++)
+    {
+      IRValueNode *provided_arg = get_operand(inst, i + 1); // (i+1 跳过 callee)
+      IRType *expected_type = func_type->as.function.param_types[i];
+
+      VERIFY_ASSERT(provided_arg->type == expected_type, vctx, provided_arg,
+                    "'call' argument %zu type mismatch. Expected type %p, got %p.", i, expected_type,
+                    provided_arg->type);
+    }
+
+    // (可变参数 '...' 部分的类型是未知的, Verifier 无法检查)
     break;
   }
 
@@ -680,8 +684,10 @@ ir_verify_function(IRFunction *func)
     list_for_each(&func->arguments, arg_it)
     {
       IRArgument *arg = list_entry(arg_it, IRArgument, list_node);
-      VERIFY_ASSERT(arg->value.name == NULL, &vctx, &arg->value,
-                    "Argument in a function *declaration* cannot have a name.");
+      // 我们仍然需要验证参数类型
+      VERIFY_ASSERT(arg->value.type != NULL, &vctx, &arg->value, "Argument has NULL type.");
+      VERIFY_ASSERT(arg->value.type->kind != IR_TYPE_VOID, &vctx, &arg->value,
+                    "Function argument cannot have void type.");
     }
     bump_destroy(&vctx.analysis_arena); // 清理空分析的竞技场
     return !vctx.has_error;             // 声明验证通过
@@ -763,8 +769,12 @@ ir_verify_module(IRModule *mod)
 
     if (global->initializer)
     {
-      VERIFY_ASSERT(global->initializer->kind == IR_KIND_CONSTANT, &vctx, global->initializer,
-                    "Global initializer must be a constant.");
+      // 初始值必须是 "全局" 的
+      bool is_valid_initializer = (global->initializer->kind == IR_KIND_CONSTANT) || // e.g., 10
+                                  (global->initializer->kind == IR_KIND_FUNCTION) || // e.g., @my_func
+                                  (global->initializer->kind == IR_KIND_GLOBAL);     // e.g., @other_global
+      VERIFY_ASSERT(is_valid_initializer, &vctx, global->initializer,
+                    "Global initializer must be a constant, function, or another global.");
       VERIFY_ASSERT(global->initializer->type == global->allocated_type, &vctx, global->initializer,
                     "Global initializer type mismatch allocated_type.");
     }

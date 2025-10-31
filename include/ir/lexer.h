@@ -19,7 +19,8 @@ typedef enum
   // --- 标识符和字面量 ---
   TK_IDENT,        // e.g., define, i32, add, my_label
   TK_GLOBAL_IDENT, // e.g., @my_global, @main
-  TK_LOCAL_IDENT,  // e.g., %x, %0, %entry
+  TK_LOCAL_IDENT,  // e.g., %x, %0,
+  TK_LABEL_IDENT,  // e.g., $entry
 
   // 字面量
   TK_INTEGER_LITERAL, // e.g., '123', '-42'
@@ -36,6 +37,9 @@ typedef enum
   TK_RBRACKET,  // ]
   TK_LPAREN,    // (
   TK_RPAREN,    // )
+  TK_LT,        // <
+  TK_GT,        // >
+  TK_ELLIPSIS,  // ...
   TK_SEMICOLON, // ; (用于注释)
 
   // (注意：'ptr', 'add', 'i32' 都会被解析为 TK_IDENT，

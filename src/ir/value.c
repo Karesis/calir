@@ -2,6 +2,7 @@
 
 #include "ir/value.h"
 #include "ir/constant.h"
+#include "ir/function.h"
 #include "ir/global.h"
 #include "ir/type.h" // <-- 关键依赖, 用于 dump
 #include "ir/use.h"  // <-- 关键依赖, 用于 R-A-U-W
@@ -41,8 +42,6 @@ get_context_from_value(IRValueNode *val)
     return bb->parent->parent->context;
   }
   case IR_KIND_ARGUMENT: {
-    // 假设 IRArgument 定义在 function.h 中
-    typedef struct IRArgument IRArgument;
     IRArgument *arg = container_of(val, IRArgument, value);
     if (!arg->parent)
       return NULL;
@@ -71,10 +70,27 @@ get_context_from_value(IRValueNode *val)
 }
 
 /**
- * @brief 打印一个 Value 的引用 (e.g., "i32 %foo" or "label %entry")
+ * @brief [内部] 辅助函数, 仅打印常量的值
+ */
+static void
+ir_constant_dump_value(IRConstant *konst, FILE *stream)
+{
+  if (konst->const_kind == CONST_KIND_INT)
+  {
+    fprintf(stream, "%d", konst->data.int_val); // [TODO] 未来可能需要处理 i64
+  }
+  else if (konst->const_kind == CONST_KIND_UNDEF)
+  {
+    fprintf(stream, "undef");
+  }
+  // [TODO] 未来添加 CONST_KIND_FLOAT 等
+}
+
+/**
+ * @brief [新] 打印一个 Value 的 "名字" (e.g., "%a", "@main", "$entry", "10")
  */
 void
-ir_value_dump(IRValueNode *val, FILE *stream)
+ir_value_dump_name(IRValueNode *val, FILE *stream)
 {
   if (!val)
   {
@@ -82,49 +98,83 @@ ir_value_dump(IRValueNode *val, FILE *stream)
     return;
   }
 
-  // 处理常量
+  // 常量没有 'name' 字段, 它打印自己的值
   if (val->kind == IR_KIND_CONSTANT)
   {
-    IRConstant *konst = (IRConstant *)val; // 向下转型
-
-    // 1. 打印类型
-    ir_type_dump(konst->value.type, stream);
-    fprintf(stream, " ");
-
-    // 2. 打印常量的值
-    if (konst->const_kind == CONST_KIND_INT)
-    {
-      fprintf(stream, "%d", konst->data.int_val);
-    }
-    else if (konst->const_kind == CONST_KIND_UNDEF)
-    {
-      fprintf(stream, "undef");
-    }
-    return; // *** 提前返回 ***
+    ir_constant_dump_value((IRConstant *)val, stream);
+    return;
   }
 
-  // 基本块标签
-  if (val->kind == IR_KIND_BASIC_BLOCK)
+  // 所有其他类型都应该有 'name'
+  assert(val->name != NULL && "Value name is NULL");
+
+  switch (val->kind)
   {
-    // 标签没有类型, 只有名字
-    fprintf(stream, "label %%%s", val->name);
+  case IR_KIND_BASIC_BLOCK:
+    fprintf(stream, "$%s", val->name); // 新规范: $label
+    break;
+  case IR_KIND_FUNCTION:
+  case IR_KIND_GLOBAL:
+    fprintf(stream, "@%s", val->name); // 新规范: @name
+    break;
+  case IR_KIND_ARGUMENT:
+  case IR_KIND_INSTRUCTION:
+    fprintf(stream, "%%%s", val->name); // 新规范: %name
+    break;
+  default:
+    fprintf(stream, "<??_KIND_%d>", val->kind);
+    break;
   }
-  // 其他 (参数, 指令结果, 函数, ...)
-  else
-  {
-    // 打印类型
-    ir_type_dump(val->type, stream);
+}
 
-    // 打印名字
-    if (val->kind == IR_KIND_FUNCTION)
-    {
-      fprintf(stream, " @%s", val->name); // 函数用 '@'
-    }
-    else
-    {
-      fprintf(stream, " %%%s", val->name); // 局部值用 '%'
-    }
+/**
+ * @brief [新] 打印一个 Value 作为 "操作数" (e.g., "%a: i32", "10: i32", "$entry")
+ */
+void
+ir_value_dump_with_type(IRValueNode *val, FILE *stream)
+{
+  if (!val)
+  {
+    fprintf(stream, "<null_operand>");
+    return;
   }
+
+  // 1. 打印 "名字" (e.g., "%a", "10", "$entry", "@main")
+  ir_value_dump_name(val, stream);
+
+  // 2. 打印 ": type", 但 $label 和 @func/@global 在使用时不需要
+  switch (val->kind)
+  {
+  case IR_KIND_CONSTANT:
+  case IR_KIND_ARGUMENT:
+  case IR_KIND_INSTRUCTION:
+    // 打印: ": i32" 或 ": <i32>"
+    fprintf(stream, ": ");
+    ir_type_dump(val->type, stream); // (这个函数我们已经重构好了)
+    break;
+
+  case IR_KIND_BASIC_BLOCK:
+  case IR_KIND_FUNCTION:
+  case IR_KIND_GLOBAL:
+    // 这三种类型在使用时 (e.g. br $entry, call @main) 不打印类型
+    break;
+
+  default:
+    break;
+  }
+}
+
+/**
+ * @brief [已重构] 旧的 dump 函数, 现在只是 _with_type 的别名
+ *
+ * 为了兼容性, 我们保留 ir_value_dump,
+ * 并让它调用新的规范化函数。
+ */
+void
+ir_value_dump(IRValueNode *val, FILE *stream)
+{
+  // 委托给新的、更强大的打印函数
+  ir_value_dump_with_type(val, stream);
 }
 
 /**

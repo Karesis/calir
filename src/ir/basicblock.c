@@ -15,25 +15,25 @@ IRBasicBlock *
 ir_basic_block_create(IRFunction *func, const char *name)
 {
   assert(func != NULL && "Parent function cannot be NULL");
-  IRContext *ctx = func->parent->context; // [新] 从父级获取 Context
+  IRContext *ctx = func->parent->context; // 从父级获取 Context
 
-  // [修改] 从 ir_arena 分配
+  // 从 ir_arena 分配
   IRBasicBlock *bb = (IRBasicBlock *)BUMP_ALLOC_ZEROED(&ctx->ir_arena, IRBasicBlock);
   if (!bb)
     return NULL;
 
   bb->parent = func;
 
-  // [修改] 显式初始化链表
+  // 显式初始化链表
   list_init(&bb->list_node);
   list_init(&bb->instructions);
 
   // 初始化 IRValueNode 基类 (代表基本块标签地址)
   bb->label_address.kind = IR_KIND_BASIC_BLOCK;
-  bb->label_address.name = ir_context_intern_str(ctx, name); // [修改] Intern 名字
-  list_init(&bb->label_address.uses);                        // [修改] 显式初始化
+  bb->label_address.name = ir_context_intern_str(ctx, name);
+  list_init(&bb->label_address.uses);
 
-  // [修改] 使用 Context 中的单例 'label' 类型
+  // 使用 Context 中的单例 'label' 类型
   bb->label_address.type = ctx->type_label;
 
   return bb;
@@ -62,7 +62,7 @@ ir_basic_block_dump(IRBasicBlock *bb, FILE *stream)
   }
 
   // 1. 打印标签 (e.g., "entry:")
-  fprintf(stream, "%s:\n", bb->label_address.name);
+  fprintf(stream, "$%s:\n", bb->label_address.name);
 
   // 2. 打印所有指令 (带缩进)
   IDList *iter;

@@ -28,17 +28,30 @@ typedef enum
 typedef struct
 {
   IRValueKind kind; // <-- 用于运行时类型识别
-  char *name;       // 如 %entry, %x, %tmp1， 用于调试
+  const char *name; // 如 $entry, %x, %tmp1， 用于调试
   IRType *type;
   IDList uses; // “谁在用我？” (Def-Use 链)
                // 这是一个 IRUse 对象的链表头
 } IRValueNode;
 
 /**
- * @brief 打印一个 Value 的引用 (e.g., "i32 %foo" or "label %entry")
- * (这是我们之前 temp_print_value 的正式版本)
- * @param val 要打印的 Value
- * @param stream 输出流
+ * @brief 打印一个 Value 的 "名字" (e.g., "%a", "@main", "$entry", "10")
+ *
+ * 负责打印正确的 sigil (%, @, $) 或常量值。
+ */
+void ir_value_dump_name(IRValueNode *val, FILE *stream);
+
+/**
+ * @brief 打印一个 Value 作为 "操作数" (e.g., "%a: i32", "10: i32", "$entry")
+ *
+ * 负责打印 "name: type" 格式。
+ * (内部会智能处理 $label 和 @func, 它们在使用时不需要类型)
+ */
+void ir_value_dump_with_type(IRValueNode *val, FILE *stream);
+
+/**
+ * @brief [废弃/可选] 打印一个 Value 的引用 (e.g., "i32 %foo" or "label %entry")
+ * (这个函数将被 ir_value_dump_with_type 替代)
  */
 void ir_value_dump(IRValueNode *val, FILE *stream);
 

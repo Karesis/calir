@@ -1,3 +1,4 @@
+// src/ir/module.c
 #include "ir/module.h"
 #include "ir/context.h"  // 核心依赖
 #include "ir/function.h" // 需要 function_dump
@@ -54,11 +55,11 @@ ir_module_dump(IRModule *mod, FILE *stream)
 {
   if (!mod)
   {
-    fprintf(stream, "<null module>\n");
+    fprintf(stream, "; <null module>\n");
     return;
   }
 
-  fprintf(stream, "; ModuleID = '%s'\n", mod->name);
+  fprintf(stream, "module = \"%s\"\n", mod->name);
   fprintf(stream, "\n");
 
   // 遍历并打印所有命名结构体

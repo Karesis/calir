@@ -276,7 +276,7 @@ insert_phi_nodes(Mem2RegContext *ctx, IDList *promotable_allocas)
         // (builder->create_phi 知道要插入到开头)
 
         // 2. 创建 PHI
-        IRValueNode *phi_val = ir_builder_create_phi(ctx->builder, info->allocated_type);
+        IRValueNode *phi_val = ir_builder_create_phi(ctx->builder, info->allocated_type, NULL);
         IRInstruction *phi_inst = container_of(phi_val, IRInstruction, result);
 
         // 3. 存储映射: phi -> alloca
