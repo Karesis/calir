@@ -2,6 +2,7 @@
 #include "ir/context.h"
 #include "ir/function.h"
 #include "ir/instruction.h"
+#include "ir/printer.h"
 #include "utils/bump.h"
 #include "utils/id_list.h"
 
@@ -51,18 +52,24 @@ ir_function_append_basic_block(IRFunction *func, IRBasicBlock *bb)
 
 // --- 调试 ---
 
+/**
+ * @brief [!!] 重构 [!!]
+ * 将单个基本块的 IR 打印到 IRPrinter
+ *
+ * @param bb 要打印的基本块
+ * @param p 打印机 (策略)
+ */
 void
-ir_basic_block_dump(IRBasicBlock *bb, FILE *stream)
+ir_basic_block_dump(IRBasicBlock *bb, IRPrinter *p)
 {
-  // (此函数的实现保持不变)
   if (!bb)
   {
-    fprintf(stream, "<null basicblock>\n");
+    ir_print_str(p, "<null basicblock>\n"); // [!!] 已更改
     return;
   }
 
-  // 1. 打印标签 (e.g., "entry:")
-  fprintf(stream, "$%s:\n", bb->label_address.name);
+  // 1. 打印标签 (e.g., "$entry:")
+  ir_printf(p, "$%s:\n", bb->label_address.name); // [!!] 已更改
 
   // 2. 打印所有指令 (带缩进)
   IDList *iter;
@@ -70,8 +77,11 @@ ir_basic_block_dump(IRBasicBlock *bb, FILE *stream)
   {
     IRInstruction *inst = list_entry(iter, IRInstruction, list_node);
 
-    fprintf(stream, "  ");
-    ir_instruction_dump(inst, stream); // <-- 依赖 instruction.c
-    fprintf(stream, "\n");
+    ir_print_str(p, "  "); // [!!] 已更改 (打印缩进)
+
+    // [!!] 调用 (尚未重构的) ir_instruction_dump
+    ir_instruction_dump(inst, p);
+
+    ir_print_str(p, "\n"); // [!!] 已更改 (打印换行)
   }
 }

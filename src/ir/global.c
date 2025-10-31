@@ -2,6 +2,7 @@
 
 #include "ir/context.h" // 需要 ir_context_intern_str, ir_type_get_ptr
 #include "ir/module.h"
+#include "ir/printer.h"
 #include "ir/type.h"
 #include "ir/value.h"   // 需要 IR_KIND_CONSTANT
 #include "utils/bump.h" // 需要 BUMP_ALLOC_ZEROED
@@ -60,42 +61,45 @@ ir_global_variable_create(IRModule *mod, const char *name, IRType *allocated_typ
 }
 
 /**
- * @brief 将单个全局变量的 IR 打印到流
+ * @brief [!!] 重构 [!!]
+ * 将单个全局变量的 IR 打印到 IRPrinter
+ *
+ * @param global 要打印的全局变量
+ * @param p 打印机 (策略)
  */
 void
-ir_global_variable_dump(IRGlobalVariable *global, FILE *stream)
+ir_global_variable_dump(IRGlobalVariable *global, IRPrinter *p)
 {
   if (!global)
   {
-    fprintf(stream, "<null global>\n");
+    ir_print_str(p, "<null global>\n"); // [!!] 已更改
     return;
   }
 
-  // --- [修改点] ---
+  // 1. 打印名字 (e.g., "@my_global")
+  // [!!] 假设: ir_value_dump_name 已被重构
+  ir_value_dump_name(&global->value, p);
+  ir_print_str(p, " = "); // [!!] 已更改
 
-  // 1. 打印名字
-  // [NEW] 使用 ir_value_dump_name, 它会正确打印 "@my_global"
-  ir_value_dump_name(&global->value, stream);
-  fprintf(stream, " = ");
+  // 2. 打印 "global" 和类型 (e.g., "global i32")
+  ir_print_str(p, "global "); // [!!] 已更改
 
-  // 2. 打印 "global" 和类型
-  // [NEW] 移除 type_str[128] 缓冲区
-  fprintf(stream, "global ");
-  // [NEW] 直接将类型打印到流
-  ir_type_dump(global->allocated_type, stream);
+  // [!!] 调用已重构的 ir_type_dump
+  ir_type_dump(global->allocated_type, p);
 
   // 3. 打印初始值
   if (global->initializer)
   {
-    fprintf(stream, " ");
-    // [NEW] 使用 ir_value_dump_with_type,
-    // 它会正确打印 "123: i32" 或 "undef: <i32>"
-    ir_value_dump_with_type(global->initializer, stream);
+    ir_print_str(p, " "); // [!!] 已更改
+
+    // [!!] 假设: ir_value_dump_with_type 已被重构
+    // (它会打印 "123: i32" 或 "@other_func" 等)
+    ir_value_dump_with_type(global->initializer, p);
   }
   else
   {
-    fprintf(stream, " zeroinitializer");
+    ir_print_str(p, " zeroinitializer"); // [!!] 已更改
   }
 
-  fprintf(stream, "\n");
+  ir_print_str(p, "\n"); // [!!] 已更改
 }

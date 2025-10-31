@@ -2,9 +2,9 @@
 #define INSTRUCTION_H
 
 #include "ir/basicblock.h"
+#include "ir/printer.h"
 #include "ir/value.h"
 #include "utils/id_list.h"
-#include <stdio.h>
 
 // 指令类型
 typedef enum
@@ -75,10 +75,11 @@ void ir_instruction_erase_from_parent(IRInstruction *inst);
 // --- 调试 ---
 
 /**
- * @brief 将单条指令的 IR 打印到流
+ * @brief 将单条指令的 IR 打印到 IRPrinter
+ * [!!] 签名已更改
  * @param inst 要打印的指令
- * @param stream 输出流
+ * @param p 打印机 (策略)
  */
-void ir_instruction_dump(IRInstruction *inst, FILE *stream);
+void ir_instruction_dump(IRInstruction *inst, IRPrinter *p);
 
 #endif

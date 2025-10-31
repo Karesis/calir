@@ -2,6 +2,7 @@
 #define BASIC_BLOCK_H
 
 #include "ir/function.h"
+#include "ir/printer.h"
 #include "ir/value.h"
 #include "utils/id_list.h"
 
@@ -33,6 +34,12 @@ IRBasicBlock *ir_basic_block_create(IRFunction *func, const char *name);
 void ir_function_append_basic_block(IRFunction *func, IRBasicBlock *bb);
 
 // --- 调试 ---
-void ir_basic_block_dump(IRBasicBlock *bb, FILE *stream);
+/**
+ * @brief 将单个基本块的 IR 打印到 IRPrinter
+ * [!!] 签名已更改
+ * @param bb 要打印的基本块
+ * @param p 打印机 (策略)
+ */
+void ir_basic_block_dump(IRBasicBlock *bb, IRPrinter *p);
 
 #endif

@@ -3,10 +3,10 @@
 
 #include "ir/context.h"
 #include "ir/module.h"
+#include "ir/printer.h"
 #include "ir/type.h"
 #include "ir/value.h"
 #include "utils/id_list.h"
-#include <stdio.h> // For FILE
 
 /**
  * @brief 全局变量
@@ -41,10 +41,11 @@ IRGlobalVariable *ir_global_variable_create(IRModule *mod, const char *name, IRT
                                             IRValueNode *initializer);
 
 /**
- * @brief 将单个全局变量的 IR 打印到流
+ * @brief 将单个全局变量的 IR 打印到 IRPrinter
+ * [!!] 签名已更改
  * @param global 要打印的全局变量
- * @param stream 输出流
+ * @param p 打印机 (策略)
  */
-void ir_global_variable_dump(IRGlobalVariable *global, FILE *stream);
+void ir_global_variable_dump(IRGlobalVariable *global, IRPrinter *p);
 
 #endif // IR_GLOBAL_H

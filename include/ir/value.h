@@ -1,9 +1,9 @@
 #ifndef VALUE_H
 #define VALUE_H
 
+#include "ir/printer.h"
 #include "ir/type.h"
 #include "utils/id_list.h"
-#include <stdio.h>
 
 /**
  * @brief 区分 IRValueNode 到底“是”什么
@@ -36,10 +36,10 @@ typedef struct
 
 /**
  * @brief 打印一个 Value 的 "名字" (e.g., "%a", "@main", "$entry", "10")
- *
- * 负责打印正确的 sigil (%, @, $) 或常量值。
+ * [!!] 签名已更改
+ * @param p 打印机 (策略)
  */
-void ir_value_dump_name(IRValueNode *val, FILE *stream);
+void ir_value_dump_name(IRValueNode *val, IRPrinter *p);
 
 /**
  * @brief 打印一个 Value 作为 "操作数" (e.g., "%a: i32", "10: i32", "$entry")
@@ -47,13 +47,13 @@ void ir_value_dump_name(IRValueNode *val, FILE *stream);
  * 负责打印 "name: type" 格式。
  * (内部会智能处理 $label 和 @func, 它们在使用时不需要类型)
  */
-void ir_value_dump_with_type(IRValueNode *val, FILE *stream);
+void ir_value_dump_with_type(IRValueNode *val, IRPrinter *p);
 
 /**
  * @brief [废弃/可选] 打印一个 Value 的引用 (e.g., "i32 %foo" or "label %entry")
  * (这个函数将被 ir_value_dump_with_type 替代)
  */
-void ir_value_dump(IRValueNode *val, FILE *stream);
+void ir_value_dump(IRValueNode *val, IRPrinter *p);
 
 /**
  * @brief 安全地设置 Value 的名字 (自动 free 旧名字并 strdup 新名字)
