@@ -9,12 +9,14 @@
 #include "ir/global.h"
 #include "ir/instruction.h"
 #include "ir/module.h"
+#include "ir/printer.h"
 #include "ir/type.h"
 #include "ir/use.h"
 #include "ir/value.h"
 #include "utils/bump.h"
 #include "utils/id_list.h"
 
+#include <stdarg.h>
 #include <stdint.h> // for uint64_t
 #include <stdio.h>  // for fprintf, stderr
 
@@ -32,59 +34,77 @@ typedef struct
   bool has_error;
   DominatorTree *dom_tree; // 缓存支配树
   Bump analysis_arena;     // 用于所有函数级分析的竞技场
+  IRPrinter *p;
 } VerifierContext;
 
 /**
- * @brief 报告一个验证错误
+ * @brief [!!] 新的：VERIFY_ERROR 的实现
  *
- * @param vctx Verifier 上下文 (用于跟踪状态)
- * @param obj 导致错误的对象 (例如 IRValueNode*, IRBasicBlock*)
- * @param ... 格式化错误信息 (printf 风格)
+ * 将宏的逻辑移到一个静态函数中，使其更清晰、更易于调试，
+ * 并且*完全*使用 IRPrinter 机制，而不是 fprintf。
+ */
+static bool
+verify_error_impl(VerifierContext *vctx, IRValueNode *obj, const char *file, int line, const char *fmt, ...)
+{
+  if (vctx->has_error)
+  {
+    return false; // 只报告第一个错误
+  }
+  vctx->has_error = true;
+
+  // [!!] 检查 p 是否存在 (以防万一)
+  if (!vctx->p)
+  {
+    return false;
+  }
+
+  // [!!] 4. 所有输出现在都通过 IRPrinter
+  ir_print_str(vctx->p, "\n--- [CALIR VERIFIER ERROR] ---\n");
+  ir_printf(vctx->p, "At:          %s:%d\n", file, line);
+
+  if (vctx->current_function)
+  {
+    ir_printf(vctx->p, "In Function: %s\n", vctx->current_function->entry_address.name);
+  }
+  if (vctx->current_block)
+  {
+    ir_printf(vctx->p, "In Block:    %s\n", vctx->current_block->label_address.name);
+  }
+
+  // 打印格式化的错误信息
+  ir_print_str(vctx->p, "Error:       ");
+  va_list args;
+  va_start(args, fmt);
+  vctx->p->append_vfmt_func(vctx->p->target, fmt, args); // [!!] 直接调用 vfmt
+  va_end(args);
+  ir_print_str(vctx->p, "\n");
+
+  // 打印导致错误的对象
+  if (obj)
+  {
+    ir_print_str(vctx->p, "Object:      ");
+    if (obj->kind == IR_KIND_INSTRUCTION)
+    {
+      ir_instruction_dump(container_of(obj, IRInstruction, result), vctx->p);
+    }
+    else
+    {
+      // (BasicBlock 和其他 Value 都可以用 ir_value_dump 打印)
+      ir_value_dump(obj, vctx->p);
+    }
+    ir_print_str(vctx->p, "\n");
+  }
+
+  ir_print_str(vctx->p, "---------------------------------\n");
+  return false; // 导致验证函数返回 false
+}
+
+/**
+ * @brief 调用辅助函数的精简包装器。
  */
 #define VERIFY_ERROR(vctx, obj, ...)                                                                                   \
-  do                                                                                                                   \
-  {                                                                                                                    \
-    if (!(vctx)->has_error)                                                                                            \
-    { /* 只打印第一个错误，防止信息泛滥 */                                                                             \
-      fprintf(stderr, "\n--- [CALIR VERIFIER ERROR] ---\n");                                                           \
-      if ((vctx)->current_function)                                                                                    \
-      {                                                                                                                \
-        fprintf(stderr, "In Function: %s\n", (vctx)->current_function->entry_address.name);                            \
-      }                                                                                                                \
-      if ((vctx)->current_block)                                                                                       \
-      {                                                                                                                \
-        fprintf(stderr, "In Block:    %s\n", (vctx)->current_block->label_address.name);                               \
-      }                                                                                                                \
-      fprintf(stderr, "Error:       ");                                                                                \
-      fprintf(stderr, __VA_ARGS__);                                                                                    \
-      fprintf(stderr, "\n");                                                                                           \
-      if (obj)                                                                                                         \
-      {                                                                                                                \
-        /* 尝试打印导致错误的对象 */                                                                                   \
-        if (((IRValueNode *)(obj))->kind == IR_KIND_INSTRUCTION)                                                       \
-        {                                                                                                              \
-          fprintf(stderr, "Object:      ");                                                                            \
-          ir_instruction_dump(container_of(obj, IRInstruction, result), stderr);                                       \
-        }                                                                                                              \
-        else if (((IRValueNode *)(obj))->kind == IR_KIND_BASIC_BLOCK)                                                  \
-        {                                                                                                              \
-          /* (ir_basic_block_dump 可能会打印过多信息，先只打印 Value) */                                               \
-          fprintf(stderr, "Object:      ");                                                                            \
-          ir_value_dump((IRValueNode *)obj, stderr);                                                                   \
-          fprintf(stderr, "\n");                                                                                       \
-        }                                                                                                              \
-        else                                                                                                           \
-        {                                                                                                              \
-          fprintf(stderr, "Object:      ");                                                                            \
-          ir_value_dump((IRValueNode *)obj, stderr);                                                                   \
-          fprintf(stderr, "\n");                                                                                       \
-        }                                                                                                              \
-      }                                                                                                                \
-      fprintf(stderr, "---------------------------------\n");                                                          \
-      (vctx)->has_error = true;                                                                                        \
-    }                                                                                                                  \
-    return false; /* 导致验证函数返回 false */                                                                         \
-  } while (0)
+  /* 'return' 会从调用方 (e.g., verify_instruction) 返回 */                                                            \
+  return verify_error_impl((vctx), (IRValueNode *)(obj), __FILE__, __LINE__, __VA_ARGS__)
 
 /**
  * @brief 检查一个断言，如果失败则报告错误
@@ -664,7 +684,11 @@ verify_basic_block(VerifierContext *vctx, IRBasicBlock *bb)
 bool
 ir_verify_function(IRFunction *func)
 {
+  IRPrinter p;
+  ir_printer_init_file(&p, stderr);
   VerifierContext vctx = {0};
+  vctx.p = &p;
+
   VERIFY_ASSERT(func != NULL, &vctx, NULL, "Function is NULL.");
   VERIFY_ASSERT(func->parent != NULL, &vctx, &func->entry_address, "Function has no parent Module.");
   VERIFY_ASSERT(func->return_type != NULL, &vctx, &func->entry_address, "Function has NULL return type.");
@@ -752,7 +776,14 @@ ir_verify_function(IRFunction *func)
 bool
 ir_verify_module(IRModule *mod)
 {
+  // [!!] 5. 设置 "策略"
+  IRPrinter p;
+  ir_printer_init_file(&p, stderr);
+
+  // [!!] 6. 设置 "机制"
   VerifierContext vctx = {0};
+  vctx.p = &p; // [!!] 传递打印机
+
   VERIFY_ASSERT(mod != NULL, &vctx, NULL, "Module is NULL.");
   VERIFY_ASSERT(mod->context != NULL, &vctx, NULL, "Module has no Context.");
 
