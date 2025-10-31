@@ -1,9 +1,9 @@
 #ifndef TYPE_H
 #define TYPE_H
 
+#include "ir/printer.h"
 #include <stdbool.h>
 #include <stddef.h> // for size_t
-#include <stdio.h>  // for FILE
 
 typedef struct IRContext IRContext;
 
@@ -123,7 +123,6 @@ IRType *ir_type_create_function(IRContext *ctx, IRType *return_type, IRType **pa
 
 // --- 调试 API (保持不变) ---
 
-void ir_type_to_string(IRType *type, char *buffer, size_t size);
-void ir_type_dump(IRType *type, FILE *stream);
+void ir_type_dump(IRType *type, IRPrinter *p);
 
 #endif // TYPE_H
