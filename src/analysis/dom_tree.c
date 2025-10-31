@@ -354,6 +354,7 @@ dom_tree_destroy(DominatorTree *tree)
   // 所有的 BucketNode
   // ... 全部都在传入的 *arena* 上分配，
   // 将由 verifier 中的 bump_destroy(&vctx.analysis_arena) 统一释放。
+  (void)tree;
 }
 
 bool

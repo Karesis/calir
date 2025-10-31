@@ -315,7 +315,7 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
 
       // 辅助变量
       RuntimeValue *rt_lhs, *rt_rhs, *rt_val, *rt_ptr, *rt_res;
-      IRValueNode *node_lhs, *node_rhs;
+      IRValueNode *node_lhs;
       void *host_ptr;
 
       switch (inst->opcode)
@@ -402,7 +402,9 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
         assert(rt_val && "PHI node missing incoming value");
         set_value(frame, &inst->result, rt_val);
         break;
-
+      case IR_OP_CALL:
+        // TODO: 实现解释器对 'call' 的支持
+        break;
       // --- 二元运算 ---
       case IR_OP_ADD:
       case IR_OP_SUB:

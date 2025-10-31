@@ -29,7 +29,6 @@ static void
 compute_df_recursive(DomTreeNode *n, DominanceFrontier *df, Bitset *temp_set)
 {
   DominatorTree *dt = df->dom_tree;
-  FunctionCFG *cfg = dt->cfg;
   size_t num_blocks = df->num_blocks;
 
   // 获取当前节点 n 的 Bitset
@@ -147,7 +146,7 @@ void
 ir_analysis_dom_frontier_destroy(DominanceFrontier *df)
 {
   // 所有内存都在 Bump arena 上分配，由 arena 统一管理
-  // (void)df;
+  (void)df;
 }
 
 /**
