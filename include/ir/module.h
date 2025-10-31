@@ -2,6 +2,7 @@
 #define MODULE_H
 
 #include "context.h"
+#include "ir/printer.h"
 #include "utils/id_list.h"
 #include <stdio.h>
 
@@ -32,10 +33,24 @@ typedef struct IRModule
 IRModule *ir_module_create(IRContext *ctx, const char *name);
 
 /**
- * @brief 将模块的 IR 打印到指定的流 (例如 stdout)
- * @param mod 要打印的模块
- * @param stream 输出流
+ * @brief [策略 1] 将模块的 IR 打印到指定的流 (例如 stdout)
+ * (这是旧的 ir_module_dump)
  */
-void ir_module_dump(IRModule *mod, FILE *stream);
+void ir_module_dump_to_file(IRModule *mod, FILE *stream);
+
+/**
+ * @brief [策略 2] 将模块的 IR 打印到 arena 上的新字符串
+ *
+ * @param mod 要打印的模块
+ * @param arena 用于分配字符串的 Bump arena
+ * @return const char* 指向 arena 上的、以 '\0' 结尾的字符串
+ */
+const char *ir_module_dump_to_string(IRModule *mod, Bump *arena);
+
+/**
+ * @brief [内部机制] 核心 dump 函数。
+ * (除非你正在实现一个新的 IRPrinter 策略，否则不应直接调用)
+ */
+void ir_module_dump_internal(IRModule *mod, IRPrinter *p);
 
 #endif
