@@ -66,7 +66,7 @@ get_golden_ir_text()
  * @param builder IR Builder
  * @return IRModule* 指向新构建的模块
  */
-static IRModule *
+static IRModule *__attribute__((unused))
 build_golden_ir(IRContext *ctx, IRBuilder *builder)
 {
   // 1. --- 设置 ---
@@ -76,9 +76,6 @@ build_golden_ir(IRContext *ctx, IRBuilder *builder)
   IRType *ty_i32 = ir_type_get_i32(ctx);
   IRType *members[2] = {ty_i32, ty_i32};
   IRType *ty_struct = ir_type_get_named_struct(ctx, "my_struct", members, 2);
-  IRType *call_params[2] = {ty_i32, ty_i32};
-  IRType *ty_call_func = ir_type_get_function(ctx, ty_i32, call_params, 2, false);
-  IRType *ty_call_func_ptr = ir_type_get_ptr(ctx, ty_call_func);
 
   // 3. --- 声明一个外部函数 (用于 call) ---
   IRFunction *callee = ir_function_create(mod, "external_add", ty_i32);
