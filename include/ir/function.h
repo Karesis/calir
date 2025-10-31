@@ -2,10 +2,10 @@
 #define FUNCTION_H
 
 #include "ir/module.h"
+#include "ir/printer.h"
 #include "ir/type.h"
 #include "ir/value.h"
 #include "utils/id_list.h"
-#include <stdio.h>
 
 /**
  * @brief 函数
@@ -62,7 +62,6 @@ IRArgument *ir_argument_create(IRFunction *func, IRType *type, const char *name)
  */
 void ir_function_finalize_signature(IRFunction *func, bool is_variadic);
 
-// --- 调试 ---
-void ir_function_dump(IRFunction *func, FILE *stream);
+void ir_function_dump(IRFunction *func, IRPrinter *p);
 
 #endif

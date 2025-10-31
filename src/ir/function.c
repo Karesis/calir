@@ -1,10 +1,11 @@
 #include "ir/function.h"
-#include "ir/basicblock.h" // 需要 basic_block_dump
-#include "ir/context.h"    // <-- [新]
+#include "ir/basicblock.h"
+#include "ir/context.h"
 #include "ir/module.h"
+#include "ir/printer.h"
 #include "ir/type.h"
 #include "ir/value.h"
-#include "utils/bump.h" // <-- [新]
+#include "utils/bump.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -135,29 +136,29 @@ ir_function_finalize_signature(IRFunction *func, bool is_variadic)
 /**
  * @brief ir_function_dump
  */
+// [!!] 签名已更改
 void
-ir_function_dump(IRFunction *func, FILE *stream)
+ir_function_dump(IRFunction *func, IRPrinter *p)
 {
   if (!func)
   {
-    fprintf(stream, "<null function>\n");
+    ir_print_str(p, "<null function>\n"); // [!!] 已更改
     return;
   }
 
   // --- 1. 准备 ---
   bool is_declaration = list_empty(&func->basic_blocks);
-  // [MODIFIED] 移除了 char type_str[32];
 
   // --- 2. 打印 'declare' 或 'define' 和签名 ---
-  fprintf(stream, "%s ", is_declaration ? "declare" : "define");
+  ir_print_str(p, is_declaration ? "declare " : "define "); // [!!] 已更改
 
-  // [NEW] 直接将类型打印到流, 避免缓冲区溢出
-  ir_type_dump(func->return_type, stream);
+  // [!!] 假设: ir_type_dump 已被重构
+  ir_type_dump(func->return_type, p);
 
-  // [NEW] ir_value_dump_name 会正确打印 "@name"
-  fprintf(stream, " ");
-  ir_value_dump_name(&func->entry_address, stream);
-  fprintf(stream, "(");
+  // [!!] 假设: ir_value_dump_name 已被重构
+  ir_print_str(p, " ");
+  ir_value_dump_name(&func->entry_address, p);
+  ir_print_str(p, "(");
 
   // --- 3. 打印参数 (新规范: %name: type) ---
   IDList *arg_iter;
@@ -166,13 +167,12 @@ ir_function_dump(IRFunction *func, FILE *stream)
   {
     if (!first_arg)
     {
-      fprintf(stream, ", ");
+      ir_print_str(p, ", "); // [!!] 已更改
     }
     IRArgument *arg = list_entry(arg_iter, IRArgument, list_node);
 
-    // [NEW] 委托给 ir_value_dump_with_type
-    // 它会根据 IR_KIND_ARGUMENT 自动打印 "%name: type"
-    ir_value_dump_with_type(&arg->value, stream);
+    // [!!] 假设: ir_value_dump_with_type 已被重构
+    ir_value_dump_with_type(&arg->value, p);
 
     first_arg = 0;
   }
@@ -180,13 +180,11 @@ ir_function_dump(IRFunction *func, FILE *stream)
   // --- 4. 打印函数体 (或结束声明) ---
   if (is_declaration)
   {
-    // 声明： declare ... (...)
-    fprintf(stream, ")\n");
+    ir_print_str(p, ")\n"); // [!!] 已更改
   }
   else
   {
-    // 定义： define ... (...) { ... }
-    fprintf(stream, ") {\n");
+    ir_print_str(p, ") {\n"); // [!!] 已更改
 
     // 打印所有基本块
     IDList *bb_iter;
@@ -194,12 +192,10 @@ ir_function_dump(IRFunction *func, FILE *stream)
     {
       IRBasicBlock *bb = list_entry(bb_iter, IRBasicBlock, list_node);
 
-      // [!!] 关键依赖：
-      // ir_basic_block_dump 现在必须负责打印 "$label:"
-      // 和它包含的所有指令
-      ir_basic_block_dump(bb, stream);
+      // [!!] 假设: ir_basic_block_dump 已被重构
+      ir_basic_block_dump(bb, p);
     }
 
-    fprintf(stream, "}\n");
+    ir_print_str(p, "}\n"); // [!!] 已更改
   }
 }
