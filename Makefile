@@ -4,32 +4,34 @@
 
 # 编译器
 CC = clang
-# CC = gcc
+# 归档工具 (用于创建静态库)
+AR = ar
 
 # --- 构建目标 ---
-# 默认主目标 (calir IR 测试)
-TARGET_CALIR_NAME = calir_test
-TARGET_CALIR = $(BUILD_DIR)/$(TARGET_CALIR_NAME)
+LIB_NAME = libcalir.a
 
 # 目录
 BUILD_DIR = build
 OBJ_DIR = $(BUILD_DIR)/obj
 
+# 目标全路径
+LIB_TARGET = $(BUILD_DIR)/$(LIB_NAME)
+
 # =================================================================
 # --- 2. 编译和链接标志 (Flags) ---
 # =================================================================
 
-# C 标志: std=c23, 警告, 调试信息
-CFLAGS_BASE = -std=c23 -Wall -Wextra -g -O0
+# C 标志: std=c23, 警告, 调试信息, 自动依赖
+CFLAGS_BASE = -std=c23 -Wall -Wextra -g -O0 -MMD -MP
 
 # 头文件包含路径 (-I)
 CPPFLAGS = -Iinclude
 
-# 链接库 (保留 -lm 以防万一)
+# 链接库
 LDLIBS = -lm
 
-# 链接标志 (例如 -L)
-LDFLAGS =
+# 链接标志 (链接我们自己的库)
+LDFLAGS = -L$(BUILD_DIR)
 
 # --- 特定于文件的 CFLAGS ---
 CFLAGS_HASHMAP = -mavx2
@@ -46,7 +48,7 @@ CFLAGS_COMMON = $(CFLAGS_BASE) $(CPPFLAGS)
 # --- 3. 文件发现 (File Discovery) ---
 # =================================================================
 
-# --- 库文件 ---
+# --- 库文件 (你的项目核心) ---
 UTILS_SRCS = $(wildcard src/utils/*.c) \
              $(wildcard src/utils/hashmap/*.c)
 IR_SRCS = $(wildcard src/ir/*.c)
@@ -54,104 +56,71 @@ ANALYSIS_SRCS = $(wildcard src/analysis/*.c)
 TRANSFORM_SRCS = $(wildcard src/transforms/*.c)
 INTERPRETER_SRCS = $(wildcard src/interpreter/*.c)
 
-# --- 主程序文件 ---
-MAIN_CALIR_SRC = src/main_test.c
+LIB_SRCS = $(UTILS_SRCS) $(IR_SRCS) $(ANALYSIS_SRCS) $(TRANSFORM_SRCS) $(INTERPRETER_SRCS)
+LIB_OBJS = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(LIB_SRCS))
 
 # --- 自动化测试发现 ---
-# 1. 找到所有 test_*.c 源文件
 TEST_SRCS = $(wildcard tests/test_*.c)
-
-# 2. 将 .c 映射到 .o (对象文件)
-# e.g., tests/test_bitset.c -> build/obj/tests/test_bitset.o
 TEST_OBJS = $(patsubst tests/%.c, $(OBJ_DIR)/tests/%.o, $(TEST_SRCS))
-
-# 3. 将 .c 映射到可执行目标
-# e.g., tests/test_bitset.c -> build/test_bitset
 TEST_TARGETS = $(patsubst tests/%.c, $(BUILD_DIR)/%, $(TEST_SRCS))
-
-# 4. 创建 "run_test_*" 伪目标名称
-# e.g., tests/test_bitset.c -> run_test_bitset
 TEST_RUNNERS = $(patsubst tests/test_%.c, run_test_%, $(TEST_SRCS))
 
-# --- 将所有 .c 映射到 .o ---
-UTILS_OBJS = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(UTILS_SRCS))
-IR_OBJS = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(IR_SRCS))
-ANALYSIS_OBJS = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(ANALYSIS_SRCS))
-TRANSFORM_OBJS = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(TRANSFORM_SRCS))
-INTERPRETER_OBJS = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(INTERPRETER_SRCS))
-MAIN_CALIR_OBJ = $(patsubst src/%.c, $(OBJ_DIR)/%.o, $(MAIN_CALIR_SRC))
-
-# --- 库对象 (所有测试都将链接它们) ---
-LIB_OBJS = $(UTILS_OBJS) $(IR_OBJS) $(ANALYSIS_OBJS) $(INTERPRETER_OBJS) $(TRANSFORM_OBJS)
+# --- 自动依赖文件 ---
+# [!!] 移除了 $(MAIN_OBJ)
+ALL_OBJS = $(LIB_OBJS) $(TEST_OBJS)
+DEPS = $(ALL_OBJS:.o=.d)
 
 # --- 用于特定 CFLAGS 的对象集 ---
 BUMP_OBJ = $(OBJ_DIR)/utils/bump.o
-HASHMAP_OBJS = $(filter $(OBJ_DIR)/utils/hashmap/%.o, $(UTILS_OBJS))
+HASHMAP_OBJS = $(filter $(OBJ_DIR)/utils/hashmap/%.o, $(LIB_OBJS))
 
 # =================================================================
 # --- 4. 主要规则 (Main Rules) ---
 # =================================================================
 
-# 默认目标 (e.g., "make" 或 "make all")
+# [!!] 默认目标: 构建核心库和所有测试
 .PHONY: all
-all: $(TARGET_CALIR)
+all: $(LIB_TARGET) build_tests
 
-# [新] "make test" 将构建所有测试
+# 显式构建所有测试可执行文件
+.PHONY: build_tests
+build_tests: $(TEST_TARGETS)
+
+# 运行所有测试 (会先构建)
 .PHONY: test
-test: $(TEST_TARGETS)
+test: $(TEST_RUNNERS)
+	@echo "\nAll tests completed."
 
-# 链接 Calir IR 测试
-$(TARGET_CALIR): $(UTILS_OBJS) $(IR_OBJS) $(ANALYSIS_OBJS) $(MAIN_CALIR_OBJ)
-	@echo "Linking Calir Test ($@)..."
+# --- 静态库规则 ---
+$(LIB_TARGET): $(LIB_OBJS)
+	@echo "Archiving Static Lib ($@)..."
 	@mkdir -p $(@D)
-	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(AR) rcs $@ $^
 
-# 自动化测试链接规则 
-# 这是一个静态模式规则
-# 它告诉 make 如何构建 *任何* 匹配 `$(TEST_TARGETS)` 列表的目标
-#
-# 依赖关系:
-# $@ (目标)     : build/test_bitset
-# $* (词干)     : test_bitset
-# $< (第一个依赖): $(OBJ_DIR)/tests/test_bitset.o
-# $^ (所有依赖): $(OBJ_DIR)/tests/test_bitset.o $(LIB_OBJS)
-#
-# 注意: 我们链接 *所有* 库对象 (LIB_OBJS)。
-# 这比为每个测试单独指定依赖更简单。
-$(TEST_TARGETS): $(BUILD_DIR)/%: $(OBJ_DIR)/tests/%.o $(LIB_OBJS)
+# --- [!!] 移除了链接主目标的规则 ---
+
+# --- 自动化测试链接规则 ---
+$(TEST_TARGETS): $(BUILD_DIR)/%: $(OBJ_DIR)/tests/%.o $(LIB_TARGET)
 	@echo "Linking Test ($@)..."
 	@mkdir -p $(@D)
-	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(CC) $(LDFLAGS) -o $@ $< -lcalir $(LDLIBS)
 
 # =================================================================
 # --- 5. 编译规则 (Compilation Rules) ---
 # =================================================================
 
 # --- 目标特定的 CFLAGS ---
-# (将 MAIN_HASHMAP_OBJ 替换为 TEST_OBJS)
-ALL_OBJS = $(UTILS_OBJS) $(IR_OBJS) $(ANALYSIS_OBJS) $(TRANSFORM_OBJS) $(INTERPRETER_OBJS) $(MAIN_CALIR_OBJ) $(TEST_OBJS)
-
-# 默认情况下，所有对象都使用通用 CFLAGS
 $(ALL_OBJS): CFLAGS = $(CFLAGS_COMMON)
-
-# *覆盖* bump.o 的 CFLAGS
 $(BUMP_OBJ): CFLAGS = $(CFLAGS_COMMON) $(CFLAGS_BUMP)
-
-# *覆盖*所有 hashmap/*.o 的 CFLAGS
 $(HASHMAP_OBJS): CFLAGS = $(CFLAGS_COMMON) $(CFLAGS_HASHMAP)
 
-
-# --- 通用编译规则 ---
-# (这些规则无需更改，它们已经很完美)
-
-# 规则 1: 编译 src/ 目录下的文件
+# --- 通用编译规则 (src/) ---
 $(OBJ_DIR)/%.o: src/%.c
 	@mkdir -p $(@D)
 	@echo "Compiling $<..."
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# 规则 2: 编译 tests/ 目录下的文件
-# (这将自动处理所有 test_*.c 文件)
+# --- 通用编译规则 (tests/) ---
 $(OBJ_DIR)/tests/%.o: tests/%.c
 	@mkdir -p $(@D)
 	@echo "Compiling $<..."
@@ -160,6 +129,25 @@ $(OBJ_DIR)/tests/%.o: tests/%.c
 # =================================================================
 # --- 6. 清理和运行 (Utility Rules) ---
 # =================================================================
+
+# [!!] 'help' 目标已更新
+.PHONY: help
+help:
+	@echo "Available commands:"
+	@echo "  make (all)           - Build the main library (libcalir.a) and all test binaries."
+	@echo "  make lib             - Build only the static library (libcalir.a)."
+	@echo "  make build_tests     - Build ALL test executables in tests/."
+	@echo "  make test            - Run ALL test suites (e.g., test_bitset, test_hashmap)."
+	@echo "  make run             - Alias for 'make test'. Runs ALL test suites."
+	@echo "  make re              - Clean and rebuild 'all'."
+	@echo "  make clean           - Remove all build artifacts."
+	@echo "  --- Individual Tests (for development) ---"
+	@echo "  make build/test_X    - Build only a *single* test (e.g., make build/test_bitset)."
+	@echo "  make run_test_X      - Build and run a *single* test (e.g., make run_test_bitset)."
+
+# 只构建库的快捷方式
+.PHONY: lib
+lib: $(LIB_TARGET)
 
 # 清理所有构建产物
 .PHONY: clean
@@ -171,27 +159,19 @@ clean:
 .PHONY: re
 re: clean all
 
-# 运行 *默认* (Calir) 测试
+# [!!] 'run' 目标现在是 'test' 的别名
 .PHONY: run
-run: all
-	@echo "Running Calir test suite..."
-	./$(TARGET_CALIR)
+run: test
 
 # 自动化运行规则 
+.PHONY: $(TEST_RUNNERS)
 
-# 定义所有 "run_test_*" 目标为伪目标
-.PHONY: $(TEST_RUNNERS) run_all_tests
-
-# 这是一个模式规则，用于创建 run_test_* 目标
-# 例如: 'make run_test_bitset'
-# 1. 它会匹配 'run_test_%' (e.g., run_test_bitset)
-# 2. 它依赖于 '$(BUILD_DIR)/test_%' (e.g., build/test_bitset)
-# 3. 它运行依赖的可执行文件
+# 模式规则: 'make run_test_bitset'
 $(TEST_RUNNERS): run_test_%: $(BUILD_DIR)/test_%
 	@echo "Running test suite ($<)..."
 	./$<
 
-# "make run_all_tests" 将运行 *所有* 测试
-run_all_tests: $(TEST_RUNNERS)
-	@echo "\nAll tests completed."
-
+# =================================================================
+# --- 7. 包含自动依赖 ---
+# =================================================================
+-include $(DEPS)
