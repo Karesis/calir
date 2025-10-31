@@ -1,9 +1,9 @@
-#include <assert.h>
 #include <math.h> // for fabs
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+// [!!] 1. 移除 <assert.h>
 
 // 包含 bump 分配器
 #include "utils/bump.h"
@@ -19,43 +19,28 @@
 #define XXH_INLINE_ALL
 #include "utils/xxhash.h"
 
+// [!!] 2. 包含我们统一的测试框架
+#include "test_utils.h"
+
 /*
  * ========================================
- * --- 最小测试框架 ---
+ * --- [!!] 3. 移除旧的测试框架 ---
  * ========================================
  */
-
-int tests_run = 0;
-int tests_failed = 0;
-
-// 定义一个测试断言宏
-#define TEST_ASSERT(condition, message, ...)                                                                           \
-  do                                                                                                                   \
-  {                                                                                                                    \
-    tests_run++;                                                                                                       \
-    if (!(condition))                                                                                                  \
-    {                                                                                                                  \
-      tests_failed++;                                                                                                  \
-      fprintf(stderr, "    [FAIL] %s:%d: " message "\n", __FILE__, __LINE__, ##__VA_ARGS__);                           \
-    }                                                                                                                  \
-  } while (0)
-
-#define RUN_TEST(test_func)                                                                                            \
-  do                                                                                                                   \
-  {                                                                                                                    \
-    printf("--- Running %s ---\n", #test_func);                                                                        \
-    test_func();                                                                                                       \
-    printf("\n");                                                                                                      \
-  } while (0)
+// (移除了 tests_run, tests_failed, TEST_ASSERT, RUN_TEST)
 
 /*
  * ========================================
  * --- I64HashMap (整数) 测试 ---
  * ========================================
  */
-void
+// [!!] 4. 函数签名改为返回 int
+int
 test_int_iterators()
 {
+  // [!!] 5. 使用 SUITE_START
+  SUITE_START("HashMap Iter: I64");
+
   Bump *arena = bump_new();
   I64HashMap *map = i64_hashmap_create(arena, 0);
 
@@ -68,7 +53,8 @@ test_int_iterators()
   {
     count++;
   }
-  TEST_ASSERT(count == 0, "Empty map iterator yielded %d items", count);
+  // [!!] 6. 使用 SUITE_ASSERT
+  SUITE_ASSERT(count == 0, "Empty map iterator yielded %d items", count);
 
   // 2. 填充 map, 触发 grow
   printf("  Testing full map (with grow)...\n");
@@ -76,10 +62,9 @@ test_int_iterators()
   intptr_t val_sum = 0;
   for (int64_t i = 1; i <= 100; i++)
   {
-    // (void*)(uintptr_t)i 只是一个唯一的非 NULL 指针
     i64_hashmap_put(map, i, (void *)(uintptr_t)i);
   }
-  TEST_ASSERT(i64_hashmap_size(map) == 100, "Map size should be 100, got %zu", i64_hashmap_size(map));
+  SUITE_ASSERT(i64_hashmap_size(map) == 100, "Map size should be 100, got %zu", i64_hashmap_size(map));
 
   count = 0;
   iter = i64_hashmap_iter(map);
@@ -89,19 +74,18 @@ test_int_iterators()
     key_sum += entry.key;
     val_sum += (intptr_t)entry.value;
   }
-  TEST_ASSERT(count == 100, "Full map iterator yielded %d items (expected 100)", count);
-  TEST_ASSERT(key_sum == 5050, "Sum of keys should be 5050, got %lld", (long long)key_sum);
-  TEST_ASSERT(val_sum == 5050, "Sum of values should be 5050, got %ld", (long)val_sum);
+  SUITE_ASSERT(count == 100, "Full map iterator yielded %d items (expected 100)", count);
+  SUITE_ASSERT(key_sum == 5050, "Sum of keys should be 5050, got %lld", (long long)key_sum);
+  SUITE_ASSERT(val_sum == 5050, "Sum of values should be 5050, got %ld", (long)val_sum);
 
   // 3. (关键) 测试带墓碑 (Tombstones) 的迭代
   printf("  Testing map with tombstones...\n");
   // 移除所有偶数
   for (int64_t i = 2; i <= 100; i += 2)
   {
-    bool removed = i64_hashmap_remove(map, i);
-    assert(removed); // 确保它们被移除了
+    i64_hashmap_remove(map, i);
   }
-  TEST_ASSERT(i64_hashmap_size(map) == 50, "Map size after removes should be 50, got %zu", i64_hashmap_size(map));
+  SUITE_ASSERT(i64_hashmap_size(map) == 50, "Map size after removes should be 50, got %zu", i64_hashmap_size(map));
 
   count = 0;
   key_sum = 0;
@@ -112,19 +96,21 @@ test_int_iterators()
     count++;
     key_sum += entry.key;
     val_sum += (intptr_t)entry.value;
-    // 迭代器 *必须* 只返回奇数
-    TEST_ASSERT(entry.key % 2 != 0, "Iterator returned an even key (%lld), should have been skipped",
-                (long long)entry.key);
+    SUITE_ASSERT(entry.key % 2 != 0, "Iterator returned an even key (%lld), should have been skipped",
+                 (long long)entry.key);
   }
-  TEST_ASSERT(count == 50, "Tombstone map iterator yielded %d items (expected 50)", count);
-  int64_t expected_key_sum = 5050 - (2550); // (Sum 1-100) - (Sum 2-100 evens) = 2500
+  SUITE_ASSERT(count == 50, "Tombstone map iterator yielded %d items (expected 50)", count);
+  int64_t expected_key_sum = 2500; // 5050 - 2550
   intptr_t expected_val_sum = 2500;
-  TEST_ASSERT(key_sum == expected_key_sum, "Sum of keys should be %lld, got %lld", (long long)expected_key_sum,
-              (long long)key_sum);
-  TEST_ASSERT(val_sum == expected_val_sum, "Sum of values should be %ld, got %ld", (long)expected_val_sum,
-              (long)val_sum);
+  SUITE_ASSERT(key_sum == expected_key_sum, "Sum of keys should be %lld, got %lld", (long long)expected_key_sum,
+               (long long)key_sum);
+  SUITE_ASSERT(val_sum == expected_val_sum, "Sum of values should be %ld, got %ld", (long)expected_val_sum,
+               (long)val_sum);
 
+  // [!!] 7. 在 SUITE_END 之前释放 arena
   bump_free(arena);
+  // [!!] 8. 使用 SUITE_END
+  SUITE_END();
 }
 
 /*
@@ -132,9 +118,11 @@ test_int_iterators()
  * --- F64HashMap (浮点数) 测试 ---
  * ========================================
  */
-void
+int
 test_float_iterators()
 {
+  SUITE_START("HashMap Iter: F64");
+
   Bump *arena = bump_new();
   F64HashMap *map = f64_hashmap_create(arena, 0);
 
@@ -147,7 +135,7 @@ test_float_iterators()
 
   f64_hashmap_remove(map, 2.2);
   f64_hashmap_remove(map, 4.4);
-  TEST_ASSERT(f64_hashmap_size(map) == 2, "Float map size should be 2, got %zu", f64_hashmap_size(map));
+  SUITE_ASSERT(f64_hashmap_size(map) == 2, "Float map size should be 2, got %zu", f64_hashmap_size(map));
 
   // 2. 迭代
   int count = 0;
@@ -159,10 +147,11 @@ test_float_iterators()
     count++;
     key_sum += entry.key;
   }
-  TEST_ASSERT(count == 2, "Float map iterator yielded %d items (expected 2)", count);
-  TEST_ASSERT(fabs(key_sum - (1.1 + 3.3)) < 1e-9, "Sum of keys should be 4.4, got %f", key_sum);
+  SUITE_ASSERT(count == 2, "Float map iterator yielded %d items (expected 2)", count);
+  SUITE_ASSERT(fabs(key_sum - (1.1 + 3.3)) < 1e-9, "Sum of keys should be 4.4, got %f", key_sum);
 
   bump_free(arena);
+  SUITE_END();
 }
 
 /*
@@ -170,14 +159,15 @@ test_float_iterators()
  * --- PtrHashMap (指针) 测试 ---
  * ========================================
  */
-void
+int
 test_ptr_iterators()
 {
+  SUITE_START("HashMap Iter: Ptr");
+
   Bump *arena = bump_new();
   PtrHashMap *map = ptr_hashmap_create(arena, 0);
 
-  // 用作 Key 的哨兵地址
-  int k1, k2, k3, k4, k5;
+  int k1, k2, k3, k4;
 
   printf("  Testing ptr map with tombstones...\n");
   ptr_hashmap_put(map, &k1, (void *)1);
@@ -187,6 +177,7 @@ test_ptr_iterators()
 
   ptr_hashmap_remove(map, &k2);
   ptr_hashmap_remove(map, &k4);
+  SUITE_ASSERT(ptr_hashmap_size(map) == 2, "Ptr map size should be 2, got %zu", ptr_hashmap_size(map));
 
   int count = 0;
   bool found_k1 = false;
@@ -202,11 +193,12 @@ test_ptr_iterators()
       found_k3 = true;
   }
 
-  TEST_ASSERT(count == 2, "Ptr map iterator yielded %d items (expected 2)", count);
-  TEST_ASSERT(found_k1, "Ptr map iterator did not find k1");
-  TEST_ASSERT(found_k3, "Ptr map iterator did not find k3");
+  SUITE_ASSERT(count == 2, "Ptr map iterator yielded %d items (expected 2)", count);
+  SUITE_ASSERT(found_k1, "Ptr map iterator did not find k1");
+  SUITE_ASSERT(found_k3, "Ptr map iterator did not find k3");
 
   bump_free(arena);
+  SUITE_END();
 }
 
 /*
@@ -214,9 +206,11 @@ test_ptr_iterators()
  * --- StrHashMap (字符串) 测试 ---
  * ========================================
  */
-void
+int
 test_str_iterators()
 {
+  SUITE_START("HashMap Iter: Str");
+
   Bump *arena = bump_new();
   StrHashMap *map = str_hashmap_create(arena, 0);
 
@@ -228,6 +222,7 @@ test_str_iterators()
 
   str_hashmap_remove(map, "banana", 6);
   str_hashmap_remove(map, "date", 4);
+  SUITE_ASSERT(str_hashmap_size(map) == 2, "Str map size should be 2, got %zu", str_hashmap_size(map));
 
   int count = 0;
   bool found_apple = false;
@@ -248,11 +243,12 @@ test_str_iterators()
     }
   }
 
-  TEST_ASSERT(count == 2, "Str map iterator yielded %d items (expected 2)", count);
-  TEST_ASSERT(found_apple, "Str map iterator did not find 'apple'");
-  TEST_ASSERT(found_carrot, "Str map iterator did not find 'carrot'");
+  SUITE_ASSERT(count == 2, "Str map iterator yielded %d items (expected 2)", count);
+  SUITE_ASSERT(found_apple, "Str map iterator did not find 'apple'");
+  SUITE_ASSERT(found_carrot, "Str map iterator did not find 'carrot'");
 
   bump_free(arena);
+  SUITE_END();
 }
 
 /*
@@ -261,7 +257,7 @@ test_str_iterators()
  * ========================================
  */
 
-// 泛型测试的辅助函数 (使用 int64_t* 作为 Key)
+// (辅助函数保持不变)
 static uint64_t
 generic_hash_fn(const void *key)
 {
@@ -274,13 +270,14 @@ generic_equal_fn(const void *key1, const void *key2)
   return *(const int64_t *)key1 == *(const int64_t *)key2;
 }
 
-void
+int
 test_generic_iterators()
 {
+  SUITE_START("HashMap Iter: Generic");
+
   Bump *arena = bump_new();
   GenericHashMap *map = generic_hashmap_create(arena, 0, generic_hash_fn, generic_equal_fn);
 
-  // Key 必须是稳定的指针
   int64_t k1 = 101, k2 = 202, k3 = 303, k4 = 404;
 
   printf("  Testing generic map with tombstones...\n");
@@ -291,6 +288,7 @@ test_generic_iterators()
 
   generic_hashmap_remove(map, &k1);
   generic_hashmap_remove(map, &k3);
+  SUITE_ASSERT(generic_hashmap_size(map) == 2, "Generic map size should be 2, got %zu", generic_hashmap_size(map));
 
   int count = 0;
   bool found_k2 = false;
@@ -308,11 +306,12 @@ test_generic_iterators()
       found_k4 = true;
   }
 
-  TEST_ASSERT(count == 2, "Generic map iterator yielded %d items (expected 2)", count);
-  TEST_ASSERT(found_k2, "Generic map iterator did not find k2 (202)");
-  TEST_ASSERT(found_k4, "Generic map iterator did not find k4 (404)");
+  SUITE_ASSERT(count == 2, "Generic map iterator yielded %d items (expected 2)", count);
+  SUITE_ASSERT(found_k2, "Generic map iterator did not find k2 (202)");
+  SUITE_ASSERT(found_k4, "Generic map iterator did not find k4 (404)");
 
   bump_free(arena);
+  SUITE_END();
 }
 
 /*
@@ -321,29 +320,43 @@ test_generic_iterators()
  * ========================================
  */
 
+// [!!] 9. 使用我们新的、统一的 main 运行器
 int
 main()
 {
-  printf("Starting iterator tests...\n\n");
+  // 设置此测试文件的总套件名称
+  __calir_current_suite_name = "HashMap Iterators";
 
-  RUN_TEST(test_int_iterators);
-  RUN_TEST(test_float_iterators);
-  RUN_TEST(test_ptr_iterators);
-  RUN_TEST(test_str_iterators);
-  RUN_TEST(test_generic_iterators);
-
-  printf("--- Test Summary ---\n");
-  printf("Total tests run: %d\n", tests_run);
-  printf("Total tests failed: %d\n", tests_failed);
-
-  if (tests_failed == 0)
+  __calir_total_suites_run++;
+  if (test_int_iterators() != 0)
   {
-    printf("\nPASSED\n");
-  }
-  else
-  {
-    printf("\nFAILED\n");
+    __calir_total_suites_failed++;
   }
 
-  return (tests_failed == 0) ? 0 : 1;
+  __calir_total_suites_run++;
+  if (test_float_iterators() != 0)
+  {
+    __calir_total_suites_failed++;
+  }
+
+  __calir_total_suites_run++;
+  if (test_ptr_iterators() != 0)
+  {
+    __calir_total_suites_failed++;
+  }
+
+  __calir_total_suites_run++;
+  if (test_str_iterators() != 0)
+  {
+    __calir_total_suites_failed++;
+  }
+
+  __calir_total_suites_run++;
+  if (test_generic_iterators() != 0)
+  {
+    __calir_total_suites_failed++;
+  }
+
+  // 打印最终摘要并返回 0 或 1
+  TEST_SUMMARY();
 }
