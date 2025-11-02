@@ -90,7 +90,7 @@ build_tests: $(TEST_TARGETS)
 
 # 运行所有测试 (会先构建)
 .PHONY: test
-test: check-headers $(TEST_RUNNERS)
+test: check-format check-headers $(TEST_RUNNERS)
 	@echo "All tests completed."
 
 # --- 静态库规则 ---
