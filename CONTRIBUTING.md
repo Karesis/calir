@@ -26,13 +26,14 @@ As the project's maintainer (BDFL), all contributions will be reviewed by [Kares
 ## Pull Requests
 
 1.  **Fork** this repository and create your new branch from `main`.
-2.  **Code:** Ensure your code follows the project's existing coding style.
-3.  **License:** All new `.c` and `.h` files **must** include the Apache 2.0 license header.
+2.  **Code Style:** Your code **must** follow our **[Code Style Guide (STYLE.MD)](STYLE.MD)**.
+3.  **Formatting:** Before submitting, please **must** run `make format` to automatically format your code.
+4.  **License:** All new `.c` and `.h` files **must** include the Apache 2.0 license header.
     * You can run `make headers` to add it automatically.
-4.  **Tests (!! Required !!)**
+5.  **Tests (!! Required !!)**
     * If you fixed a bug, please add a new **regression test** in the `tests/` directory to verify the fix.
     * If you added a new feature, please write comprehensive unit tests for it.
-    * Before submitting your PR, you **must** run `make test` locally and ensure all tests (including `check-headers`) pass 100%.
-5.  **Submit PR:** Submit a Pull Request, clearly describing what you did and why.
+    * Before submitting your PR, you **must** run `make test` locally and ensure all tests (including `check-headers` and `check-format`) pass 100%.
+6.  **Submit PR:** Submit a Pull Request, clearly describing what you did and why.
 
 Thank you for your contribution!
