@@ -1,62 +1,123 @@
 # Calico-IR
 
-**A cross-platform Intermediate Representation (IR) framework written in C, inspired by LLVM.**
 
-`Calico-IR` (or `calir`) is a personal project to build a general-purpose compiler backend. It provides the core data structures, transforms, and analysis passes required to define, build, parse, analyze, transform, and verify SSA-form IR.
+**A lightweight, zero-dependency, LLVM-inspired Intermediate Representation (IR) framework written in pure C (C11).**
 
-This project is part of the "Compiler Principles" coursework at UCAS.
+[![Build Status](https://img.shields.io/github/actions/workflow/status/Karesis/calir/ci.yml?style=for-the-badge&logo=github)](https://github.com/Karesis/calir/actions) <!-- 替换为你的 GitHub Actions 徽章 -->
+[![License](https://img.shields.io/github/license/Karesis/calir?style=for-the-badge&color=blue)](LICENSE)
+![Language](https://img.shields.io/badge/Language-C23-orange.svg?style=for-the-badge)
+![Lines of Code](https://img.shields.io/tokei/lines/github/Karesis/calir?style=for-the-badge&color=brightgreen) 
 
-## Core Features
+`Calico-IR` (or `calir`) is a personal project to build a general-purpose compiler backend, rigorously developed as part of the "Compiler Principles" coursework at UCAS.
 
-`Calico-IR`'s design is logically divided into five layers:
+It provides the core data structures, transforms, and analysis passes required to define, build, parse, analyze, transform, and verify SSA-form IR.
 
-  * **`utils/` (Core Utilities Layer)**
+## Why Calico-IR?
 
-      * `bump.c`: A high-performance **Bump Allocator** for fast allocation and lifetime management of IR objects.
-      * `hashmap.c`: A type-safe, high-performance generic hash map.
-      * `id_list.h`: An **intrusive linked list** for managing IR objects (instructions, basic blocks, etc.).
-      * `string_buf.h` / `temp_vec.h`: Dynamic collections (`StringBuf` and `void*` vector) optimized for the bump allocator.
-      * `bitset.c`: A bitset library for dataflow analysis.
+Tired of the 10+ million lines of C++ in the LLVM framework? Calico-IR is designed as a direct answer for learning, prototyping, and teaching.
 
-  * **`ir/` (IR Core Layer)**
+* **Lightweight & Understandable:** The entire framework is small, heavily commented, and self-contained. It's designed to be studied, not just used.
+* **Pure C (C23) with Zero Dependencies:** No C++, no complex build systems, no external libraries. Just `make` and a C23-compliant compiler.
+* **Feature-Complete Core:** Don't let "lightweight" fool you. Calir includes:
+    * A robust `IRBuilder` API
+    * A full **Text IR Parser** with detailed, line-level error reporting
+    * A strict **SSA and Type Verifier**
+    * Classic **Dominator Analysis** (Lengauer-Tarjan) and Dominance Frontiers
+    * The complete **`mem2reg`** pass for SSA construction
 
-      * `context.h`: A powerful **`IRContext`** that acts as a central manager for:
-          * **Type Interning** (for pointers, arrays, and structs).
-          * **Constant Interning** (for integers, floats, `undef`, `null`).
-          * **String Interning** (for identifiers).
-      * `value.h` / `use.h`: A robust **Use-Def chain** implementation.
-      * `type.h`: A rich type system supporting primitive types, pointers, arrays, and named/anonymous structs.
-      * `builder.h`: A feature-complete **`IRBuilder` API** for programmatically building IR in C, supporting complex instructions like `alloca`, `load`, `store`, `gep`, and `phi`.
-      * `lexer.h` / `parser.h`: A complete **Text IR Parser** (`ir_parse_module`) capable of parsing LLVM-style `.calir` text files back into in-memory IR.
-      * `error.h`: Provides **detailed, pretty-printed error diagnostics**, precise to line and column, for the parser.
-      * `printer.h`: A flexible **IR Printer** (`IRPrinter`) to serialize in-memory IR to files, `stdout`, or strings.
-      * `verifier.h`: A critical **IR Verifier** (`ir_verify_module`) to check IR correctness (e.g., SSA dominance rules, type matching).
+## Quick Start 1: Parsing Text IR (The "Hello, World!")
 
-  * **`analysis/` (Analysis Layer)**
+Calico-IR can parse, verify, and print `.calir` text files, complete with detailed error reporting.
 
-      * `cfg.h`: **Control Flow Graph (CFG)** generation.
-      * `dom_tree.h`: **Dominator Tree** calculation, based on the Lengauer-Tarjan algorithm.
-      * `dom_frontier.h`: **Dominance Frontier** calculation (a prerequisite for SSA construction).
+```c
+#include "ir/context.h"
+#include "ir/module.h"
+#include "ir/parser.h"
+#include "ir/verifier.h"
+#include <stdio.h>
 
-  * **`transforms/` (Transforms Layer)**
+// Our IR source file
+const char *IR_SOURCE =
+    "module = \"parsed_module\"\n"
+    "\n"
+    "define i32 @add(%a: i32, %b: i32) {\n"
+    "$entry:\n"
+    "  %sum: i32 = add %a: i32, %b: i32\n"
+    "  ret %sum: i32\n"
+    "}\n";
 
-      * `mem2reg.h`: The classic **"Memory to Register"** pass, promoting `alloca`/`load`/`store` to SSA-form `phi` nodes.
+int main() {
+  IRContext *ctx = ir_context_create();
+  
+  // 1. Parse
+  IRModule *mod = ir_parse_module(ctx, IR_SOURCE);
 
-  * **`interpreter/` (Interpreter Layer)**
+  if (mod == NULL) {
+    fprintf(stderr, "Failed to parse IR.\n");
+    ir_context_destroy(ctx);
+    return 1;
+  }
+  printf("Parse successful. Module: %s\n", mod->name);
 
-      * `interpreter.h`: (In development) A **tree-walking interpreter** for executing IR.
+  // 2. Verify (optional, but recommended)
+  if (ir_verify_module(mod)) {
+    printf("Module verified successfully.\n");
+  }
+
+  ir_context_destroy(ctx);
+  return 0;
+}
+````
+
+### Powerful Error Reporting
+
+If the IR contains a syntax error (e.g., `%sum = add` instead of `%sum: i32 = add`), the parser pinpoints the error:
+
+```
+$ ./my_parser_test
+
+--- Parse Error ---
+Error: 5:3: Expected ':', but got '='
+  |
+5 |   %sum = add %a: i32, %b: i32
+  |       ^
+
+Failed to parse IR.
+```
 
 -----
 
-## Quick Start
+## Quick Start 2: Building IR with the C API
 
-`Calico-IR` provides two primary entry points: **building** IR with the `IRBuilder` or **parsing** IR with `ir_parse_module`.
+You can also build complex IR programmatically using the `IRBuilder` API.
 
-### Example 1: Using the Builder API to Build IR
+### Target IR
 
-The following C code demonstrates how to use the `IRBuilder` API to programmatically build a module containing named structs, global variables, `alloca`, and `gep`.
+This is the `.calir` text we want to build. It uses named structs, `alloca`, and the `gep` (Get Element Pointer) instruction.
 
-#### Example C Code (`tests/test_readme_example.c`)
+```llvm
+module = "test_module"
+
+%point = type { i32, i64 }
+%data_packet = type { %point, [10 x i32] }
+
+@g_data = global [10 x i32] zeroinitializer
+
+define void @test_func(%idx: i32) {
+$entry:
+  %packet_ptr: <%data_packet> = alloc %data_packet
+  %elem_ptr: <i32> = gep inbounds %packet_ptr: <%data_packet>, 0: i32, 1: i32, %idx: i32
+  store 123: i32, %elem_ptr: <i32>
+  ret void
+}
+```
+
+### Builder C Code
+
+This C code (found in `tests/test_readme_example.c`) generates the IR above.
+
+\<details\>
+\<summary\>\<b\>Click to expand\</b\> the C code for \<code\>test\_readme\_example.c\</code\>\</summary\>
 
 ```c
 /*
@@ -159,101 +220,25 @@ main()
 }
 ```
 
-#### Expected Output (`ir_module_dump_to_file`)
-
-```llvm
---- Calir IR Dump ---
-module = "test_module"
-
-%point = type { i32, i64 }
-%data_packet = type { %point, [10 x i32] }
-
-@g_data = global [10 x i32] zeroinitializer
-
-define void @test_func(%idx: i32) {
-$entry:
-  %packet_ptr: <%data_packet> = alloc %data_packet
-  %elem_ptr: <i32> = gep inbounds %packet_ptr: <%data_packet>, 0: i32, 1: i32, %idx: i32
-  store 123: i32, %elem_ptr: <i32>
-  ret void
-}
---- Dump Complete ---
-```
+\</details\>
 
 -----
 
-### Example 2: Parsing and Verifying Text IR
+## Core Features
 
-The `ir/parser` module can parse text IR back into memory objects and provides detailed error reporting.
-
-```c
-#include "ir/context.h"
-#include "ir/module.h"
-#include "ir/parser.h"
-#include "ir/verifier.h"
-#include <stdio.h>
-
-// Our IR source file
-const char *IR_SOURCE =
-    "module = \"parsed_module\"\n"
-    "\n"
-    "define i32 @add(%a: i32, %b: i32) {\n"
-    "$entry:\n"
-    "  %sum: i32 = add %a: i32, %b: i32\n"
-    "  ret %sum: i32\n"
-    "}\n";
-
-int
-main()
-{
-  IRContext *ctx = ir_context_create();
-  
-  // 1. Parse
-  IRModule *mod = ir_parse_module(ctx, IR_SOURCE);
-
-  if (mod == NULL)
-  {
-    fprintf(stderr, "Failed to parse IR.\n");
-    ir_context_destroy(ctx);
-    return 1;
-  }
-  printf("Parse successful. Module: %s\n", mod->name);
-
-  // 2. Verify (optional, but recommended)
-  if (ir_verify_module(mod))
-  {
-    printf("Module verified successfully.\n");
-  }
-
-  ir_context_destroy(ctx);
-  return 0;
-}
-```
-
-#### Parser Error Reporting
-
-If the IR contains a syntax error (e.g., `%sum = add` instead of `%sum: i32 = add`), the parser pinpoints the error:
-
-```
-$ ./my_parser_test
-
---- Parse Error ---
-Error: 5:3: Expected ':', but got '='
-  |
-5 |   %sum = add %a: i32, %b: i32
-  |       ^
-
-Failed to parse IR.
-```
-
------
+  * **IR Core (`ir/`)**: Robust **Use-Def chain** implementation, rich type system (primitives, pointers, arrays, named/anonymous structs), central `IRContext` for **type/constant/string interning**, and a feature-complete `IRBuilder` API (`alloca`, `load`, `store`, `gep`, `phi`, etc.).
+  * **Text IR (`ir/`)**: A full **Text IR Parser** (`ir_parse_module`) and **IR Printer** (`IRPrinter`) for serializing IR to files, `stdout`, or strings.
+  * **Verifier (`ir/`)**: A critical **IR Verifier** (`ir_verify_module`) that checks for correctness (e.g., SSA dominance rules, type matching).
+  * **Analysis (`analysis/`)**: Includes **Control Flow Graph (CFG)** generation, **Dominator Tree** calculation (Lengauer-Tarjan), and **Dominance Frontier** calculation.
+  * **Transforms (`transforms/`)**: Implements the classic **"Memory to Register" (`mem2reg`)** pass to promote `alloca`/`load`/`store` to SSA-form `phi` nodes.
+  * **Utilities (`utils/`)**: High-performance helpers including a **Bump Allocator**, intrusive linked lists, generic hash maps, and bitsets.
 
 ## Building and Testing
 
 ### Dependencies
 
   * `make`
-  * C Compiler (e.g., `gcc` or `clang`)
+  * C11-compliant Compiler (e.g., `gcc` or `clang`)
 
 ### Running
 
@@ -271,36 +256,26 @@ Failed to parse IR.
     make run_test_parser
     ```
 
-3.  **Build only a specific test (without running):**
-
-    ```bash
-    make build/test_parser
-    ```
-
------
-
-## Project Status
-
-**This project is functionally complete and feature-rich.** The core IR pipeline (Build, Parse, Verify, Transform) is implemented and tested. The completion of the `mem2reg` pass marks the SSA construction pipeline as ready.
-
-Issues and feedback are welcome\!
-
 ## Roadmap
 
-The core framework is complete. Future goals are focused on implementing the interpreter and more optimization passes.
+The core framework is stable. Future goals are focused on implementing the interpreter and more optimization passes.
 
   * [ ] **IR Interpreter (`ir/interpreter`)**
       * **(Current Goal)** Implement a tree-walking interpreter for executing and debugging IR.
   * [x] **IR Text Parser (`ir/parser`)**
-      * **Completed.** Capable of parsing `.calir` text files with detailed error reporting.
+      * **Completed.**
   * [x] **Dominance Frontier (`analysis/dom_frontier`)**
-      * **Completed.** A prerequisite for SSA construction.
+      * **Completed.**
   * [x] **Mem2Reg Pass (`transforms/mem2reg`)**
-      * **Completed.** Implements promotion of `alloca`/`load`/`store` to `phi` nodes.
+      * **Completed.**
   * [ ] **Simple Optimizations (`transforms/*`)**
       * [ ] Constant Folding
       * [ ] Dead Code Elimination (DCE)
 
+## Contributing
+
+Contributions, issues, and feedback are warmly welcome\! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
 ## License
 
-This project is licensed under the Apache-2.0 License - see the LICENSE file for details.
+This project is licensed under the Apache-2.0 License. See the [LICENSE](LICENSE) and [NOTICE](NOTICE) files for details.
