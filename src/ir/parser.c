@@ -16,6 +16,7 @@
 #include "utils/bump.h"    // For bump_init/destroy
 #include "utils/hashmap.h" // For ptr_hashmap_...
 #include "utils/id_list.h" // for container_of, list_entry
+#include "utils/temp_vec.h"
 
 #include <assert.h>
 #include <inttypes.h> // For PRId64
@@ -310,10 +311,7 @@ parser_find_value(Parser *p, Token *tok)
 
   if (val_ptr == NULL)
   {
-    char error_msg[256];
-    snprintf(error_msg, sizeof(error_msg), "Use of undefined value '%c%s'", (tok->type == TK_GLOBAL_IDENT) ? '@' : '%',
-             name);
-    parser_error(p, error_msg);
+    parser_error_at(p, tok, "Use of undefined value '%c%s'", (tok->type == TK_GLOBAL_IDENT) ? '@' : '%', name);
   }
   return (IRValueNode *)val_ptr;
 }
@@ -334,17 +332,14 @@ parser_record_value(Parser *p, Token *tok, IRValueNode *val)
 
   if (map == NULL)
   {
-    parser_error(p, "Attempted to define a local value outside a function");
+    parser_error_at(p, tok, "Attempted to define a local value '%%%s' outside a function", name);
     return;
   }
 
   // 检查重定义
   if (ptr_hashmap_contains(map, (void *)name))
   {
-    char error_msg[256];
-    snprintf(error_msg, sizeof(error_msg), "Redefinition of value '%c%s'", (tok->type == TK_GLOBAL_IDENT) ? '@' : '%',
-             name);
-    parser_error(p, error_msg);
+    parser_error_at(p, tok, "Redefinition of value '%c%s'", (tok->type == TK_GLOBAL_IDENT) ? '@' : '%', name);
     return;
   }
 
@@ -354,7 +349,8 @@ parser_record_value(Parser *p, Token *tok, IRValueNode *val)
   // 存入符号表 (使用 interned 指针作为 Key)
   if (!ptr_hashmap_put(map, (void *)name, (void *)val))
   {
-    parser_error(p, "Failed to record value (HashMap OOM)");
+    parser_error_at(p, tok, "Failed to record value '%c%s' (HashMap OOM)", (tok->type == TK_GLOBAL_IDENT) ? '@' : '%',
+                    name);
   }
 }
 
@@ -555,7 +551,7 @@ parse_function_definition(Parser *p)
   IRFunction *func = ir_function_create(p->module, name_tok.as.ident_val, ret_type);
   if (!func)
   {
-    parser_error(p, "OOM creating function");
+    parser_error_at(p, &name_tok, "OOM creating function '@%s'", name_tok.as.ident_val);
     return;
   }
   parser_record_value(p, &name_tok, &func->entry_address);
@@ -566,7 +562,7 @@ parse_function_definition(Parser *p)
   p->local_value_map = ptr_hashmap_create(&p->temp_arena, 64);
   if (!p->local_value_map)
   {
-    parser_error(p, "OOM creating local value map");
+    parser_error_at(p, &name_tok, "OOM creating local value map for function '@%s'", name_tok.as.ident_val);
     return;
   }
 
@@ -590,10 +586,7 @@ parse_function_definition(Parser *p)
       // [OK] 已修复 (设计 B)
       Token arg_name_tok = *current_token(p);
       if (!expect(p, TK_LOCAL_IDENT))
-      {
-        parser_error(p, "Expected argument name (e.g., %a) in parameter list");
         return;
-      }
       if (!expect(p, TK_COLON))
         return;
       IRType *arg_type = parse_type(p);
@@ -603,7 +596,7 @@ parse_function_definition(Parser *p)
       IRArgument *arg = ir_argument_create(func, arg_type, arg_name_tok.as.ident_val);
       if (!arg)
       {
-        parser_error(p, "OOM creating argument");
+        parser_error_at(p, &arg_name_tok, "OOM creating argument '%%%s'", arg_name_tok.as.ident_val);
         return;
       }
       parser_record_value(p, &arg_name_tok, &arg->value);
@@ -665,9 +658,8 @@ parse_function_type(Parser *p, IRType *ret_type)
 
   // 1. 解析参数类型列表 (存储在 temp_arena)
   bump_reset(&p->temp_arena);
-  size_t capacity = 8;
-  size_t count = 0;
-  IRType **param_types = BUMP_ALLOC_SLICE(&p->temp_arena, IRType *, capacity);
+  TempVec params;
+  temp_vec_init(&params, &p->temp_arena);
   bool is_variadic = false;
 
   if (current_token(p)->type != TK_RPAREN)
@@ -683,15 +675,15 @@ parse_function_type(Parser *p, IRType *ret_type)
         break;
       }
 
-      // 扩容
-      if (count == capacity)
-      { /* ... 扩容逻辑 (你的代码是正确的) ... */
-      }
-
       IRType *param_type = parse_type(p);
       if (!param_type)
         return NULL;
-      param_types[count++] = param_type;
+
+      if (!temp_vec_push(&params, (void *)param_type))
+      {
+        parser_error(p, "OOM parsing function parameters");
+        return NULL;
+      }
 
       if (match(p, TK_RPAREN))
         break;
@@ -705,15 +697,18 @@ parse_function_type(Parser *p, IRType *ret_type)
   }
 
   // 2. 将参数列表复制到 permanent_arena
-  IRType **permanent_params = BUMP_ALLOC_SLICE_COPY(&p->context->permanent_arena, IRType *, param_types, count);
-  if (count > 0 && !permanent_params)
+  IRType **permanent_params = BUMP_ALLOC_SLICE_COPY(&p->context->permanent_arena, IRType *,
+                                                    (IRType **)temp_vec_data(&params), // <-- 新
+                                                    temp_vec_len(&params)              // <-- 新
+  );
+  if (temp_vec_len(&params) > 0 && !permanent_params)
   {
     parser_error(p, "OOM copying function parameters");
     return NULL;
   }
 
   // 3. 获取唯一的函数类型
-  return ir_type_get_function(p->context, ret_type, permanent_params, count, is_variadic);
+  return ir_type_get_function(p->context, ret_type, permanent_params, temp_vec_len(&params), is_variadic);
 }
 
 /**
@@ -738,7 +733,7 @@ parse_function_declaration(Parser *p)
   IRFunction *func = ir_function_create(p->module, name_tok.as.ident_val, ret_type);
   if (!func)
   {
-    parser_error(p, "OOM creating function");
+    parser_error_at(p, &name_tok, "OOM creating function declaration '@%s'", name_tok.as.ident_val);
     return;
   }
 
@@ -835,21 +830,12 @@ parse_type_definition(Parser *p)
 
   // 4. 解析结构体字面量 { ... }
   if (!expect(p, TK_LBRACE))
-  {
-    parser_error(p, "Expected struct body '{...}' after 'type'");
     return;
-  }
 
   // 5. 解析成员列表 (这部分逻辑是正确的)
   bump_reset(&p->temp_arena);
-  size_t capacity = 8;
-  size_t count = 0;
-  IRType **members = BUMP_ALLOC_SLICE(&p->temp_arena, IRType *, capacity);
-  if (!members && capacity > 0)
-  {
-    parser_error(p, "OOM in temp_arena for struct members");
-    return;
-  }
+  TempVec members;
+  temp_vec_init(&members, &p->temp_arena);
 
   if (current_token(p)->type == TK_RBRACE)
   {
@@ -859,15 +845,15 @@ parse_type_definition(Parser *p)
   {
     while (true)
     {
-      if (count == capacity)
-      {
-        // ... (扩容逻辑) ...
-      }
 
       IRType *member_type = parse_type(p);
       if (!member_type)
         return;
-      members[count++] = member_type;
+      if (!temp_vec_push(&members, (void *)member_type))
+      {
+        parser_error(p, "OOM parsing struct members");
+        return;
+      }
 
       if (match(p, TK_RBRACE))
         break;
@@ -877,18 +863,23 @@ parse_type_definition(Parser *p)
   }
 
   // 6. 复制到永久 Arena
-  IRType **permanent_members = BUMP_ALLOC_SLICE_COPY(&p->context->permanent_arena, IRType *, members, count);
-  if (count > 0 && !permanent_members)
+  IRType **permanent_members = BUMP_ALLOC_SLICE_COPY(&p->context->permanent_arena, IRType *,
+                                                     (IRType **)temp_vec_data(&members), // <-- 新
+                                                     temp_vec_len(&members)              // <-- 新
+  );
+  if (temp_vec_len(&members) > 0 && !permanent_members)
   {
     parser_error(p, "OOM in permanent_arena copying struct members");
     return;
   }
 
   // 7. [OK] 调用 API
-  IRType *named_struct = ir_type_get_named_struct(p->context, name, permanent_members, count);
+  IRType *named_struct = ir_type_get_named_struct(p->context, name, permanent_members, temp_vec_len(&members));
+  // 必须检查 API 调用是否成功
   if (named_struct == NULL)
   {
-    parser_error(p, "Failed to create or register named struct");
+    // `ir_type_get_named_struct` 失败，通常是因为重定义
+    parser_error_at(p, &name_tok, "Failed to create or register named struct '%%%s' (possibly redefined?)", name);
     return;
   }
 }
@@ -916,7 +907,8 @@ parse_global_variable(Parser *p)
   IRType *ptr_type = parse_type(p);
   if (!ptr_type || ptr_type->kind != IR_TYPE_PTR)
   {
-    parser_error(p, "Global variable must have a pointer type annotation (e.g., '@g: <i32> = ...')");
+    parser_error_at(p, &name_tok, "Global variable '@%s' must have a pointer type annotation (e.g., '@g: <i32> = ...')",
+                    name_tok.as.ident_val);
     return;
   }
   // 这是全局变量 *内部* 的类型
@@ -948,12 +940,13 @@ parse_global_variable(Parser *p)
     // 验证
     if (initializer->kind != IR_KIND_CONSTANT)
     {
-      parser_error(p, "Global initializer must be a constant operand");
+      parser_error_at(p, &name_tok, "Initializer for global '@%s' must be a constant operand", name_tok.as.ident_val);
       return;
     }
     if (initializer->type != allocated_type)
     {
-      parser_error(p, "Global initializer's type does not match allocated type");
+      parser_error_at(p, &name_tok, "Initializer's type for global '@%s' does not match allocated type",
+                      name_tok.as.ident_val);
       return;
     }
   }
@@ -962,14 +955,14 @@ parse_global_variable(Parser *p)
   IRGlobalVariable *gvar = ir_global_variable_create(p->module, name_tok.as.ident_val, allocated_type, initializer);
   if (gvar == NULL)
   {
-    parser_error(p, "Failed to create global variable object (OOM?)");
+    parser_error_at(p, &name_tok, "Failed to create global variable object '@%s' (OOM?)", name_tok.as.ident_val);
     return;
   }
 
   // 7. [!!] 最终验证
   if (gvar->value.type != ptr_type)
   {
-    parser_error(p, "Internal: GVar creation type mismatch (Builder API is wrong?)");
+    parser_error_at(p, &name_tok, "Internal: GVar creation type mismatch for '@%s'", name_tok.as.ident_val);
     return;
   }
 
@@ -995,10 +988,7 @@ parse_basic_block(Parser *p)
   // 1. 解析标签 ($name:)
   Token name_tok = *current_token(p);
   if (!expect(p, TK_LABEL_IDENT))
-  {
-    parser_error(p, "Expected basic block label (e.g., $entry)");
     return;
-  }
   if (!expect(p, TK_COLON))
     return;
 
@@ -1012,15 +1002,13 @@ parse_basic_block(Parser *p)
   {
     if (existing_val->kind != IR_KIND_BASIC_BLOCK)
     {
-      parser_error(p, "Label name conflicts with an existing value");
+      parser_error_at(p, &name_tok, "Label '$%s' conflicts with an existing value", name_tok.as.ident_val);
       return;
     }
     bb = container_of(existing_val, IRBasicBlock, label_address);
     if (bb->list_node.next != &bb->list_node)
     {
-      char error_msg[256];
-      snprintf(error_msg, sizeof(error_msg), "Redefinition of basic block label '$%s'", name);
-      parser_error(p, error_msg);
+      parser_error_at(p, &name_tok, "Redefinition of basic block label '$%s'", name);
       return;
     }
   }
@@ -1029,7 +1017,7 @@ parse_basic_block(Parser *p)
     bb = ir_basic_block_create(p->current_function, name);
     if (!bb)
     {
-      parser_error(p, "OOM creating basic block");
+      parser_error_at(p, &name_tok, "OOM creating basic block '$%s'", name_tok.as.ident_val);
       return;
     }
     // 注册到符号表
@@ -1122,8 +1110,9 @@ parse_instruction(Parser *p, bool *out_is_terminator)
     // [!!] 验证指令返回的类型是否与我们的注解匹配
     if (instr_val->type != result_type)
     {
-      parser_error(p, "Instruction result type does not match type annotation");
-      // (这里可能需要打印两种类型)
+      // (未来我们可以添加一个 `ir_type_to_string` 工具来打印两种类型)
+      parser_error_at(p, &result_tok, "Instruction result type does not match type annotation for '%%%s'",
+                      result_tok.as.ident_val);
       return NULL;
     }
 
@@ -1145,7 +1134,8 @@ parse_instruction(Parser *p, bool *out_is_terminator)
   // (反之亦然: %res: type = ret void)
   else if (has_result && instr_val && instr_val->type->kind == IR_TYPE_VOID)
   {
-    parser_error(p, "Cannot assign result of 'void' instruction to a variable");
+    parser_error_at(p, &result_tok, "Cannot assign result of 'void' instruction to variable '%%%s'",
+                    result_tok.as.ident_val);
     return NULL;
   }
 
@@ -1193,7 +1183,7 @@ parse_icmp_predicate(Parser *p)
     return IR_ICMP_ULE;
 
   // 错误
-  parser_error(p, "Unknown ICMP predicate");
+  parser_error_at(p, &tok, "Unknown ICMP predicate '%s'", pred);
   return IR_ICMP_EQ; // 默认
 }
 
@@ -1232,10 +1222,8 @@ parse_operation(Parser *p, Token *result_token, IRType *result_type, bool *out_i
 
   Token opcode_tok = *current_token(p);
   if (!expect(p, TK_IDENT))
-  {
-    parser_error(p, "Expected instruction opcode");
     return NULL;
-  }
+
   const char *opcode = opcode_tok.as.ident_val;
   const char *name_hint = result_token ? result_token->as.ident_val : NULL;
 
@@ -1290,7 +1278,7 @@ parse_operation(Parser *p, Token *result_token, IRType *result_type, bool *out_i
   }
 
   // 默认
-  parser_error(p, "Unknown instruction opcode");
+  parser_error_at(p, &opcode_tok, "Unknown instruction opcode '%s'", opcode);
   return NULL;
 }
 
@@ -1564,19 +1552,11 @@ parse_instr_gep(Parser *p, const char *name_hint, IRType *result_type)
 
   // 3. 解析索引列表
   bump_reset(&p->temp_arena);
-  size_t capacity = 8;
-  size_t count = 0;
-  IRValueNode **indices = BUMP_ALLOC_SLICE(&p->temp_arena, IRValueNode *, capacity);
-  if (!indices && capacity > 0)
-  {
-    parser_error(p, "OOM for GEP indices");
-    return NULL;
-  }
+  TempVec indices;
+  temp_vec_init(&indices, &p->temp_arena);
 
   while (match(p, TK_COMMA))
   {
-    // ... (扩容逻辑) ...
-
     // 3a. 解析 %idx: type
     IRValueNode *idx_val = parse_operand(p);
     if (!idx_val)
@@ -1590,16 +1570,23 @@ parse_instr_gep(Parser *p, const char *name_hint, IRType *result_type)
       parser_error(p, "GEP indices must be integer types");
       return NULL;
     }
-    indices[count++] = idx_val;
+    if (!temp_vec_push(&indices, (void *)idx_val))
+    {
+      parser_error(p, "OOM for GEP indices");
+      return NULL;
+    }
   }
 
-  if (count == 0)
+  if (temp_vec_len(&indices) == 0)
   {
     parser_error(p, "gep must have at least one index operand");
     return NULL;
   }
 
-  return ir_builder_create_gep(p->builder, source_type, base_ptr, indices, count, inbounds, name_hint);
+  return ir_builder_create_gep(p->builder, source_type, base_ptr,
+                               (IRValueNode **)temp_vec_data(&indices), // <-- 新
+                               temp_vec_len(&indices),                  // <-- 新
+                               inbounds, name_hint);
 }
 
 /**
@@ -1680,18 +1667,14 @@ phi_error:
 }
 
 /**
- * @brief [半重构] 解析 'call'
+ * @brief 解析 'call'
  *
- * 语法 (Bug B 仍在):
+ * 语法 :
  * %res: type = call <func_ptr_type> %callee( %arg1: type1, ... )
  */
 static IRValueNode *
 parse_instr_call(Parser *p, const char *name_hint, IRType *result_type)
 {
-  // 1. [!!] 这是 Bug B 的核心 [!!]
-  // Parser 期望 <func_ptr_type>
-  // Printer *不* 打印它
-  // 我们暂时保留 Parser 的期望, 稍后修复 Printer
   IRType *func_ptr_type = parse_type(p);
   if (!func_ptr_type || func_ptr_type->kind != IR_TYPE_PTR || func_ptr_type->as.pointee_type->kind != IR_TYPE_FUNCTION)
   {
@@ -1707,12 +1690,6 @@ parse_instr_call(Parser *p, const char *name_hint, IRType *result_type)
     return NULL;
   }
 
-  // 2. [!!] 修复: 使用旧的 parse_operand(p, type)
-  // 因为我们的新 parse_operand 期望 %val: type,
-  // 但这里的 callee 语法是 <type> %val
-  // [!!]
-  // [!!] 让我们修复这个问题！
-  // 我们将手动解析 callee
   Token callee_tok = *current_token(p);
   IRValueNode *callee_val = NULL;
   if (callee_tok.type == TK_LOCAL_IDENT || callee_tok.type == TK_GLOBAL_IDENT)
@@ -1723,7 +1700,7 @@ parse_instr_call(Parser *p, const char *name_hint, IRType *result_type)
       return NULL;
     if (callee_val->type != func_ptr_type)
     {
-      parser_error(p, "Callee's type does not match explicit function pointer type");
+      parser_error_at(p, &callee_tok, "Callee's type does not match explicit function pointer type");
       return NULL;
     }
   }
@@ -1738,10 +1715,8 @@ parse_instr_call(Parser *p, const char *name_hint, IRType *result_type)
     return NULL;
 
   bump_reset(&p->temp_arena);
-  size_t capacity = 8;
-  size_t count = 0;
-  IRValueNode **arg_values = BUMP_ALLOC_SLICE(&p->temp_arena, IRValueNode *, capacity);
-  // ... (OOM 检查) ...
+  TempVec arg_values;
+  temp_vec_init(&arg_values, &p->temp_arena);
 
   bool is_variadic = func_type->as.function.is_variadic;
   size_t expected_count = func_type->as.function.param_count;
@@ -1750,10 +1725,6 @@ parse_instr_call(Parser *p, const char *name_hint, IRType *result_type)
   {
     while (true)
     {
-      // ... (扩容逻辑) ...
-      if (match(p, TK_ELLIPSIS))
-      { /* ... '...' 逻辑 ... */
-      }
 
       // 4a. [!! 已重构 !!] 解析 %arg: type
       IRValueNode *arg_val = parse_operand(p);
@@ -1762,20 +1733,24 @@ parse_instr_call(Parser *p, const char *name_hint, IRType *result_type)
       IRType *arg_type = arg_val->type;
 
       // 4b. 验证类型
-      if (!is_variadic && count >= expected_count)
+      if (!is_variadic && temp_vec_len(&arg_values) >= expected_count)
       {
         parser_error(p, "Too many arguments");
         return NULL;
       }
-      if (count < expected_count)
+      if (temp_vec_len(&arg_values) < expected_count)
       {
-        if (arg_type != func_type->as.function.param_types[count])
+        if (arg_type != func_type->as.function.param_types[temp_vec_len(&arg_values)])
         {
           parser_error(p, "Argument type mismatch in call");
           return NULL;
         }
       }
-      arg_values[count++] = arg_val;
+      if (!temp_vec_push(&arg_values, (void *)arg_val))
+      {
+        parser_error(p, "OOM parsing call arguments");
+        return NULL;
+      }
 
       if (match(p, TK_RPAREN))
         break;
@@ -1789,9 +1764,26 @@ parse_instr_call(Parser *p, const char *name_hint, IRType *result_type)
   }
 
   // 5. 验证数量
-  // ... (is_variadic 检查) ...
+  if (temp_vec_len(&arg_values) < expected_count)
+  {
+    if (is_variadic)
+    {
+      parser_error_at(p, &callee_tok, "Too few arguments for variadic call: expected at least %zu, got %zu",
+                      expected_count, temp_vec_len(&arg_values));
+    }
+    else
+    {
+      parser_error_at(p, &callee_tok, "Too few arguments for call: expected %zu, got %zu", expected_count,
+                      temp_vec_len(&arg_values));
+    }
+    return NULL;
+  }
 
-  return ir_builder_create_call(p->builder, callee_val, arg_values, count, name_hint);
+  // --- 修改后 ---
+  return ir_builder_create_call(p->builder, callee_val,
+                                (IRValueNode **)temp_vec_data(&arg_values), // <-- 新
+                                temp_vec_len(&arg_values),                  // <-- 新
+                                name_hint);
 }
 /*
  * -----------------------------------------------------------------
@@ -1818,7 +1810,7 @@ parse_array_type(Parser *p)
 
   if (count_tok->as.int_val < 0)
   {
-    parser_error(p, "Array size cannot be negative");
+    parser_error_at(p, count_tok, "Array size cannot be negative (got %" PRId64 ")", count_tok->as.int_val);
     return NULL;
   }
 
@@ -1854,14 +1846,8 @@ parse_struct_type(Parser *p)
 
   // 1. 重置临时分配器，用于构建成员列表
   bump_reset(&p->temp_arena);
-  size_t capacity = 8;
-  size_t count = 0;
-  IRType **members = BUMP_ALLOC_SLICE(&p->temp_arena, IRType *, capacity);
-  if (!members)
-  {
-    parser_error(p, "OOM in temp_arena for struct members");
-    return NULL;
-  }
+  TempVec members;
+  temp_vec_init(&members, &p->temp_arena);
 
   // 检查空结构体: {}
   if (current_token(p)->type == TK_RBRACE)
@@ -1873,28 +1859,17 @@ parse_struct_type(Parser *p)
   // 2. 循环解析成员类型
   while (true)
   {
-    // 检查是否需要扩容
-    if (count == capacity)
-    {
-      size_t new_capacity = capacity * 2;
-      IRType **new_members = BUMP_ALLOC_SLICE(&p->temp_arena, IRType *, new_capacity);
-      if (!new_members)
-      {
-        parser_error(p, "OOM in temp_arena resizing struct members");
-        return NULL;
-      }
-      memcpy(new_members, members, capacity * sizeof(IRType *));
-      members = new_members;
-      capacity = new_capacity;
-    }
-
     // 解析一个成员
     IRType *member_type = parse_type(p);
     if (!member_type)
     {
       return NULL; // 错误: 缺少成员类型
     }
-    members[count++] = member_type;
+    if (!temp_vec_push(&members, (void *)member_type))
+    {
+      parser_error(p, "OOM parsing anonymous struct members");
+      return NULL;
+    }
 
     // 检查结束: '}'
     if (match(p, TK_RBRACE))
@@ -1911,15 +1886,18 @@ parse_struct_type(Parser *p)
 
   // 3. 将最终的成员列表复制到 *永久* Arena
   // (因为类型是永久的，但我们的列表是在 temp_arena 中的)
-  IRType **permanent_members = BUMP_ALLOC_SLICE_COPY(&p->context->permanent_arena, IRType *, members, count);
-  if (!permanent_members)
+  IRType **permanent_members = BUMP_ALLOC_SLICE_COPY(&p->context->permanent_arena, IRType *,
+                                                     (IRType **)temp_vec_data(&members), // <-- 新
+                                                     temp_vec_len(&members)              // <-- 新
+  );
+  if (temp_vec_len(&members) > 0 && !permanent_members) // [!!] 修正检查
   {
     parser_error(p, "OOM in permanent_arena copying struct members");
     return NULL;
   }
 
   // 4. 获取（或创建）唯一的匿名结构体类型
-  return ir_type_get_anonymous_struct(p->context, permanent_members, count);
+  return ir_type_get_anonymous_struct(p->context, permanent_members, temp_vec_len(&members));
 }
 
 /**
@@ -1988,9 +1966,7 @@ parse_type(Parser *p)
     }
     else
     {
-      char error_msg[256];
-      snprintf(error_msg, sizeof(error_msg), "Unknown type identifier '%s'", name);
-      parser_error(p, error_msg);
+      parser_error_at(p, tok, "Unknown type identifier '%s'", name);
       return NULL;
     }
     advance(p); // 消耗类型标识符 (e.g., 'i32')
@@ -2023,9 +1999,7 @@ parse_type(Parser *p)
     if (found_type == NULL)
     {
       // [!!] 错误：类型未定义
-      char error_msg[256];
-      snprintf(error_msg, sizeof(error_msg), "Use of undefined named type '%%%s'", name_tok.as.ident_val);
-      parser_error(p, error_msg);
+      parser_error_at(p, &name_tok, "Use of undefined named type '%%%s'", name_tok.as.ident_val);
       return NULL;
     }
     base_type = found_type;
@@ -2085,7 +2059,7 @@ parse_constant_from_token(Parser *p, Token *val_tok, IRType *type)
     case IR_TYPE_I64:
       return ir_constant_get_i64(p->context, val);
     default:
-      parser_error(p, "Integer literal provided for non-integer type");
+      parser_error_at(p, val_tok, "Integer literal '%" PRId64 "' provided for non-integer type", val_tok->as.int_val);
       return NULL;
     }
   }
@@ -2099,7 +2073,7 @@ parse_constant_from_token(Parser *p, Token *val_tok, IRType *type)
     case IR_TYPE_F64:
       return ir_constant_get_f64(p->context, val);
     default:
-      parser_error(p, "Float literal provided for non-float type");
+      parser_error_at(p, val_tok, "Float literal '%f' provided for non-float type", val_tok->as.float_val);
       return NULL;
     }
   }
@@ -2109,13 +2083,13 @@ parse_constant_from_token(Parser *p, Token *val_tok, IRType *type)
     if (strcmp(name, "true") == 0)
     {
       if (type->kind != IR_TYPE_I1)
-        parser_error(p, "'true' must have type 'i1'");
+        parser_error_at(p, val_tok, "'true' must have type 'i1'");
       return ir_constant_get_i1(p->context, true);
     }
     if (strcmp(name, "false") == 0)
     {
       if (type->kind != IR_TYPE_I1)
-        parser_error(p, "'false' must have type 'i1'");
+        parser_error_at(p, val_tok, "'false' must have type 'i1'");
       return ir_constant_get_i1(p->context, false);
     }
     if (strcmp(name, "undef") == 0)
@@ -2125,14 +2099,14 @@ parse_constant_from_token(Parser *p, Token *val_tok, IRType *type)
     if (strcmp(name, "null") == 0)
     {
       if (type->kind != IR_TYPE_PTR)
-        parser_error(p, "'null' must have 'ptr' type");
+        parser_error_at(p, val_tok, "'null' must have 'ptr' type");
       return ir_constant_get_undef(p->context, type);
     }
-    parser_error(p, "Unexpected identifier as constant value");
+    parser_error_at(p, val_tok, "Unexpected identifier '%s' as constant value", name);
     return NULL;
   }
   default:
-    parser_error(p, "Unexpected token as constant value");
+    parser_error_at(p, val_tok, "Unexpected token '%s' as constant value", token_type_to_string(val_tok->type));
     return NULL;
   }
 }
@@ -2171,7 +2145,8 @@ parse_operand(Parser *p)
     }
     if (val->kind != IR_KIND_BASIC_BLOCK)
     {
-      parser_error(p, "Expected a basic block label ($name)");
+      parser_error_at(p, &val_tok, "Expected a basic block label ($name), but '$%s' is not a label",
+                      val_tok.as.ident_val);
       return NULL;
     }
     return val;
@@ -2180,10 +2155,7 @@ parse_operand(Parser *p)
   // --- 所有其他值都必须遵循 %val: type 或 const: type ---
 
   if (!expect(p, TK_COLON))
-  {
-    parser_error(p, "Expected ':' after operand value");
     return NULL;
-  }
 
   IRType *type = parse_type(p);
   if (!type)
@@ -2201,7 +2173,7 @@ parse_operand(Parser *p)
     if (val->type != type)
     {
       // [!!] 关键验证
-      parser_error(p, "Variable's type annotation does not match its definition type");
+      parser_error_at(p, &val_tok, "Variable's type annotation does not match its definition type");
       return NULL;
     }
     return val;
@@ -2216,7 +2188,7 @@ parse_operand(Parser *p)
   }
 
   default:
-    parser_error(p, "Unexpected token as operand value");
+    parser_error_at(p, &val_tok, "Unexpected token '%s' as operand value", token_type_to_string(val_tok.type));
     return NULL;
   }
 }
@@ -2251,15 +2223,19 @@ ir_parse_module(IRContext *ctx, const char *source_buffer)
   const char *module_name = "parsed_module"; // 默认名
   const Token *first_tok = ir_lexer_current_token(&lexer);
 
-  // 检查是否为 'source_filename = "..."'
+  // 检查是否为 'module = "..."'
   if (first_tok->type == TK_IDENT && strcmp(first_tok->as.ident_val, "module") == 0)
   {
-    ir_lexer_next(&lexer); // 消耗 'source_filename'
+    ir_lexer_next(&lexer); // 消耗 'module'
 
     // 检查 '='
-    if (ir_lexer_current_token(&lexer)->type != TK_EQ)
+    // [!! 升级 !!]
+    const Token *eq_tok = ir_lexer_current_token(&lexer);
+    if (eq_tok->type != TK_EQ)
     {
-      fprintf(stderr, "Parse Error (Line %zu): Expected '=' after 'module'\n", ir_lexer_current_token(&lexer)->line);
+      // [!! 升级 !!] 添加了列号和 "got" token
+      fprintf(stderr, "Parse Error (%zu:%zu): Expected '=' after 'module', but got %s\n", eq_tok->line, eq_tok->column,
+              token_type_to_string(eq_tok->type));
       ir_builder_destroy(builder);
       return NULL;
     }
@@ -2269,8 +2245,9 @@ ir_parse_module(IRContext *ctx, const char *source_buffer)
     const Token *name_tok = ir_lexer_current_token(&lexer);
     if (name_tok->type != TK_STRING_LITERAL)
     {
-      fprintf(stderr, "Parse Error (Line %zu): Expected string literal (e.g., \"foo.c\") after 'module ='\n",
-              name_tok->line);
+      // [!! 升级 !!] 添加了列号和 "got" token
+      fprintf(stderr, "Parse Error (%zu:%zu): Expected string literal (e.g., \"foo.c\") after 'module =', but got %s\n",
+              name_tok->line, name_tok->column, token_type_to_string(name_tok->type));
       ir_builder_destroy(builder);
       return NULL;
     }
@@ -2300,6 +2277,7 @@ ir_parse_module(IRContext *ctx, const char *source_buffer)
   }
 
   // 6. 运行主解析循环
+  // (从这里开始, `parser_error_at` 和 `print_parse_error` 将接管)
   parse_module_body(&parser);
 
   // 7. 检查错误
@@ -2307,6 +2285,7 @@ ir_parse_module(IRContext *ctx, const char *source_buffer)
 
   if (!success)
   {
+    // [!! OK !!] 这个函数现在会处理所有*解析器内部*的错误
     print_parse_error(&parser, source_buffer);
   }
 
@@ -2319,6 +2298,7 @@ ir_parse_module(IRContext *ctx, const char *source_buffer)
     // [已更新] 运行 Verifier 验证解析出的 IR
     if (!ir_verify_module(module))
     {
+      // [!! OK !!] Verifier 错误是不同的，保留 fprintf
       fprintf(stderr, "Parser Error: Generated IR failed verification.\n");
       // 验证失败，返回 NULL
       return NULL;
@@ -2327,8 +2307,7 @@ ir_parse_module(IRContext *ctx, const char *source_buffer)
   }
   else
   {
-    // 解析失败。模块可能处于半成品状态。
-    // ir_arena 中残留的数据将由 context 稍后清理。
+    // 解析失败。
     return NULL;
   }
 }
