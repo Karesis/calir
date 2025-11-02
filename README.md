@@ -3,10 +3,10 @@
 
 **A lightweight, zero-dependency, LLVM-inspired Intermediate Representation (IR) framework written in pure C (C23).**
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/Karesis/calir/ci.yml?style=for-the-badge&logo=github)](https://github.com/Karesis/calir/actions) <!-- 替换为你的 GitHub Actions 徽章 -->
-[![License](https://img.shields.io/github/license/Karesis/calir?style=for-the-badge&color=blue)](LICENSE)
-![Language](https://img.shields.io/badge/Language-C23-orange.svg?style=for-the-badge)
-![Lines of Code](https://img.shields.io/github/languages/code-lines/Karesis/calir?style=for-the-badge&color=brightgreen)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/Karesis/calir/ci.yml?style=flat-square&logo=github)](https://github.com/Karesis/calir/actions) <!-- 替换为你的 GitHub Actions 徽章 -->
+![GitHub stars](https://img.shields.io/github/stars/Karesis/calir?style=flat-square&logo=github)
+[![License](https://img.shields.io/github/license/Karesis/calir?style=flat-square&color=blue)](LICENSE)
+![Language](https://img.shields.io/badge/Language-C23-orange.svg?style=flat-square)
 
 `Calico-IR` (or `calir`) is a personal project to build a general-purpose compiler backend, rigorously developed as part of the "Compiler Principles" coursework at UCAS.
 
