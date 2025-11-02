@@ -7,8 +7,24 @@ name: C Project CI (Clang 20)
 on:
   push:
     branches: [ "main" ]
+    # 白名单：只在这些文件变化时运行
+    paths:
+      - 'src/**'       # C 源文件
+      - 'include/**'   # 头文件
+      - 'tests/**'     # 测试文件
+      - 'scripts/**'   # Python 脚本 
+      - 'Makefile'     # 构建文件
+      - '.github/workflows/ci.yml' # CI 配置文件本身
   pull_request:
     branches: [ "main" ]
+    # 同上
+    paths:
+      - 'src/**'
+      - 'include/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'Makefile'
+      - '.github/workflows/ci.yml'
 
 # 3. 任务
 jobs:
