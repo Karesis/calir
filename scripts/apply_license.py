@@ -15,7 +15,19 @@ DIRS_TO_SCAN = ["src", "include", "tests"]
 TARGET_EXTS = {".c", ".h"}
 
 # -----------------------------------------------------------------
-# [!!] 模板: 这是将要被添加的 Apache 2.0 声明头
+# 要排除的第三方路径
+# -----------------------------------------------------------------
+# 此列表中的任何文件或目录前缀 (相对于项目根目录)
+# 将被许可证检查和应用脚本完全跳过。
+# 确保使用正斜杠 '/' 作为路径分隔符。
+THIRD_PARTY_PATHS = {
+    # xxHash
+    "include/utils/xxhash.h",
+    "src/utils/xxhash.c",
+}
+
+# -----------------------------------------------------------------
+# 模板: 这是将要被添加的 Apache 2.0 声明头
 # -----------------------------------------------------------------
 BOILERPLATE = f"""/*
  * Copyright {COPYRIGHT_YEAR} {COPYRIGHT_OWNER}
@@ -34,7 +46,7 @@ BOILERPLATE = f"""/*
  */
 """
 
-# 我们会在头部和代码之间添加两个换行符
+# 在头部和代码之间添加两个换行符
 BOILERPLATE_WITH_SPACING = BOILERPLATE + "\n\n"
 
 def process_file(file_path: Path, check_mode: bool) -> bool:
@@ -71,6 +83,15 @@ def process_file(file_path: Path, check_mode: bool) -> bool:
         print(f"  [ERROR] 无法写入 {file_path}: {e}", file=sys.stderr)
         return True # 仍然算作"缺失"
 
+def is_excluded(relative_path_str: str) -> bool:
+    """
+    检查文件路径是否在排除列表中。
+    """
+    for exclusion_prefix in THIRD_PARTY_PATHS:
+        if relative_path_str.startswith(exclusion_prefix):
+            return True
+    return False
+
 def main():
     check_mode = "--check" in sys.argv
     project_root = Path(__file__).parent.parent # 脚本在 'scripts/' 目录中
@@ -82,7 +103,8 @@ def main():
         print("模式: 应用 (Apply)")
 
     missing_files = 0
-    total_files = 0
+    total_processed = 0 # 跟踪实际处理的文件
+    total_skipped = 0
 
     for dir_name in DIRS_TO_SCAN:
         search_dir = project_root / dir_name
@@ -92,31 +114,42 @@ def main():
             
         print(f"\nScanning {search_dir}...")
         
+        files_in_dir_processed = 0
+        
         # 递归搜索所有 .c 和 .h 文件
-        files_in_dir = 0
         for ext in TARGET_EXTS:
             for file_path in search_dir.rglob(f"*{ext}"):
-                total_files += 1
-                files_in_dir += 1
+                
+                # 获取相对路径并检查是否应排除
+                relative_path_str = file_path.relative_to(project_root).as_posix()
+                
+                if is_excluded(relative_path_str):
+                    total_skipped += 1
+                    continue # 跳过这个文件
+
+                total_processed += 1
+                files_in_dir_processed += 1
                 if process_file(file_path, check_mode):
                     missing_files += 1
         
-        if files_in_dir == 0:
-            print("  (未找到目标文件)")
+        if files_in_dir_processed == 0:
+            print("  (未找到需要处理的目标文件)")
 
     print("\n--- 扫描完成 ---")
-    print(f"总共扫描文件: {total_files}")
+    print(f"总共处理文件: {total_processed}")
+    print(f"总共跳过文件: {total_skipped} (第三方)")
+    
     if check_mode:
         if missing_files > 0:
             print(f"[!!] 失败: {missing_files} 个文件缺失许可证头部。")
             sys.exit(1) # 退出码 1 (失败)
         else:
-            print("[OK] 所有文件均包含许可证头部。")
+            print("[OK] 所有被处理的文件均包含许可证头部。")
     else:
         if missing_files > 0:
             print(f"[OK] 已修复 {missing_files} 个文件。")
         else:
-            print("[OK] 所有文件已包含许可证头部。")
+            print("[OK] 所有被处理的文件已包含许可证头部。")
             
     sys.exit(0) # 退出码 0 (成功)
 
