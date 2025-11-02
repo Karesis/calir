@@ -19,7 +19,7 @@
 #include "utils/hashmap/ptr.h"
 #include "utils/bump.h"
 #include <assert.h>
-#include <string.h> // for memcmp, memcpy
+#include <string.h>
 
 #define XXH_INLINE_ALL
 #include "utils/xxhash.h"
@@ -38,7 +38,7 @@ typedef struct
   void *value;
 } PtrHashMapBucket;
 
-// PtrHashMap 结构体的完整定义
+
 struct PtrHashMap
 {
   Bump *arena;
@@ -73,7 +73,7 @@ ptr_hashmap_get_hash(void *key)
  * ========================================
  */
 
-// 定义模板参数
+
 #define CHM_PREFIX ptr
 #define CHM_K_TYPE void *
 #define CHM_V_TYPE void *
@@ -81,12 +81,12 @@ ptr_hashmap_get_hash(void *key)
 #define CHM_STRUCT_TYPE PtrHashMap
 #define CHM_BUCKET_TYPE PtrHashMapBucket
 
-// 实例化泛型函数
-// 这将定义:
-// - ptr_hashmap_next_pow2
-// - ptr_hashmap_get_min_buckets_for_entries
-// - ptr_hashmap_find_bucket
-// - ptr_hashmap_grow
+
+
+
+
+
+
 #include "utils/hashmap/core.inc"
 
 /*
@@ -106,20 +106,20 @@ ptr_hashmap_create(Bump *arena, size_t initial_capacity)
   if (!map)
     return NULL;
 
-  // Buckets 不需要清零, 状态由 'states' 数组管理
+
   PtrHashMapBucket *buckets = BUMP_ALLOC_SLICE(arena, PtrHashMapBucket, num_buckets);
   if (!buckets)
     return NULL;
 
-  // States *必须* 清零 (BUMP_ALLOC_SLICE_ZEROED)
-  // 因为 BUCKET_EMPTY == 0
+
+
   uint8_t *states = BUMP_ALLOC_SLICE_ZEROED(arena, uint8_t, num_buckets);
   if (!states)
-    return NULL; // OOM
+    return NULL;
 
   map->arena = arena;
   map->buckets = buckets;
-  map->states = states; // <-- 设置 states 指针
+  map->states = states;
   map->num_entries = 0;
   map->num_tombstones = 0;
   map->num_buckets = num_buckets;
@@ -131,7 +131,7 @@ void *
 ptr_hashmap_get(const PtrHashMap *map, void *key)
 {
   PtrHashMapBucket *bucket;
-  // 调用泛型的 find_bucket
+
   if (ptr_hashmap_find_bucket(map, key, &bucket))
   {
     return bucket->value;
@@ -145,17 +145,17 @@ ptr_hashmap_remove(PtrHashMap *map, void *key)
   PtrHashMapBucket *bucket;
   if (ptr_hashmap_find_bucket(map, key, &bucket))
   {
-    // Key 存在, 将其槽位标记为墓碑
+
     size_t bucket_idx = (size_t)(bucket - map->buckets);
     map->states[bucket_idx] = BUCKET_TOMBSTONE;
 
-    // (不再需要设置 bucket->key = TOMBSTONE_K)
-    bucket->value = NULL; // (良好实践)
+
+    bucket->value = NULL;
     map->num_entries--;
     map->num_tombstones++;
     return true;
   }
-  return false; // Key 不存在
+  return false;
 }
 
 bool
@@ -166,23 +166,23 @@ ptr_hashmap_put(PtrHashMap *map, void *key, void *value)
 
   if (found)
   {
-    // Key 已存在, 更新 value
+
     bucket->value = value;
     return true;
   }
 
-  // Key 不存在, 'bucket' 指向我们应该插入的槽位
+
   assert(bucket != NULL && "find_bucket must return a valid slot");
 
-  // 检查是否需要扩容
+
   size_t total_load = map->num_entries + map->num_tombstones + 1;
   if (total_load * 4 >= map->num_buckets * 3)
   {
-    if (!ptr_hashmap_grow(map)) // grow() 已被重构为使用 states
+    if (!ptr_hashmap_grow(map))
     {
-      return false; // OOM on grow
+      return false;
     }
-    // 扩容后, 必须重新查找槽位
+
     found = ptr_hashmap_find_bucket(map, key, &bucket);
     assert(!found && "Key should not exist after grow");
     assert(bucket != NULL);
@@ -190,16 +190,16 @@ ptr_hashmap_put(PtrHashMap *map, void *key, void *value)
 
   size_t bucket_idx = (size_t)(bucket - map->buckets);
 
-  // 如果我们复用了墓碑, 减少墓碑计数
+
   if (map->states[bucket_idx] == BUCKET_TOMBSTONE)
   {
     map->num_tombstones--;
   }
 
-  // 插入新条目
+
   bucket->key = key;
   bucket->value = value;
-  map->states[bucket_idx] = BUCKET_FILLED; // <-- 标记为 FILLED
+  map->states[bucket_idx] = BUCKET_FILLED;
   map->num_entries++;
 
   return true;
@@ -224,22 +224,22 @@ ptr_hashmap_size(const PtrHashMap *map)
  * ========================================
  */
 
-// 1. (FIX) 为 CHM_FUNC 定义粘贴宏
+
 #define _CHM_PASTE3(a, b, c) a##b##c
 #define CHM_PASTE3(a, b, c) _CHM_PASTE3(a, b, c)
 #define CHM_FUNC(prefix, suffix) CHM_PASTE3(prefix, _hashmap_, suffix)
 
-// 为 iterator.inc 设置 "模板参数"
+
 #define CHM_PREFIX ptr
 #define CHM_API_TYPE PtrHashMap
-#define CHM_STRUCT_TYPE PtrHashMap // 在 .c 文件中, PtrHashMap 是完整类型
+#define CHM_STRUCT_TYPE PtrHashMap
 #define CHM_BUCKET_TYPE PtrHashMapBucket
-#define CHM_ENTRY_TYPE PtrHashMapEntry // 来自 ptr.h
-#define CHM_ITER_TYPE PtrHashMapIter   // 来自 ptr.h
+#define CHM_ENTRY_TYPE PtrHashMapEntry
+#define CHM_ITER_TYPE PtrHashMapIter
 
-// (我们 *不* 定义 CHM_ITER_ASSIGN_ENTRY, 所以它会使用默认实现)
 
-// 包含通用实现
+
+
 #include "utils/hashmap/iterator.inc"
 
 #undef _CHM_PASTE3

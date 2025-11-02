@@ -18,11 +18,11 @@
 #ifndef CALIR_IR_LEXER_H
 #define CALIR_IR_LEXER_H
 
-#include "ir/context.h" // Lexer 需要 Context 来做字符串驻留
+#include "ir/context.h"
 #include <stddef.h>
 #include <stdint.h>
 
-// 前向声明
+
 typedef struct IRContext IRContext;
 
 /**
@@ -30,37 +30,37 @@ typedef struct IRContext IRContext;
  */
 typedef enum
 {
-  TK_ILLEGAL, // 非法字符
-  TK_EOF,     // 文件结束
+  TK_ILLEGAL,
+  TK_EOF,
 
-  // --- 标识符和字面量 ---
-  TK_IDENT,        // e.g., define, i32, add, my_label
-  TK_GLOBAL_IDENT, // e.g., @my_global, @main
-  TK_LOCAL_IDENT,  // e.g., %x, %0,
-  TK_LABEL_IDENT,  // e.g., $entry
 
-  // 字面量
-  TK_INTEGER_LITERAL, // e.g., '123', '-42'
-  TK_FLOAT_LITERAL,   // [新] e.g., '1.23', '-0.5'
-  TK_STRING_LITERAL,  // [新] e.g., '"Hello\n"'
+  TK_IDENT,
+  TK_GLOBAL_IDENT,
+  TK_LOCAL_IDENT,
+  TK_LABEL_IDENT,
 
-  // --- 标点符号 ---
-  TK_EQ,        // =
-  TK_COMMA,     // ,
-  TK_COLON,     // :
-  TK_LBRACE,    // {
-  TK_RBRACE,    // }
-  TK_LBRACKET,  // [
-  TK_RBRACKET,  // ]
-  TK_LPAREN,    // (
-  TK_RPAREN,    // )
-  TK_LT,        // <
-  TK_GT,        // >
-  TK_ELLIPSIS,  // ...
-  TK_SEMICOLON, // ; (用于注释)
 
-  // (注意：'ptr', 'add', 'i32' 都会被解析为 TK_IDENT，
-  //  *Parser* 将负责识别它们是关键字、类型还是普通标识符)
+  TK_INTEGER_LITERAL,
+  TK_FLOAT_LITERAL,
+  TK_STRING_LITERAL,
+
+
+  TK_EQ,
+  TK_COMMA,
+  TK_COLON,
+  TK_LBRACE,
+  TK_RBRACE,
+  TK_LBRACKET,
+  TK_RBRACKET,
+  TK_LPAREN,
+  TK_RPAREN,
+  TK_LT,
+  TK_GT,
+  TK_ELLIPSIS,
+  TK_SEMICOLON,
+
+
+
 
 } TokenType;
 
@@ -72,18 +72,18 @@ typedef enum
 typedef struct Token
 {
   TokenType type;
-  size_t line; // Token 所在的行号 (用于报错)
+  size_t line;
   size_t column;
 
   union {
-    // 用于 TK_IDENT, TK_GLOBAL_IDENT, TK_LOCAL_IDENT, TK_STRING_LITERAL
-    // 指针指向 Context->permanent_arena 中唯一的字符串
+
+
     const char *ident_val;
 
-    // 用于 TK_INTEGER_LITERAL
+
     int64_t int_val;
 
-    // 用于 TK_FLOAT_LITERAL
+
     double float_val;
   } as;
 } Token;
@@ -95,17 +95,17 @@ typedef struct Token
  */
 typedef struct Lexer
 {
-  IRContext *context;       // 用于字符串驻留
-  const char *buffer_start; // 输入的 .cir 文件的完整内容
-  const char *ptr;          // 当前解析到的字符位置
-  const char *line_start;   // [!! 新增 !!] 当前行在 buffer_start 中的起始指针
-  int line;                 // 当前行号
+  IRContext *context;
+  const char *buffer_start;
+  const char *ptr;
+  const char *line_start;
+  int line;
 
-  Token current; // 当前的 Token
-  Token peek;    // LL(2) 预读
+  Token current;
+  Token peek;
 } Lexer;
 
-// --- Lexer API ---
+
 
 /**
  * @brief 初始化 Lexer
@@ -147,4 +147,4 @@ const Token *ir_lexer_peek_token(const Lexer *lexer);
  */
 bool ir_lexer_eat(Lexer *lexer, TokenType expected);
 
-#endif // CALIR_IR_LEXER_H
+#endif

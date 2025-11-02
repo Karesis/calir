@@ -33,14 +33,14 @@
  */
 typedef struct IRGlobalVariable
 {
-  IRValueNode value; // <-- 基类 (kind = IR_KIND_GLOBAL)
-                     // (value.type 将是一个 *指针* 类型, e.g., ptr)
+  IRValueNode value;
 
-  IDList list_node; // <-- 节点, 用于加入 Module->globals 链表
-  IRModule *parent; // <-- 指向父模块
 
-  IRType *allocated_type;   // <-- 全局变量 *自身* 的类型 (e.g., i32)
-  IRValueNode *initializer; // (可选) 初始值 (必须是一个 Constant)
+  IDList list_node;
+  IRModule *parent;
+
+  IRType *allocated_type;
+  IRValueNode *initializer;
 
 } IRGlobalVariable;
 
@@ -65,4 +65,4 @@ IRGlobalVariable *ir_global_variable_create(IRModule *mod, const char *name, IRT
  */
 void ir_global_variable_dump(IRGlobalVariable *global, IRPrinter *p);
 
-#endif // IR_GLOBAL_H
+#endif

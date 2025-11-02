@@ -17,9 +17,9 @@
 
 #include "ir/use.h"
 #include "ir/context.h"
-#include "ir/instruction.h" // 需要 IRInstruction->operands
-#include "ir/value.h"       // 需要 IRValueNode->uses
-#include "utils/bump.h"     // 需要 BUMP_ALLOC_ZEROED
+#include "ir/instruction.h"
+#include "ir/value.h"
+#include "utils/bump.h"
 
 #include <assert.h>
 
@@ -33,7 +33,7 @@ ir_use_create(IRContext *ctx, IRInstruction *user, IRValueNode *value)
   assert(user != NULL);
   assert(value != NULL);
 
-  // 1. [修改] 从 ir_arena 分配
+
   IRUse *use = BUMP_ALLOC_ZEROED(&ctx->ir_arena, IRUse);
   if (!use)
     return NULL;
@@ -41,10 +41,10 @@ ir_use_create(IRContext *ctx, IRInstruction *user, IRValueNode *value)
   use->value = value;
   use->user = user;
 
-  // 2. 链接到 User (inst->operands)
+
   list_add_tail(&user->operands, &use->user_node);
 
-  // 3. 链接到 Value (value->uses)
+
   list_add_tail(&value->uses, &use->value_node);
 
   return use;
@@ -70,12 +70,12 @@ ir_use_set_value(IRUse *use, IRValueNode *new_val)
   assert(use != NULL);
   assert(new_val != NULL);
 
-  // 1. 从 old_val->uses 链表中解开
+
   list_del(&use->value_node);
 
-  // 2. 更新指针
+
   use->value = new_val;
 
-  // 3. 链接到 new_val->uses 链表
+
   list_add_tail(&new_val->uses, &use->value_node);
 }

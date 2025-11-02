@@ -31,9 +31,9 @@
 typedef struct TempVec
 {
   Bump *arena;
-  void **data;     // 指向在 arena 中分配的 void* 数组
-  size_t len;      // 当前存储的元素数量
-  size_t capacity; // 当前分配的数组容量 (以元素为单位)
+  void **data;
+  size_t len;
+  size_t capacity;
 } TempVec;
 
 /**
@@ -91,7 +91,7 @@ temp_vec_data(const TempVec *vec)
 static inline void *
 temp_vec_get(const TempVec *vec, size_t index)
 {
-  // 如果需要，可以在调试版本中添加: assert(index < vec->len);
+
   return vec->data[index];
 }
 
@@ -107,4 +107,4 @@ temp_vec_clear(TempVec *vec)
   vec->len = 0;
 }
 
-#endif // CALIR_UTILS_TEMP_VEC_H
+#endif

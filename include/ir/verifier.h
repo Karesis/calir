@@ -44,4 +44,4 @@ bool ir_verify_module(IRModule *mod);
  */
 bool ir_verify_function(IRFunction *func);
 
-#endif // IR_VERIFIER_H
+#endif

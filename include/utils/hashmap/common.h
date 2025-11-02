@@ -36,4 +36,4 @@ typedef enum BucketState
   BUCKET_TOMBSTONE = 2
 } BucketState;
 
-#endif // HASHMAP_COMMON_H
+#endif

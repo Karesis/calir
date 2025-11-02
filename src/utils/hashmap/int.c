@@ -21,11 +21,11 @@
 #include <limits.h>
 #include <string.h>
 
-// 1. 包含 xxhash.h 并内联实现
+
 #define XXH_INLINE_ALL
 #include "utils/xxhash.h"
 
-// 2. 定义模板宏工具
+
 #define _INT_PASTE3(a, b, c) a##b##c
 #define INT_PASTE3(a, b, c) _INT_PASTE3(a, b, c)
 #define INT_FUNC(suffix) INT_PASTE3(INT_PREFIX, _hashmap_, suffix)

@@ -15,7 +15,7 @@
  */
 
 
-// include/utils/bitset.h
+
 #ifndef CALIR_UTILS_BITSET_H
 #define CALIR_UTILS_BITSET_H
 
@@ -29,9 +29,9 @@
  */
 typedef struct Bitset
 {
-  size_t num_bits;  // 集合中可以存储的总位数 (例如，CFG 节点的数量)
-  size_t num_words; // words 数组的长度 (num_bits / 64, 向上取整)
-  uint64_t *words;  // 存储位的 64 位字数组
+  size_t num_bits;
+  size_t num_words;
+  uint64_t *words;
 } Bitset;
 
 /**
@@ -113,4 +113,4 @@ void bitset_difference(Bitset *dest, const Bitset *src1, const Bitset *src2);
  */
 size_t bitset_count_slow(const Bitset *bs);
 
-#endif // CALIR_UTILS_BITSET_H
+#endif

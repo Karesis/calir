@@ -18,7 +18,7 @@
 #ifndef CALIR_ANALYSIS_DOM_FRONTIER_H
 #define CALIR_ANALYSIS_DOM_FRONTIER_H
 
-// 依赖项：我们需要支配树、函数和 BitSet
+
 #include "analysis/dom_tree.h"
 #include "ir/basicblock.h"
 #include "ir/function.h"
@@ -47,9 +47,9 @@ typedef struct DominanceFrontier
    * frontiers[i] 存储的是 ID 为 i 的基本块的支配边界集合。
    */
   Bitset **frontiers;
-  size_t num_blocks; // 块的数量，应与 dom_tree->num_blocks 相同
+  size_t num_blocks;
 
-  Bump *arena; // 用于分配 frontiers 数组和所有 BitSet 的内存
+  Bump *arena;
 
 } DominanceFrontier;
 
@@ -77,4 +77,4 @@ void ir_analysis_dom_frontier_destroy(DominanceFrontier *df);
  */
 Bitset *ir_analysis_dom_frontier_get(DominanceFrontier *df, IRBasicBlock *bb);
 
-#endif // CALIR_ANALYSIS_DOM_FRONTIER_H
+#endif

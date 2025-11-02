@@ -20,7 +20,7 @@
 
 #include "ir/printer.h"
 #include <stdbool.h>
-#include <stddef.h> // for size_t
+#include <stddef.h>
 
 typedef struct IRContext IRContext;
 
@@ -29,8 +29,8 @@ typedef struct IRContext IRContext;
  */
 typedef enum
 {
-  IR_TYPE_VOID, // (void)
-  IR_TYPE_I1,   // (bool)
+  IR_TYPE_VOID,
+  IR_TYPE_I1,
   IR_TYPE_I8,
   IR_TYPE_I16,
   IR_TYPE_I32,
@@ -38,7 +38,7 @@ typedef enum
   IR_TYPE_F32,
   IR_TYPE_F64,
   IR_TYPE_LABEL,
-  IR_TYPE_PTR, // 指针类型
+  IR_TYPE_PTR,
   IR_TYPE_ARRAY,
   IR_TYPE_STRUCT,
   IR_TYPE_FUNCTION
@@ -51,32 +51,32 @@ typedef struct IRType IRType;
 struct IRType
 {
   IRTypeKind kind;
-  // 用于存储特定类型数据的联合
+
   union {
-    // 对应 IR_TYPE_PTR
+
     IRType *pointee_type;
 
-    // 对应 IR_TYPE_ARRAY
+
     struct
     {
       IRType *element_type;
       size_t element_count;
     } array;
 
-    // 对应 IR_TYPE_STRUCT
+
     struct
     {
-      IRType **member_types; // 成员类型列表
-      size_t member_count;   // 成员数量
-      const char *name;      // (可选) 结构体名 e.g., "my_struct"
+      IRType **member_types;
+      size_t member_count;
+      const char *name;
     } aggregate;
 
     struct
     {
       IRType *return_type;
-      IRType **param_types; // 参数类型的数组
-      size_t param_count;   // 参数数量
-      bool is_variadic;     // 是否为可变参数 (e.g. printf)
+      IRType **param_types;
+      size_t param_count;
+      bool is_variadic;
     } function;
   } as;
 };
@@ -138,8 +138,8 @@ IRType *ir_type_create_struct(IRContext *ctx, IRType **member_types, size_t memb
 IRType *ir_type_create_function(IRContext *ctx, IRType *return_type, IRType **param_types, size_t param_count,
                                 bool is_variadic);
 
-// --- 调试 API (保持不变) ---
+
 
 void ir_type_dump(IRType *type, IRPrinter *p);
 
-#endif // TYPE_H
+#endif

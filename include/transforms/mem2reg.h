@@ -35,4 +35,4 @@
  */
 bool ir_transform_mem2reg_run(IRFunction *func, DominatorTree *dt, DominanceFrontier *df);
 
-#endif // CALIR_TRANSFORMS_MEM2REG_H
+#endif

@@ -33,10 +33,10 @@
  * - Values 存储为 void*，由调用者管理其生命周期。
  */
 
-// 不透明的指针哈希表结构体
+
 typedef struct PtrHashMap PtrHashMap;
 
-// 迭代器结构体
+
 typedef struct
 {
   void *key;
@@ -108,8 +108,8 @@ bool ptr_hashmap_contains(const PtrHashMap *map, void *key);
  */
 size_t ptr_hashmap_size(const PtrHashMap *map);
 
-// 迭代器函数声明
+
 PtrHashMapIter ptr_hashmap_iter(const PtrHashMap *map);
 bool ptr_hashmap_iter_next(PtrHashMapIter *iter, PtrHashMapEntry *entry_out);
 
-#endif // HASHMAP_PTR_H
+#endif

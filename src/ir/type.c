@@ -16,11 +16,11 @@
 
 
 #include "ir/type.h"
-#include "ir/context.h" // 需要 IRContext 结构体
+#include "ir/context.h"
 #include "ir/printer.h"
-#include "utils/bump.h" // 需要 BUMP_ALLOC_ZEROED
+#include "utils/bump.h"
 #include <assert.h>
-#include <string.h> // for memcpy
+#include <string.h>
 
 /**
  * @brief [内部] 创建一个新的基本类型 (i32, void, ...)
@@ -28,19 +28,19 @@
 IRType *
 ir_type_create_primitive(IRContext *ctx, IRTypeKind kind)
 {
-  // 基本类型不能是指针类型
+
   assert(kind != IR_TYPE_PTR && "Use ir_type_create_ptr for pointer types");
 
-  // 从永久 Arena 分配并零初始化
+
   IRType *type = BUMP_ALLOC_ZEROED(&ctx->permanent_arena, IRType);
   if (!type)
   {
-    // OOM error
+
     return NULL;
   }
 
   type->kind = kind;
-  type->as.pointee_type = NULL; // 零初始化已完成，这里是显式说明
+  type->as.pointee_type = NULL;
   return type;
 }
 
@@ -52,11 +52,11 @@ ir_type_create_ptr(IRContext *ctx, IRType *pointee_type)
 {
   assert(pointee_type != NULL && "Pointer must point to a type");
 
-  // 从永久 Arena 分配并零初始化
+
   IRType *type = BUMP_ALLOC_ZEROED(&ctx->permanent_arena, IRType);
   if (!type)
   {
-    // OOM error
+
     return NULL;
   }
 
@@ -74,10 +74,10 @@ ir_type_create_array(IRContext *ctx, IRType *element_type, size_t element_count)
   assert(ctx != NULL);
   assert(element_type != NULL);
 
-  // 从永久 Arena 分配
+
   IRType *type = BUMP_ALLOC_ZEROED(&ctx->permanent_arena, IRType);
   if (!type)
-    return NULL; // OOM
+    return NULL;
 
   type->kind = IR_TYPE_ARRAY;
   type->as.array.element_type = element_type;
@@ -95,20 +95,20 @@ ir_type_create_struct(IRContext *ctx, IRType **member_types, size_t member_count
   assert(ctx != NULL);
   assert(member_types != NULL || member_count == 0);
 
-  // 1. 分配 Type 结构体本身
+
   IRType *type = BUMP_ALLOC_ZEROED(&ctx->permanent_arena, IRType);
   if (!type)
-    return NULL; // OOM
+    return NULL;
 
   type->kind = IR_TYPE_STRUCT;
 
-  // 2. 分配并拷贝成员类型数组
+
   if (member_count > 0)
   {
-    // 在 permanent_arena 中创建这个数组的*副本*
+
     type->as.aggregate.member_types = BUMP_ALLOC_SLICE(&ctx->permanent_arena, IRType *, member_count);
     if (!type->as.aggregate.member_types)
-      return NULL; // OOM
+      return NULL;
 
     memcpy(type->as.aggregate.member_types, member_types, member_count * sizeof(IRType *));
   }
@@ -118,7 +118,7 @@ ir_type_create_struct(IRContext *ctx, IRType **member_types, size_t member_count
   }
   type->as.aggregate.member_count = member_count;
 
-  // 3. (可选) Intern 结构体名字
+
   if (name)
   {
     type->as.aggregate.name = ir_context_intern_str(ctx, name);
@@ -141,24 +141,24 @@ ir_type_create_function(IRContext *ctx, IRType *return_type, IRType **param_type
   assert(return_type != NULL);
   assert(param_types != NULL || param_count == 0);
 
-  // 1. 分配 Type 结构体本身
+
   IRType *type = BUMP_ALLOC_ZEROED(&ctx->permanent_arena, IRType);
   if (!type)
-    return NULL; // OOM
+    return NULL;
 
   type->kind = IR_TYPE_FUNCTION;
 
-  // 2. 设置函数特定成员
+
   type->as.function.return_type = return_type;
   type->as.function.is_variadic = is_variadic;
 
-  // 3. 分配并拷贝参数类型数组 (逻辑同 struct)
+
   if (param_count > 0)
   {
-    // 在 permanent_arena 中创建这个数组的*副本*
+
     type->as.function.param_types = BUMP_ALLOC_SLICE(&ctx->permanent_arena, IRType *, param_count);
     if (!type->as.function.param_types)
-      return NULL; // OOM
+      return NULL;
 
     memcpy(type->as.function.param_types, param_types, param_count * sizeof(IRType *));
   }
@@ -196,7 +196,7 @@ ir_type_dump(IRType *type, IRPrinter *p)
 
   switch (type->kind)
   {
-  // --- 基本类型 ---
+
   case IR_TYPE_VOID:
     ir_print_str(p, "void");
     break;
@@ -225,26 +225,26 @@ ir_type_dump(IRType *type, IRPrinter *p)
     ir_print_str(p, "label");
     break;
 
-  // --- 派生类型 ---
+
   case IR_TYPE_PTR:
-    // <...>
+
     ir_print_str(p, "<");
-    ir_type_dump(type->as.pointee_type, p); // 递归调用
+    ir_type_dump(type->as.pointee_type, p);
     ir_print_str(p, ">");
     break;
 
   case IR_TYPE_ARRAY:
-    // [10 x i32]
+
     ir_print_str(p, "[");
-    ir_printf(p, "%zu", type->as.array.element_count); // [!!] 直接打印
+    ir_printf(p, "%zu", type->as.array.element_count);
     ir_print_str(p, " x ");
-    ir_type_dump(type->as.array.element_type, p); // 递归调用
+    ir_type_dump(type->as.array.element_type, p);
     ir_print_str(p, "]");
     break;
 
   case IR_TYPE_STRUCT:
-    // 命名结构体: %my_struct
-    // (注意: 'module.c' 负责打印 *定义*，这里只打印 *用法*)
+
+
     if (type->as.aggregate.name)
     {
       ir_print_str(p, "%");
@@ -252,7 +252,7 @@ ir_type_dump(IRType *type, IRPrinter *p)
       break;
     }
 
-    // 匿名结构体: { i32, <f64> }
+
     ir_print_str(p, "{ ");
     for (size_t i = 0; i < type->as.aggregate.member_count; i++)
     {
@@ -260,14 +260,14 @@ ir_type_dump(IRType *type, IRPrinter *p)
       {
         ir_print_str(p, ", ");
       }
-      ir_type_dump(type->as.aggregate.member_types[i], p); // 递归调用
+      ir_type_dump(type->as.aggregate.member_types[i], p);
     }
     ir_print_str(p, " }");
     break;
 
   case IR_TYPE_FUNCTION:
-    // i32 (i32, f64, ...)
-    ir_type_dump(type->as.function.return_type, p); // 递归调用
+
+    ir_type_dump(type->as.function.return_type, p);
     ir_print_str(p, " (");
     for (size_t i = 0; i < type->as.function.param_count; i++)
     {
@@ -275,7 +275,7 @@ ir_type_dump(IRType *type, IRPrinter *p)
       {
         ir_print_str(p, ", ");
       }
-      ir_type_dump(type->as.function.param_types[i], p); // 递归调用
+      ir_type_dump(type->as.function.param_types[i], p);
     }
     if (type->as.function.is_variadic)
     {

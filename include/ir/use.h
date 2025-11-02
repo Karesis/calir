@@ -75,4 +75,4 @@ void ir_use_unlink(IRUse *use);
  */
 void ir_use_set_value(IRUse *use, IRValueNode *new_val);
 
-#endif // IR_USE_H
+#endif

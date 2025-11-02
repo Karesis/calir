@@ -28,11 +28,11 @@
  */
 typedef struct IRBasicBlock
 {
-  IRValueNode label_address; // 标签地址
-  IDList list_node;          // <-- 节点，用于加入 Function->basic_blocks 链表
+  IRValueNode label_address;
+  IDList list_node;
 
-  IDList instructions; // 链表头 (元素是 IRInstruction)
-  IRFunction *parent;  // <-- 指向父函数
+  IDList instructions;
+  IRFunction *parent;
 } IRBasicBlock;
 
 /**
@@ -50,7 +50,7 @@ IRBasicBlock *ir_basic_block_create(IRFunction *func, const char *name);
  */
 void ir_function_append_basic_block(IRFunction *func, IRBasicBlock *bb);
 
-// --- 调试 ---
+
 /**
  * @brief 将单个基本块的 IR 打印到 IRPrinter
  * [!!] 签名已更改

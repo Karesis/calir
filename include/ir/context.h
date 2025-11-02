@@ -18,13 +18,13 @@
 #ifndef IR_CONTEXT_H
 #define IR_CONTEXT_H
 
-#include "ir/type.h" // typedef IRContext goes here
+#include "ir/type.h"
 #include "ir/value.h"
-#include "utils/bump.h"    // Arena 分配器
-#include "utils/hashmap.h" // 哈希表主头文件
-#include <stdbool.h>       // for bool
-#include <stddef.h>        // for size_t
-#include <stdint.h>        // for integer types
+#include "utils/bump.h"
+#include "utils/hashmap.h"
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 /*
  * =================================================================
@@ -47,46 +47,46 @@
  */
 struct IRContext
 {
-  // --- 1. 内存管理 (来自 bump.h) ---
+
 
   /** 永久 Arena (用于 Types, Constants, Strings, Hashes) */
   Bump permanent_arena;
   /** 临时 IR Arena (用于 Modules, Functions, Instructions, ...) */
   Bump ir_arena;
 
-  // --- 2. 唯一化哈希表 (Caches) (来自 hashmap.h) ---
 
-  // Type Caches
-  PtrHashMap *pointer_type_cache; // Map<IRType* (pointee), IRType* (ptr)>
 
-  // Constant Caches
-  I8HashMap *i8_constant_cache;     // Map<int8_t, IRValueNode*>
-  I16HashMap *i16_constant_cache;   // Map<int16_t, IRValueNode*>
-  I32HashMap *i32_constant_cache;   // Map<int32_t, IRValueNode*>
-  I64HashMap *i64_constant_cache;   // Map<int64_t, IRValueNode*>
-  F32HashMap *f32_constant_cache;   // Map<float, IRValueNode*>
-  F64HashMap *f64_constant_cache;   // Map<double, IRValueNode*>
-  PtrHashMap *undef_constant_cache; // Map<IRType*, IRValueNode* (undef)>
-  PtrHashMap *array_type_cache;     // Map<IRType* (elem_ty), PtrHashMap* (Map<size_t, IRType*>)>
 
-  // struct
-  // 缓存 1: Map<const char* (name), IRType* (struct)>
+  PtrHashMap *pointer_type_cache;
+
+
+  I8HashMap *i8_constant_cache;
+  I16HashMap *i16_constant_cache;
+  I32HashMap *i32_constant_cache;
+  I64HashMap *i64_constant_cache;
+  F32HashMap *f32_constant_cache;
+  F64HashMap *f64_constant_cache;
+  PtrHashMap *undef_constant_cache;
+  PtrHashMap *array_type_cache;
+
+
+
   StrHashMap *named_struct_cache;
-  // 缓存 2: Map<AnonStructKey*, IRType* (struct)>
+
   GenericHashMap *anon_struct_cache;
 
-  // func_ptr
+
   GenericHashMap *function_type_cache;
 
-  // String Interning
-  StrHashMap *string_intern_cache; // Map<(char*, len), const char* (unique)>
 
-  // --- 3. 缓存的单例对象 (Singleton Objects) ---
-  // (这些指针指向 permanent_arena 中的对象)
+  StrHashMap *string_intern_cache;
 
-  // 基本类型
+
+
+
+
   IRType *type_void;
-  IRType *type_i1; // (布尔类型)
+  IRType *type_i1;
   IRType *type_i8;
   IRType *type_i16;
   IRType *type_i32;
@@ -95,7 +95,7 @@ struct IRContext
   IRType *type_f64;
   IRType *type_label;
 
-  // i1 (bool) 类型的两个常量
+
   IRValueNode *const_i1_true;
   IRValueNode *const_i1_false;
 };
@@ -106,7 +106,7 @@ struct IRContext
  * =================================================================
  */
 
-// --- 生命周期 (Lifecycle) ---
+
 
 /**
  * @brief 创建一个新的 IRContext
@@ -133,7 +133,7 @@ void ir_context_destroy(IRContext *ctx);
  */
 void ir_context_reset_ir_arena(IRContext *ctx);
 
-// --- API: 类型 (Types) ---
+
 
 IRType *ir_type_get_void(IRContext *ctx);
 IRType *ir_type_get_i1(IRContext *ctx);
@@ -182,7 +182,7 @@ IRType *ir_type_get_anonymous_struct(IRContext *ctx, IRType **member_types, size
 IRType *ir_type_get_function(IRContext *ctx, IRType *return_type, IRType **param_types, size_t param_count,
                              bool is_variadic);
 
-// --- API: 常量 (Constants) ---
+
 
 /**
  * @brief 获取一个 'undef' 常量 (唯一化)
@@ -229,7 +229,7 @@ IRValueNode *ir_constant_get_f32(IRContext *ctx, float value);
  */
 IRValueNode *ir_constant_get_f64(IRContext *ctx, double value);
 
-// --- API: 字符串 (String Interning) ---
+
 
 /**
  * @brief 唯一化一个字符串 (String Interning)
@@ -252,4 +252,4 @@ const char *ir_context_intern_str(IRContext *ctx, const char *str);
  */
 const char *ir_context_intern_str_slice(IRContext *ctx, const char *str, size_t len);
 
-#endif // IR_CONTEXT_H
+#endif

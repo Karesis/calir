@@ -18,16 +18,16 @@
 /* src/ir/lexer.c */
 #include "ir/lexer.h"
 #include "ir/context.h"
-#include "utils/id_list.h" // 包含 container_of (虽然这里没用，但保持一致)
+#include "utils/id_list.h"
 
 #include <assert.h>
-#include <ctype.h>  // for isalpha, isdigit, isalnum
-#include <stdlib.h> // for strtoll
-#include <string.h> // for strncmp
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
 
-// -----------------------------------------------------------------
-// 辅助谓词 (Helper Predicates)
-// -----------------------------------------------------------------
+
+
+
 
 static bool
 is_ident_start(char c)
@@ -41,9 +41,9 @@ is_ident_continue(char c)
   return isalnum(c) || c == '_' || c == '.';
 }
 
-// -----------------------------------------------------------------
-// 辅助解析器 (Helper Parsers)
-// -----------------------------------------------------------------
+
+
+
 
 static char
 current_char(Lexer *l)
@@ -117,7 +117,7 @@ static void
 parse_ident(Lexer *l, Token *out_token)
 {
   const char *start = l->ptr;
-  // (我们已经知道第一个字符是 ident_start)
+
   advance(l);
 
   while (is_ident_continue(current_char(l)))
@@ -174,18 +174,18 @@ parse_number(Lexer *l, Token *out_token)
     advance(l);
   }
 
-  // (我们已经知道至少有一位数字)
+
   int64_t int_part = 0;
   while (isdigit(current_char(l)))
   {
     int_part = int_part * 10 + (advance(l) - '0');
   }
 
-  // [新] 检查浮点数
+
   if (current_char(l) == '.' && isdigit(peek_char(l)))
   {
-    // 这是一个浮点数
-    advance(l); // 消耗 '.'
+
+    advance(l);
 
     double frac_part = 0.0;
     double div = 10.0;
@@ -201,12 +201,12 @@ parse_number(Lexer *l, Token *out_token)
   }
   else
   {
-    // 这是一个整数
+
     out_token->type = TK_INTEGER_LITERAL;
     out_token->as.int_val = is_negative ? -int_part : int_part;
   }
 
-  // 检查非法后缀 (e.g., "123foo")
+
   if (is_ident_start(current_char(l)))
   {
     out_token->type = TK_ILLEGAL;
@@ -223,8 +223,8 @@ parse_string(Lexer *l, Token *out_token)
 {
   const char *start = l->ptr;
 
-  // 循环直到找到结束的 '"'
-  // TODO: 当前不支持转义字符 (e.g., \" or \n)
+
+
   while (current_char(l) != '"' && current_char(l) != '\0')
   {
     advance(l);
@@ -232,22 +232,22 @@ parse_string(Lexer *l, Token *out_token)
 
   if (current_char(l) == '\0')
   {
-    // 未闭合的字符串
+
     out_token->type = TK_ILLEGAL;
     return;
   }
 
   size_t len = l->ptr - start;
-  advance(l); // 消耗 '"'
+  advance(l);
 
   out_token->type = TK_STRING_LITERAL;
-  // (我们 intern 字符串的 *内容*，不包括引号)
+
   out_token->as.ident_val = ir_context_intern_str_slice(l->context, start, len);
 }
 
-// -----------------------------------------------------------------
-// 核心扫描器 (Core Scanner)
-// -----------------------------------------------------------------
+
+
+
 
 /**
  * @brief  扫描下一个 Token 并填充 out_token。
@@ -255,24 +255,24 @@ parse_string(Lexer *l, Token *out_token)
 static void
 lexer_scan_token(Lexer *l, Token *out_token)
 {
-  // 1. 跳过空白和注释
+
   skip_whitespace(l);
 
-  // 2. 存储 Token 的起始行号
+
   out_token->line = l->line;
   out_token->column = (l->ptr - l->line_start) + 1;
 
-  // 3. 消耗一个字符并进行分派
+
   char c = advance(l);
 
   switch (c)
   {
-  // --- 文件结束 ---
+
   case '\0':
     out_token->type = TK_EOF;
     break;
 
-  // --- 标点符号 ---
+
   case '=':
     out_token->type = TK_EQ;
     break;
@@ -306,21 +306,21 @@ lexer_scan_token(Lexer *l, Token *out_token)
   case '>':
     out_token->type = TK_GT;
     break;
-    // 处理 '...'
+
   case '.':
     if (current_char(l) == '.' && peek_char(l) == '.')
     {
-      advance(l); // 消耗第二个 '.'
-      advance(l); // 消耗第三个 '.'
+      advance(l);
+      advance(l);
       out_token->type = TK_ELLIPSIS;
     }
     else
     {
-      // '.' 或 '..' 都是非法的
+
       out_token->type = TK_ILLEGAL;
     }
     break;
-  // --- 标识符 ---
+
   case '@':
     parse_global_or_local(l, TK_GLOBAL_IDENT, out_token);
     break;
@@ -331,28 +331,28 @@ lexer_scan_token(Lexer *l, Token *out_token)
     parse_global_or_local(l, TK_LABEL_IDENT, out_token);
     break;
 
-  // 字符串
+
   case '"':
     parse_string(l, out_token);
     break;
 
-  // --- 默认情况 (标识符, 数字, 或非法字符) ---
+
   default:
-    // 1. 普通标识符 (e.g., 'define', 'add')
+
     if (is_ident_start(c))
     {
-      l->ptr--; // 回退一步
+      l->ptr--;
       parse_ident(l, out_token);
     }
-    // 2. 数字 (e.g., '123', '-42', '1.23')
+
     else if (isdigit(c) || (c == '-' && isdigit(peek_char(l))))
     {
-      // parse_number 仍然会处理 '-' 和 '.'
-      // 但我们只在 '-' 后面*明确*跟着数字时才进入
-      l->ptr--; // 回退一步
+
+
+      l->ptr--;
       parse_number(l, out_token);
     }
-    // 3. 非法字符
+
     else
     {
       out_token->type = TK_ILLEGAL;
@@ -361,9 +361,9 @@ lexer_scan_token(Lexer *l, Token *out_token)
   }
 }
 
-// -----------------------------------------------------------------
-// 公共 API (Public API) - [!! 已升级 !!]
-// -----------------------------------------------------------------
+
+
+
 
 /**
  * @brief 初始化 Lexer
@@ -378,8 +378,8 @@ ir_lexer_init(Lexer *lexer, const char *buffer, IRContext *ctx)
   lexer->line = 1;
   lexer->line_start = buffer;
 
-  // [!! 核心 !!]
-  // 填充 K=1 和 K=2 (current 和 peek)
+
+
   lexer_scan_token(lexer, &lexer->current);
   lexer_scan_token(lexer, &lexer->peek);
 }
@@ -390,15 +390,15 @@ ir_lexer_init(Lexer *lexer, const char *buffer, IRContext *ctx)
 void
 ir_lexer_next(Lexer *lexer)
 {
-  // 1. 将 peek 移到 current
+
   lexer->current = lexer->peek;
 
-  // 2. 如果 current 不是 EOF，扫描下一个 token 到 peek
+
   if (lexer->current.type != TK_EOF)
   {
     lexer_scan_token(lexer, &lexer->peek);
   }
-  // (如果 current 是 EOF, peek 也会是 EOF)
+
 }
 
 /**
@@ -427,12 +427,12 @@ ir_lexer_eat(Lexer *lexer, TokenType expected)
 {
   if (lexer->current.type != expected)
   {
-    // 'eat' 是一个高级辅助函数，它不应该将
-    // token 设为 ILLEGAL，它应该只报告 false。
-    // Parser 负责报告错误。
+
+
+
     return false;
   }
-  // 消耗匹配的 Token
+
   ir_lexer_next(lexer);
   return true;
 }

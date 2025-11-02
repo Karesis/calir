@@ -48,7 +48,7 @@ typedef bool (*GenericEqualFn)(const void *key1, const void *key2);
  * - 哈希和比较逻辑由用户在创建时通过函数指针提供。
  */
 
-// 不透明的泛型哈希表结构体
+
 typedef struct GenericHashMap GenericHashMap;
 
 /**
@@ -117,7 +117,7 @@ size_t generic_hashmap_size(const GenericHashMap *map);
 /** @brief GenericHashMap 的一个条目 (Key/Value 对) */
 typedef struct
 {
-  const void *key; // Key 是一个 void*
+  const void *key;
   void *value;
 } GenericHashMapEntry;
 
@@ -140,4 +140,4 @@ GenericHashMapIter generic_hashmap_iter(const GenericHashMap *map);
  */
 bool generic_hashmap_iter_next(GenericHashMapIter *iter, GenericHashMapEntry *entry_out);
 
-#endif // HASHMAP_GENERIC_H
+#endif

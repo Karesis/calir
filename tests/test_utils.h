@@ -31,11 +31,11 @@
  * 这正是我们想要的：每个 test_*.c 都管理自己的套件计数。
  */
 
-// 全局状态: 跟踪套件的总数
+
 static int __calir_total_suites_run = 0;
 static int __calir_total_suites_failed = 0;
 
-// 套件局部状态: 跟踪当前套件的测试
+
 static const char *__calir_current_suite_name = "";
 static int __calir_current_suite_tests = 0;
 static int __calir_current_suite_passed = 0;
@@ -137,4 +137,4 @@ static int __calir_current_suite_passed = 0;
     }                                                                                                                  \
   } while (0)
 
-#endif // CALIR_TEST_UTILS_H
+#endif

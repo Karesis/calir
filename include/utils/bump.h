@@ -24,9 +24,9 @@
 #ifndef BUMP_H
 #define BUMP_H
 
-#include <stdbool.h> // for bool
-#include <stddef.h>  // for size_t
-#include <stdint.h>  // for SIZE_MAX, uintptr_t
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 
 /*
@@ -43,21 +43,21 @@
 typedef struct ChunkFooter ChunkFooter;
 struct ChunkFooter
 {
-  // 指向此 Chunk 内存的起始地址 (即 malloc 返回的指针)
+
   unsigned char *data;
 
-  // 此 Chunk 的总大小 (即 malloc 分配的大小)
+
   size_t chunk_size;
 
-  // 指向上一个 Chunk 的 Footer
+
   ChunkFooter *prev;
 
-  // 碰撞指针。指向下一个分配将开始的*末尾*地址。
-  // 它从 (unsigned char*)this - sizeof(ChunkFooter) 开始，向 data 移动。
+
+
   unsigned char *ptr;
 
-  // 到此 Chunk 为止，所有 Chunk 的 *可用* 空间总和
-  // (不包括 Footer 自身)
+
+
   size_t allocated_bytes;
 };
 
@@ -76,14 +76,14 @@ typedef struct
  */
 typedef struct
 {
-  // 指向当前正在使用的 Chunk 的 Footer
+
   ChunkFooter *current_chunk_footer;
 
-  // 分配上限 (SIZE_MAX 表示无上限)
+
   size_t allocation_limit;
 
-  // 最小对齐。
-  // 对应 Rust 的 const MIN_ALIGN。在 C 中我们将其作为运行时字段。
+
+
   size_t min_align;
 } Bump;
 
@@ -243,17 +243,17 @@ size_t bump_get_allocated_bytes(Bump *bump);
  */
 #define BUMP_ALLOC(bump_ptr, T) ((T *)bump_alloc((bump_ptr), sizeof(T), _Alignof(T)))
 
-// 分配 T 的数组（未初始化）
+
 #define BUMP_ALLOC_SLICE(bump_ptr, T, count) ((T *)bump_alloc((bump_ptr), sizeof(T) * (count), _Alignof(T)))
 
-// 分配并复制 T 的数组
+
 #define BUMP_ALLOC_SLICE_COPY(bump_ptr, T, src_ptr, count)                                                             \
   ((T *)bump_alloc_copy((bump_ptr), (src_ptr), sizeof(T) * (count), _Alignof(T)))
 
-// 分配并零初始化单个 T 实例
+
 #define BUMP_ALLOC_ZEROED(bump_ptr, T) ((T *)memset(BUMP_ALLOC((bump_ptr), T), 0, sizeof(T)))
 
-// 分配并零初始化 T 的数组
+
 #define BUMP_ALLOC_SLICE_ZEROED(bump_ptr, T, count)                                                                    \
   ((T *)memset(BUMP_ALLOC_SLICE((bump_ptr), T, (count)), 0, sizeof(T) * (count)))
 

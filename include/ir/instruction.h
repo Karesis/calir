@@ -23,62 +23,62 @@
 #include "ir/value.h"
 #include "utils/id_list.h"
 
-// 指令类型
+
 typedef enum
 {
-  // 终结者指令
-  IR_OP_RET,     // return <val>
-  IR_OP_BR,      // branch <target_bb>
-  IR_OP_COND_BR, // branch <cond>, <true_bb>, <false_bb>
 
-  // 二元运算
-  IR_OP_ADD,  // add <type> <op1>, <op2>
-  IR_OP_SUB,  // sub <type> <op1>, <op2>
-  IR_OP_ICMP, // icmp <pred> <type> <op1>, <op2>
+  IR_OP_RET,
+  IR_OP_BR,
+  IR_OP_COND_BR,
 
-  // 内存操作
+
+  IR_OP_ADD,
+  IR_OP_SUB,
+  IR_OP_ICMP,
+
+
   IR_OP_ALLOCA,
   IR_OP_LOAD,
   IR_OP_STORE,
-  IR_OP_PHI, // phi <type> [ <val1>, <bb1> ], [ <val2>, <bb2> ], ...
-  IR_OP_GEP, // gep
-  IR_OP_CALL // call
+  IR_OP_PHI,
+  IR_OP_GEP,
+  IR_OP_CALL
 } IROpcode;
 
-// ICMP (Integer Compare) 谓词
+
 typedef enum
 {
-  IR_ICMP_EQ,  // 'eq' (equal)
-  IR_ICMP_NE,  // 'ne' (not equal)
-  IR_ICMP_UGT, // 'ugt' (unsigned greater than)
-  IR_ICMP_UGE, // 'uge' (unsigned greater or equal)
-  IR_ICMP_ULT, // 'ult' (unsigned less than)
-  IR_ICMP_ULE, // 'ule' (unsigned less or equal)
-  IR_ICMP_SGT, // 'sgt' (signed greater than)
-  IR_ICMP_SGE, // 'sge' (signed greater or equal)
-  IR_ICMP_SLT, // 'slt' (signed less than)
-  IR_ICMP_SLE, // 'sle' (signed less or equal)
+  IR_ICMP_EQ,
+  IR_ICMP_NE,
+  IR_ICMP_UGT,
+  IR_ICMP_UGE,
+  IR_ICMP_ULT,
+  IR_ICMP_ULE,
+  IR_ICMP_SGT,
+  IR_ICMP_SGE,
+  IR_ICMP_SLT,
+  IR_ICMP_SLE,
 } IRICmpPredicate;
 
-// 指令
+
 typedef struct
 {
-  IRValueNode result; // 指令计算的结果
-  IDList list_node;   // <-- 节点，用于加入 BasicBlock->instructions 链表
+  IRValueNode result;
+  IDList list_node;
 
   IROpcode opcode;
-  IDList operands; // 所使用的所有节点
+  IDList operands;
   IRBasicBlock *parent;
   union {
-    // 对应 IR_OP_ICMP
+
     struct
     {
       IRICmpPredicate predicate;
     } icmp;
-    // 对应 IR_OP_GEP
+
     struct
     {
-      IRType *source_type; // GEP 'inbounds' <type>, <ptr> ...
+      IRType *source_type;
       bool inbounds;
     } gep;
   } as;
@@ -89,7 +89,7 @@ typedef struct
  */
 void ir_instruction_erase_from_parent(IRInstruction *inst);
 
-// --- 调试 ---
+
 
 /**
  * @brief 将单条指令的 IR 打印到 IRPrinter

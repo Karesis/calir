@@ -19,14 +19,14 @@
 #ifndef IR_PARSER_H
 #define IR_PARSER_H
 
-#include "ir/builder.h"    // For IRBuilder
-#include "ir/context.h"    // For IRContext
-#include "ir/function.h"   // For IRFunction
-#include "ir/lexer.h"      // For Lexer
-#include "ir/module.h"     // For IRModule
-#include "utils/bump.h"    // For Bump
-#include "utils/hashmap.h" // For PtrHashMap
-#include <stdbool.h>       // For bool
+#include "ir/builder.h"
+#include "ir/context.h"
+#include "ir/function.h"
+#include "ir/lexer.h"
+#include "ir/module.h"
+#include "utils/bump.h"
+#include "utils/hashmap.h"
+#include <stdbool.h>
 
 /**
  * @brief Parser 状态机
@@ -86,9 +86,9 @@ typedef struct Parser
    */
   struct
   {
-    char message[256]; // 格式化后的错误信息
-    size_t line;       // 发生错误的行号
-    size_t column;     // 发生错误的列号
+    char message[256];
+    size_t line;
+    size_t column;
   } error;
 
 } Parser;
@@ -107,4 +107,4 @@ typedef struct Parser
  */
 IRModule *ir_parse_module(IRContext *ctx, const char *source_buffer);
 
-#endif // IR_PARSER_H
+#endif

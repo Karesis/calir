@@ -29,11 +29,11 @@
  */
 typedef struct IRPrinter
 {
-  // 策略：目标对象 (FILE* 或 StringBuf*)
+
   void *target;
-  // 机制 1：附加一个原始字符串
+
   void (*append_str_func)(void *target, const char *str);
-  // 机制 2：附加一个格式化的 va_list
+
   void (*append_vfmt_func)(void *target, const char *fmt, va_list args);
 } IRPrinter;
 
@@ -67,4 +67,4 @@ void ir_print_str(IRPrinter *p, const char *str);
  */
 void ir_printf(IRPrinter *p, const char *fmt, ...);
 
-#endif // CALIR_IR_PRINTER_H
+#endif

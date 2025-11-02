@@ -20,9 +20,9 @@
 
 #include "ir/context.h"
 #include "ir/type.h"
-#include "ir/value.h" // 包含 IRValueNode, IRValueKind
+#include "ir/value.h"
 #include <stdbool.h>
-#include <stdint.h> // for int64_t, etc.
+#include <stdint.h>
 
 /**
  * @brief 区分不同类型的常量
@@ -93,4 +93,4 @@ IRValueNode *ir_constant_create_int(IRContext *ctx, IRType *type, int64_t value)
  */
 IRValueNode *ir_constant_create_float(IRContext *ctx, IRType *type, double value);
 
-#endif // IR_CONSTANT_H
+#endif

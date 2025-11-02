@@ -15,25 +15,25 @@
  */
 
 
-// src/ir/instruction.c
+
 #include "ir/instruction.h"
-#include "ir/basicblock.h" // 需要 BasicBlock->parent
-#include "ir/constant.h"   // 需要 ir_constant_get_undef
-#include "ir/context.h"    // 需要 Context
-#include "ir/function.h"   // 需要 Function->parent
-#include "ir/module.h"     // 需要 Module->context
+#include "ir/basicblock.h"
+#include "ir/constant.h"
+#include "ir/context.h"
+#include "ir/function.h"
+#include "ir/module.h"
 #include "ir/printer.h"
-#include "ir/type.h"  // 需要 ir_type_dump
-#include "ir/use.h"   // 需要 ir_use_unlink
-#include "ir/value.h" // 需要 ir_value_dump, ir_value_replace_all_uses_with
+#include "ir/type.h"
+#include "ir/use.h"
+#include "ir/value.h"
 
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
-// --- 内部辅助函数 (用于 dump) ---
 
-// 辅助函数：将 ICMP 谓词转换为字符串
+
+
 static const char *
 ir_icmp_predicate_to_string(IRICmpPredicate pred)
 {
@@ -85,7 +85,7 @@ get_operand(IRInstruction *inst, int index)
   return use->value;
 }
 
-// --- 生命周期  ---
+
 
 /**
  * @brief 从其父基本块中安全地擦除一条指令
@@ -96,37 +96,37 @@ ir_instruction_erase_from_parent(IRInstruction *inst)
   if (!inst)
     return;
 
-  // 1. 获取 Context
-  //    inst -> BasicBlock -> Function -> Module -> Context
+
+
   assert(inst->parent != NULL && "Instruction has no parent BasicBlock");
   assert(inst->parent->parent != NULL && "BasicBlock has no parent Function");
   assert(inst->parent->parent->parent != NULL && "Function has no parent Module");
   IRContext *ctx = inst->parent->parent->parent->context;
 
-  // 2. 将所有对该指令结果的使用替换为 'undef'
+
   if (inst->result.type->kind != IR_TYPE_VOID && !list_empty(&inst->result.uses))
   {
-    //  调用 Context API
+
     IRValueNode *undef = ir_constant_get_undef(ctx, inst->result.type);
     ir_value_replace_all_uses_with(&inst->result, undef);
   }
   assert(list_empty(&inst->result.uses) && "Instruction result still in use!");
 
-  // 3. 解开 (unlink) 所有 Operands (IRUse 边)
-  //    不 "destroy" use, 只是 "unlink"
+
+
   IDList *iter, *temp;
   list_for_each_safe(&inst->operands, iter, temp)
   {
     IRUse *use = list_entry(iter, IRUse, user_node);
     ir_use_unlink(use);
-    // (IRUse 对象仍在 Arena 中, 将被统一释放)
+
   }
 
-  // 4. 从父基本块的链表中移除
+
   list_del(&inst->list_node);
 }
 
-// --- 调试 ---
+
 
 void
 ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
@@ -137,16 +137,16 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
     return;
   }
 
-  // --- 1. 打印结果 (新规范: %name: type =) ---
+
   int has_result = (inst->result.type && inst->result.type->kind != IR_TYPE_VOID);
   if (has_result)
   {
-    // [!!] 调用已重构的 ir_value_dump_with_type
+
     ir_value_dump_with_type(&inst->result, p);
     ir_print_str(p, " = ");
   }
 
-  // 2. 打印 Opcode 和 Operands
+
   IRValueNode *op1, *op2;
 
   switch (inst->opcode)
@@ -200,7 +200,7 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
   case IR_OP_ALLOCA:
     ir_print_str(p, "alloc ");
     assert(inst->result.type->kind == IR_TYPE_PTR);
-    // [!!] 调用已重构的 ir_type_dump
+
     ir_type_dump(inst->result.type->as.pointee_type, p);
     break;
 
@@ -295,7 +295,7 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
     ir_print_str(p, "(");
 
     IDList *chead = &inst->operands;
-    IDList *citer = chead->next->next; // 跳过 callee
+    IDList *citer = chead->next->next;
     int arg_idx = 0;
     while (citer != chead)
     {

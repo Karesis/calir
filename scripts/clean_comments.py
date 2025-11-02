@@ -157,7 +157,7 @@ def is_excluded(relative_path_str: str) -> bool:
 
 def main():
     project_root = Path(__file__).parent.parent
-    print("--- Calico-IR 临时注释清理 (激进模式) ---")
+    print("--- Calico-IR 临时注释清理 ---")
     print("模式: 清理 (Clean)")
 
     total_files_processed = 0

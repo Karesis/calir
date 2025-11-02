@@ -29,15 +29,15 @@
  */
 typedef struct IRFunction
 {
-  IRValueNode entry_address; // 函数入口地址
-  IRModule *parent;          // <-- 指向父模块
+  IRValueNode entry_address;
+  IRModule *parent;
 
-  IRType *return_type;   // 缓存的返回类型 (e.g., i32)
-  IRType *function_type; // [!!] 新增: 完整的函数类型 (e.g., i32 (i32, f64))
+  IRType *return_type;
+  IRType *function_type;
 
-  IDList list_node;    // <-- 节点，用于加入 Module->functions 链表
-  IDList arguments;    // 链表头 (元素是 IRArgument)
-  IDList basic_blocks; // 链表头 (元素是 IRBasicBlock)
+  IDList list_node;
+  IDList arguments;
+  IDList basic_blocks;
 } IRFunction;
 
 /**
@@ -46,8 +46,8 @@ typedef struct IRFunction
 typedef struct IRArgument
 {
   IRValueNode value;
-  IDList list_node;   // <-- 节点，用于加入 Function->arguments 链表
-  IRFunction *parent; // <-- 指向父函数
+  IDList list_node;
+  IRFunction *parent;
 } IRArgument;
 
 /**

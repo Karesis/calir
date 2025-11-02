@@ -39,7 +39,7 @@ typedef enum
   RUNTIME_VAL_I64,
   RUNTIME_VAL_F32,
   RUNTIME_VAL_F64,
-  RUNTIME_VAL_PTR // 指向 *宿主* (host) 内存的指针
+  RUNTIME_VAL_PTR
 } RuntimeValueKind;
 
 /**
@@ -56,7 +56,7 @@ typedef struct RuntimeValue
     int64_t val_i64;
     float val_f32;
     double val_f64;
-    void *val_ptr; // 用于 alloca, GEP 等
+    void *val_ptr;
   } as;
 } RuntimeValue;
 
@@ -67,10 +67,10 @@ typedef struct RuntimeValue
  */
 typedef struct Interpreter
 {
-  Bump *arena; // 用于所有运行时对象的竞技场
+  Bump *arena;
 } Interpreter;
 
-// --- 解释器 API ---
+
 
 /**
  * @brief 创建一个新的解释器实例。
@@ -98,4 +98,4 @@ void interpreter_destroy(Interpreter *interp);
 bool interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **args, size_t num_args,
                               RuntimeValue *result_out);
 
-#endif // CALIR_INTERPRETER_INTERPRETER_H
+#endif

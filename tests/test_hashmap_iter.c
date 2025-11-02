@@ -15,28 +15,28 @@
  */
 
 
-#include <math.h> // for fabs
+#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-// [!!] 1. 移除 <assert.h>
 
-// 包含 bump 分配器
+
+
 #include "utils/bump.h"
 
-// 包含所有 hashmap API
+
 #include "utils/hashmap/float.h"
 #include "utils/hashmap/generic.h"
 #include "utils/hashmap/int.h"
 #include "utils/hashmap/ptr.h"
 #include "utils/hashmap/str_slice.h"
 
-// 包含 xxhash.h (generic 测试需要)
+
 #define XXH_INLINE_ALL
 #include "utils/xxhash.h"
 
-// [!!] 2. 包含我们统一的测试框架
+
 #include "test_utils.h"
 
 /*
@@ -44,24 +44,24 @@
  * --- [!!] 3. 移除旧的测试框架 ---
  * ========================================
  */
-// (移除了 tests_run, tests_failed, TEST_ASSERT, RUN_TEST)
+
 
 /*
  * ========================================
  * --- I64HashMap (整数) 测试 ---
  * ========================================
  */
-// [!!] 4. 函数签名改为返回 int
+
 int
 test_int_iterators()
 {
-  // [!!] 5. 使用 SUITE_START
+
   SUITE_START("HashMap Iter: I64");
 
   Bump *arena = bump_new();
   I64HashMap *map = i64_hashmap_create(arena, 0);
 
-  // 1. 测试空迭代
+
   printf("  Testing empty map...\n");
   int count = 0;
   I64HashMapIter iter = i64_hashmap_iter(map);
@@ -70,10 +70,10 @@ test_int_iterators()
   {
     count++;
   }
-  // [!!] 6. 使用 SUITE_ASSERT
+
   SUITE_ASSERT(count == 0, "Empty map iterator yielded %d items", count);
 
-  // 2. 填充 map, 触发 grow
+
   printf("  Testing full map (with grow)...\n");
   int64_t key_sum = 0;
   intptr_t val_sum = 0;
@@ -95,9 +95,9 @@ test_int_iterators()
   SUITE_ASSERT(key_sum == 5050, "Sum of keys should be 5050, got %lld", (long long)key_sum);
   SUITE_ASSERT(val_sum == 5050, "Sum of values should be 5050, got %ld", (long)val_sum);
 
-  // 3. (关键) 测试带墓碑 (Tombstones) 的迭代
+
   printf("  Testing map with tombstones...\n");
-  // 移除所有偶数
+
   for (int64_t i = 2; i <= 100; i += 2)
   {
     i64_hashmap_remove(map, i);
@@ -117,16 +117,16 @@ test_int_iterators()
                  (long long)entry.key);
   }
   SUITE_ASSERT(count == 50, "Tombstone map iterator yielded %d items (expected 50)", count);
-  int64_t expected_key_sum = 2500; // 5050 - 2550
+  int64_t expected_key_sum = 2500;
   intptr_t expected_val_sum = 2500;
   SUITE_ASSERT(key_sum == expected_key_sum, "Sum of keys should be %lld, got %lld", (long long)expected_key_sum,
                (long long)key_sum);
   SUITE_ASSERT(val_sum == expected_val_sum, "Sum of values should be %ld, got %ld", (long)expected_val_sum,
                (long)val_sum);
 
-  // [!!] 7. 在 SUITE_END 之前释放 arena
+
   bump_free(arena);
-  // [!!] 8. 使用 SUITE_END
+
   SUITE_END();
 }
 
@@ -143,7 +143,7 @@ test_float_iterators()
   Bump *arena = bump_new();
   F64HashMap *map = f64_hashmap_create(arena, 0);
 
-  // 1. 填充并移除
+
   printf("  Testing float map with tombstones...\n");
   f64_hashmap_put(map, 1.1, (void *)1);
   f64_hashmap_put(map, 2.2, (void *)2);
@@ -154,7 +154,7 @@ test_float_iterators()
   f64_hashmap_remove(map, 4.4);
   SUITE_ASSERT(f64_hashmap_size(map) == 2, "Float map size should be 2, got %zu", f64_hashmap_size(map));
 
-  // 2. 迭代
+
   int count = 0;
   double key_sum = 0;
   F64HashMapIter iter = f64_hashmap_iter(map);
@@ -274,7 +274,7 @@ test_str_iterators()
  * ========================================
  */
 
-// (辅助函数保持不变)
+
 static uint64_t
 generic_hash_fn(const void *key)
 {
@@ -337,11 +337,11 @@ test_generic_iterators()
  * ========================================
  */
 
-// [!!] 9. 使用我们新的、统一的 main 运行器
+
 int
 main()
 {
-  // 设置此测试文件的总套件名称
+
   __calir_current_suite_name = "HashMap Iterators";
 
   __calir_total_suites_run++;
@@ -374,6 +374,6 @@ main()
     __calir_total_suites_failed++;
   }
 
-  // 打印最终摘要并返回 0 或 1
+
   TEST_SUMMARY();
 }

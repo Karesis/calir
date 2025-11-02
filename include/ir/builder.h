@@ -15,7 +15,7 @@
  */
 
 
-// include/ir/builder.h (重构版)
+
 #ifndef IR_BUILDER_H
 #define IR_BUILDER_H
 
@@ -23,7 +23,7 @@
 #include "ir/value.h"
 #include <stddef.h>
 
-// --- 前向声明 ---
+
 typedef struct IRContext IRContext;
 typedef struct IRBasicBlock IRBasicBlock;
 typedef struct IRType IRType;
@@ -39,18 +39,18 @@ typedef struct IRBuilder
   size_t next_temp_reg_id;
 } IRBuilder;
 
-// --- 生命周期  ---
+
 IRBuilder *ir_builder_create(IRContext *ctx);
 void ir_builder_destroy(IRBuilder *builder);
 void ir_builder_set_insertion_point(IRBuilder *builder, IRBasicBlock *bb);
 
-// --- API: 终结者指令 (Terminators) ---
+
 IRValueNode *ir_builder_create_ret(IRBuilder *builder, IRValueNode *val);
 IRValueNode *ir_builder_create_br(IRBuilder *builder, IRValueNode *target_bb);
 IRValueNode *ir_builder_create_cond_br(IRBuilder *builder, IRValueNode *cond, IRValueNode *true_bb,
                                        IRValueNode *false_bb);
 
-// --- API: 二元运算 ---
+
 
 /** * @brief 构建 'add <type> <lhs>, <rhs>'
  * @param name_hint [!!] (可选) 用于调试的名字 (e.g., "sum")
@@ -68,7 +68,7 @@ IRValueNode *ir_builder_create_sub(IRBuilder *builder, IRValueNode *lhs, IRValue
 IRValueNode *ir_builder_create_icmp(IRBuilder *builder, IRICmpPredicate pred, IRValueNode *lhs, IRValueNode *rhs,
                                     const char *name_hint);
 
-// --- API: 内存操作 ---
+
 
 /** * @brief 构建 'alloca <type>'
  * @param name_hint [!!] (可选) (e.g., "ptr_x")
@@ -96,7 +96,7 @@ IRValueNode *ir_builder_create_store(IRBuilder *builder, IRValueNode *val, IRVal
 IRValueNode *ir_builder_create_gep(IRBuilder *builder, IRType *source_type, IRValueNode *base_ptr,
                                    IRValueNode **indices, size_t num_indices, bool inbounds, const char *name_hint);
 
-// --- API: PHI 节点 ---
+
 
 /**
  * @brief 构建 'phi <type>'
@@ -107,7 +107,7 @@ IRValueNode *ir_builder_create_phi(IRBuilder *builder, IRType *type, const char 
 /** @brief 向 PHI 节点添加 [value, basic_block] 对 (保持不变) */
 void ir_phi_add_incoming(IRValueNode *phi_node, IRValueNode *value, IRBasicBlock *incoming_bb);
 
-// --- API: CALL 节点
+
 /**
  * @brief 构建 'call <callee>, <arg1>, ...'
  *
@@ -117,4 +117,4 @@ void ir_phi_add_incoming(IRValueNode *phi_node, IRValueNode *value, IRBasicBlock
 IRValueNode *ir_builder_create_call(IRBuilder *builder, IRValueNode *callee_func, IRValueNode **args, size_t num_args,
                                     const char *name_hint);
 
-#endif // IR_BUILDER_H
+#endif

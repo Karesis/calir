@@ -15,18 +15,18 @@
  */
 
 
-// include/analysis/cfg.h
+
 #ifndef CALIR_ANALYSIS_CFG_H
 #define CALIR_ANALYSIS_CFG_H
 
 #include "ir/basicblock.h"
 #include "ir/function.h"
-#include "ir/instruction.h" // 需要访问终结者指令
+#include "ir/instruction.h"
 #include "utils/bump.h"
-#include "utils/hashmap.h" // PtrHashMap
+#include "utils/hashmap.h"
 #include "utils/id_list.h"
 
-// 前向声明
+
 typedef struct CFGNode CFGNode;
 
 /**
@@ -35,8 +35,8 @@ typedef struct CFGNode CFGNode;
  */
 typedef struct CFGEdge
 {
-  CFGNode *node;    // 指向目标 (succ) 或来源 (pred) 节点
-  IDList list_node; // 侵入式链表节点
+  CFGNode *node;
+  IDList list_node;
 } CFGEdge;
 
 /**
@@ -44,29 +44,29 @@ typedef struct CFGEdge
  */
 struct CFGNode
 {
-  IRBasicBlock *block; // 指向原始 BB
-  int id;              // 稠密 ID (从 0 到 N-1)
+  IRBasicBlock *block;
+  int id;
 
-  // 存储 CFGEdge 结构体
-  IDList successors;   // CFGEdge 链表 (的头)
-  IDList predecessors; // CFGEdge 链表 (的头)
+
+  IDList successors;
+  IDList predecessors;
 };
 
-// 整个函数的 CFG
+
 typedef struct FunctionCFG
 {
   IRFunction *func;
   int num_nodes;
 
-  // 竞技场，用于分配所有 CFGNode, CFGEdge 和 nodes 数组
+
   Bump arena;
 
-  // 存储所有 CFGNode 的数组，通过 node->id 索引
+
   CFGNode *nodes;
 
-  CFGNode *entry_node; // 入口块 (id == 0)
+  CFGNode *entry_node;
 
-  // 从 IRBasicBlock* 快速映射到 CFGNode*
+
   PtrHashMap *block_to_node_map;
 
 } FunctionCFG;
@@ -94,4 +94,4 @@ cfg_get_node(FunctionCFG *cfg, IRBasicBlock *bb)
   return (CFGNode *)ptr_hashmap_get(cfg->block_to_node_map, bb);
 }
 
-#endif // CALIR_ANALYSIS_CFG_H
+#endif

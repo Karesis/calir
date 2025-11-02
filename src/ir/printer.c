@@ -43,7 +43,7 @@ ir_printer_string_buf_append_str(void *target, const char *str)
 static void
 ir_printer_string_buf_append_vfmt(void *target, const char *fmt, va_list args)
 {
-  // [!!] 调用我们刚刚在 StringBuf 中添加的新函数
+
   string_buf_vappend_fmt((StringBuf *)target, fmt, args);
 }
 

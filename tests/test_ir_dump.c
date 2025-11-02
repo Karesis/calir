@@ -15,12 +15,12 @@
  */
 
 
-// tests/test_ir_dump.c
+
 #include <stdbool.h>
 #include <stdio.h>
-#include <string.h> // [!!] 新增: 包含 strcmp
+#include <string.h>
 
-// 包含你的 calir 项目的核心头文件
+
 #include "ir/basicblock.h"
 #include "ir/builder.h"
 #include "ir/constant.h"
@@ -30,7 +30,7 @@
 #include "ir/type.h"
 #include "ir/value.h"
 
-// [!!] 新增: 包含测试框架
+
 #include "test_utils.h"
 #include "utils/bump.h"
 
@@ -50,8 +50,8 @@ const char *EXPECTED_IR = "module = \"test_indirect_call_module\"\n"
                           "  ret %result: i32\n"
                           "}\n";
 
-// --- 辅助函数：构建 @add(i32, i32) ---
-// [!!] (此辅助函数保持不变)
+
+
 IRFunction *
 build_add_function(IRModule *mod)
 {
@@ -83,25 +83,25 @@ test_indirect_call()
 {
   SUITE_START("IR Builder: Indirect Call");
 
-  // 1. --- 设置 ---
+
   Bump arena;
-  bump_init(&arena); // [!!] 为 ...dump_to_string 创建 arena
+  bump_init(&arena);
   IRContext *ctx = ir_context_create();
   IRModule *mod = ir_module_create(ctx, "test_indirect_call_module");
   IRBuilder *builder = ir_builder_create(ctx);
 
-  // 2. --- 获取类型 ---
+
   IRType *ty_i32 = ir_type_get_i32(ctx);
 
-  // 3. --- [关键] 创建函数指针类型 ---
+
   IRType *add_param_types[2] = {ty_i32, ty_i32};
   IRType *ty_add_func = ir_type_get_function(ctx, ty_i32, add_param_types, 2, false);
   IRType *ty_func_ptr = ir_type_get_ptr(ctx, ty_add_func);
 
-  // 4. --- 创建 "callee" 函数 @add ---
+
   build_add_function(mod);
 
-  // 5. --- 创建 "caller" 函数 @do_operation ---
+
   IRFunction *caller_func = ir_function_create(mod, "do_operation", ty_i32);
   IRArgument *arg_ptr_s = ir_argument_create(caller_func, ty_func_ptr, "func_ptr");
   IRArgument *arg_x_s = ir_argument_create(caller_func, ty_i32, "x");
@@ -111,17 +111,17 @@ test_indirect_call()
   IRValueNode *val_x = &arg_x_s->value;
   IRValueNode *val_y = &arg_y_s->value;
 
-  // 6. --- 为 "caller" 创建 'entry' 块 ---
+
   IRBasicBlock *bb_entry = ir_basic_block_create(caller_func, "entry");
   ir_function_append_basic_block(caller_func, bb_entry);
   ir_builder_set_insertion_point(builder, bb_entry);
 
-  // 7. --- [关键测试] 填充 'entry' 块 ---
+
   IRValueNode *call_args[2] = {val_x, val_y};
   IRValueNode *result = ir_builder_create_call(builder, val_func_ptr, call_args, 2, "result");
   ir_builder_create_ret(builder, result);
 
-  // 8. --- [!!] 自动化测试 [!!] ---
+
   printf("  (Dumping module to string...)\n");
   const char *dumped_str = ir_module_dump_to_string(mod, &arena);
 
@@ -135,7 +135,7 @@ test_indirect_call()
                  EXPECTED_IR, dumped_str);
   }
 
-  // 9. --- 清理 ---
+
   ir_builder_destroy(builder);
   ir_context_destroy(ctx);
   bump_destroy(&arena);

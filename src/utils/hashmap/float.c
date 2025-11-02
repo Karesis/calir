@@ -20,11 +20,11 @@
 #include <assert.h>
 #include <string.h>
 
-// 1. 包含 xxhash.h 并内联实现
+
 #define XXH_INLINE_ALL
 #include "utils/xxhash.h"
 
-// 2. 定义模板宏工具
+
 #define _FLOAT_PASTE3(a, b, c) a##b##c
 #define FLOAT_PASTE3(a, b, c) _FLOAT_PASTE3(a, b, c)
 #define FLOAT_FUNC(suffix) FLOAT_PASTE3(FLOAT_PREFIX, _hashmap_, suffix)

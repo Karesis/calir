@@ -30,12 +30,12 @@
  */
 typedef enum
 {
-  IR_KIND_ARGUMENT,    // 这是一个函数参数 (IRArgument)
-  IR_KIND_INSTRUCTION, // 这是一个指令的结果 (IRInstruction)
-  IR_KIND_BASIC_BLOCK, // 这是一个基本块的标签 (IRBasicBlock)
-  IR_KIND_FUNCTION,    // 这是一个函数地址 (IRFunction)
-  IR_KIND_CONSTANT,    // 这是一个常量 (IRConstant)
-  IR_KIND_GLOBAL,      // 这是一个全局变量 (IRGlobalVariable)
+  IR_KIND_ARGUMENT,
+  IR_KIND_INSTRUCTION,
+  IR_KIND_BASIC_BLOCK,
+  IR_KIND_FUNCTION,
+  IR_KIND_CONSTANT,
+  IR_KIND_GLOBAL,
 } IRValueKind;
 
 /**
@@ -44,11 +44,11 @@ typedef enum
  */
 typedef struct
 {
-  IRValueKind kind; // <-- 用于运行时类型识别
-  const char *name; // 如 $entry, %x, %tmp1， 用于调试
+  IRValueKind kind;
+  const char *name;
   IRType *type;
-  IDList uses; // “谁在用我？” (Def-Use 链)
-               // 这是一个 IRUse 对象的链表头
+  IDList uses;
+
 } IRValueNode;
 
 /**

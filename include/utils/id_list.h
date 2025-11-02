@@ -17,8 +17,8 @@
 
 #ifndef IR_LIST_H
 #define IR_LIST_H
-// 侵入式双向链表
-#include <stddef.h> // for offsetof
+
+#include <stddef.h>
 
 /**
  * @brief 侵入式双向链表节点(intrusive doubly linked list)
@@ -33,7 +33,7 @@ typedef struct IDList
   struct IDList *next;
 } IDList;
 
-// 核心函数
+
 
 /**
  * @brief 初始化一个链表头 (或一个独立的节点)
@@ -92,7 +92,7 @@ list_del(IDList *node)
 {
   node->next->prev = node->prev;
   node->prev->next = node->next;
-  // 将节点重置为"未链接"状态 (可选，但有助于调试)
+
   list_init(node);
 }
 
@@ -107,7 +107,7 @@ list_empty(const IDList *head)
   return head->next == head;
 }
 
-// container_of 和 迭代器
+
 
 /**
  * @brief container_of 宏

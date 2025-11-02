@@ -31,10 +31,10 @@
  */
 typedef struct IRModule
 {
-  IRContext *context; // <-- [新] 指向拥有它的 Context
-  const char *name;   // <-- [修改] 指向 Context 中 interned 的字符串
-  IDList functions;   // 链表头 (元素是 IRFunction)
-  IDList globals;     // 链表头 (元素是 IRGlobalVariable)
+  IRContext *context;
+  const char *name;
+  IDList functions;
+  IDList globals;
 } IRModule;
 
 /**
