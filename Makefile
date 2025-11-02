@@ -142,6 +142,7 @@ help:
 	@echo "  make run             - Alias for 'make test'. Runs ALL test suites."
 	@echo "  make re              - Clean and rebuild 'all'."
 	@echo "  make clean           - Remove all build artifacts."
+	@echo "  make clean-comments  - Clean temporary comments ('//')"
 	@echo "  --- License Management ---"
 	@echo "  make headers         - Apply missing license headers to all .c/.h files."
 	@echo "  make check-headers   - Check for missing license headers (CI mode)."
@@ -177,6 +178,12 @@ headers:
 check-headers:
 	@echo "Checking license headers..."
 	@$(PYTHON) scripts/apply_license.py --check
+
+# 清理临时注释
+.PHONY: clean-comments
+clean-comments:
+	@echo "Cleaning temporary (//) comments..."
+	@$(PYTHON) scripts/clean_comments.py
 
 # 自动化运行规则 
 .PHONY: $(TEST_RUNNERS)
