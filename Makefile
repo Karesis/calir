@@ -6,6 +6,8 @@
 CC = clang
 # 归档工具 (用于创建静态库)
 AR = ar
+# Python 解释器
+PYTHON = python3
 
 # --- 构建目标 ---
 LIB_NAME = libcalir.a
@@ -88,7 +90,7 @@ build_tests: $(TEST_TARGETS)
 
 # 运行所有测试 (会先构建)
 .PHONY: test
-test: $(TEST_RUNNERS)
+test: check-headers $(TEST_RUNNERS)
 	@echo "All tests completed."
 
 # --- 静态库规则 ---
@@ -130,7 +132,6 @@ $(OBJ_DIR)/tests/%.o: tests/%.c
 # --- 6. 清理和运行 (Utility Rules) ---
 # =================================================================
 
-# [!!] 'help' 目标已更新
 .PHONY: help
 help:
 	@echo "Available commands:"
@@ -141,6 +142,9 @@ help:
 	@echo "  make run             - Alias for 'make test'. Runs ALL test suites."
 	@echo "  make re              - Clean and rebuild 'all'."
 	@echo "  make clean           - Remove all build artifacts."
+	@echo "  --- License Management ---"
+	@echo "  make headers         - Apply missing license headers to all .c/.h files."
+	@echo "  make check-headers   - Check for missing license headers (CI mode)."
 	@echo "  --- Individual Tests (for development) ---"
 	@echo "  make build/test_X    - Build only a *single* test (e.g., make build/test_bitset)."
 	@echo "  make run_test_X      - Build and run a *single* test (e.g., make run_test_bitset)."
@@ -159,9 +163,20 @@ clean:
 .PHONY: re
 re: clean all
 
-# [!!] 'run' 目标现在是 'test' 的别名
+# 'run' 目标是 'test' 的别名
 .PHONY: run
 run: test
+
+# 许可证头部规则
+.PHONY: headers
+headers:
+	@echo "Applying license headers..."
+	@$(PYTHON) scripts/apply_license.py
+
+.PHONY: check-headers
+check-headers:
+	@echo "Checking license headers..."
+	@$(PYTHON) scripts/apply_license.py --check
 
 # 自动化运行规则 
 .PHONY: $(TEST_RUNNERS)
