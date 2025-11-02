@@ -14,6 +14,12 @@
  * limitations under the License.
  */
 
+/*
+ * [Note] The bump-pointer allocation strategy used here was inspired by
+ * learning about the 'arena' allocation model, particularly from studying
+ * the design of the Rust 'bumpalo' library.
+ * `bumpalo` library: https://github.com/fitzgen/bumpalo
+ */
 
 #ifndef BUMP_H
 #define BUMP_H
