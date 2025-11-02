@@ -1,24 +1,24 @@
 ---
-name: 🐞 Bug 报告
-about: 提交一个 Bug 来帮助我们改进
+name: 🐞 Bug Report
+about: Create a bug report to help us improve
 title: '[BUG] '
 labels: 'bug'
 ---
 
-**描述 Bug**
-(请清晰简洁地描述这个 Bug 是什么。)
+**Describe the bug**
+A clear and concise description of what the bug is.
 
-**如何复现 (To Reproduce)**
-1. 使用这个 IR: `...`
-2. 运行这个 C API: `...`
-3. 发生崩溃 / 得到错误的输出 `...`
+**To Reproduce**
+1. Use this IR: `...`
+2. Run this C API: `...`
+3. See error / wrong output `...`
 
-**期望的行为 (Expected behavior)**
-(你期望发生什么？)
+**Expected behavior**
+A clear and concise description of what you expected to happen.
 
-**实际行为 (Actual behavior)**
-(实际发生了什么？请粘贴完整的错误日志或终端输出。)
+**Actual behavior**
+What actually happened. Please paste the full error log or terminal output.
 
-**环境 (可选)**
- - 操作系统: [例如, Ubuntu 22.04]
- - 编译器: [例如, clang 16]
+**Environment (Optional)**
+ - OS: [e.g., Ubuntu 24.04]
+ - Compiler: [e.g., clang 20]

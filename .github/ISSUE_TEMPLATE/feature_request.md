@@ -1,18 +1,18 @@
 ---
-name: ✨ 功能请求
-about: 建议一个新功能或改进
+name: ✨ Feature Request
+about: Suggest an idea or enhancement for this project
 title: '[FEAT] '
 labels: 'enhancement'
 ---
 
-**你的功能请求是否与某个问题相关？**
-(例如: "当我尝试...时, 我很沮B。")
+**Is your feature request related to a problem?**
+(e.g., "I'm frustrated when I try to...")
 
-**描述你想要的解决方案**
-(请清晰简洁地描述你希望实现的功能。)
+**Describe the solution you'd like**
+A clear and concise description of what you want to happen.
 
-**描述你考虑过的替代方案**
-(你还考虑过哪些其他方法或解决方案？)
+**Describe alternatives you've considered**
+A clear and concise description of any alternative solutions or features you've considered.
 
-**附加信息**
-(任何其他关于这个请求的上下文或截图。)
+**Additional context**
+Add any other context or screenshots about the feature request here.
