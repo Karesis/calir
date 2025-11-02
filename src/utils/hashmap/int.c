@@ -14,17 +14,14 @@
  * limitations under the License.
  */
 
-
 #include "utils/hashmap/int.h"
 #include "utils/bump.h"
 #include <assert.h>
 #include <limits.h>
 #include <string.h>
 
-
 #define XXH_INLINE_ALL
 #include "utils/xxhash.h"
-
 
 #define _INT_PASTE3(a, b, c) a##b##c
 #define INT_PASTE3(a, b, c) _INT_PASTE3(a, b, c)

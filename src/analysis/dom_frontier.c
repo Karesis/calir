@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include "analysis/dom_frontier.h"
 #include "analysis/cfg.h"
 #include "utils/bitset.h"
@@ -48,12 +47,7 @@ compute_df_recursive(DomTreeNode *n, DominanceFrontier *df, Bitset *temp_set)
   DominatorTree *dt = df->dom_tree;
   size_t num_blocks = df->num_blocks;
 
-
-
   Bitset *df_n = df->frontiers[n->cfg_node->id];
-
-
-
 
   IDList *succ_list = &n->cfg_node->successors;
   IDList *edge_node;
@@ -61,8 +55,6 @@ compute_df_recursive(DomTreeNode *n, DominanceFrontier *df, Bitset *temp_set)
   {
     CFGEdge *edge = list_entry(edge_node, CFGEdge, list_node);
     CFGNode *y_cfg = edge->node;
-
-
 
     DomTreeNode *y_dom_node = dt->nodes[y_cfg->id];
     DomTreeNode *idom_y = y_dom_node->idom;
@@ -74,8 +66,6 @@ compute_df_recursive(DomTreeNode *n, DominanceFrontier *df, Bitset *temp_set)
     }
   }
 
-
-
   IDList *child_list = &n->children;
   IDList *child_list_node;
   list_for_each(child_list, child_list_node)
@@ -83,18 +73,11 @@ compute_df_recursive(DomTreeNode *n, DominanceFrontier *df, Bitset *temp_set)
     DomTreeChild *child = list_entry(child_list_node, DomTreeChild, list_node);
     DomTreeNode *c = child->node;
 
-
     compute_df_recursive(c, df, temp_set);
-
 
     Bitset *df_c = df->frontiers[c->cfg_node->id];
 
-
-
-
     bitset_clear_all(temp_set);
-
-
 
     for (size_t w_id = 0; w_id < num_blocks; w_id++)
     {
@@ -112,8 +95,6 @@ compute_df_recursive(DomTreeNode *n, DominanceFrontier *df, Bitset *temp_set)
       }
     }
 
-
-
     bitset_union(df_n, df_n, temp_set);
   }
 }
@@ -127,16 +108,12 @@ ir_analysis_dom_frontier_compute(DominatorTree *dt, Bump *arena)
   FunctionCFG *cfg = dt->cfg;
   size_t num_blocks = cfg->num_nodes;
 
-
   DominanceFrontier *df = BUMP_ALLOC_ZEROED(arena, DominanceFrontier);
   df->dom_tree = dt;
   df->num_blocks = num_blocks;
   df->arena = arena;
 
-
-
   df->frontiers = BUMP_ALLOC_SLICE_ZEROED(arena, Bitset *, num_blocks);
-
 
   for (size_t i = 0; i < num_blocks; i++)
   {
@@ -144,13 +121,9 @@ ir_analysis_dom_frontier_compute(DominatorTree *dt, Bump *arena)
     df->frontiers[i] = bitset_create(num_blocks, arena);
   }
 
-
   Bitset *temp_set = bitset_create(num_blocks, arena);
 
-
   compute_df_recursive(dt->root, df, temp_set);
-
-
 
   return df;
 }
@@ -175,14 +148,12 @@ ir_analysis_dom_frontier_get(DominanceFrontier *df, IRBasicBlock *bb)
   DominatorTree *dt = df->dom_tree;
   FunctionCFG *cfg = dt->cfg;
 
-
   CFGNode *node = cfg_get_node(cfg, bb);
   if (!node)
   {
 
     return NULL;
   }
-
 
   return df->frontiers[node->id];
 }

@@ -46,17 +46,11 @@ struct ChunkFooter
 
   unsigned char *data;
 
-
   size_t chunk_size;
-
 
   ChunkFooter *prev;
 
-
-
   unsigned char *ptr;
-
-
 
   size_t allocated_bytes;
 };
@@ -79,10 +73,7 @@ typedef struct
 
   ChunkFooter *current_chunk_footer;
 
-
   size_t allocation_limit;
-
-
 
   size_t min_align;
 } Bump;
@@ -243,16 +234,12 @@ size_t bump_get_allocated_bytes(Bump *bump);
  */
 #define BUMP_ALLOC(bump_ptr, T) ((T *)bump_alloc((bump_ptr), sizeof(T), _Alignof(T)))
 
-
 #define BUMP_ALLOC_SLICE(bump_ptr, T, count) ((T *)bump_alloc((bump_ptr), sizeof(T) * (count), _Alignof(T)))
-
 
 #define BUMP_ALLOC_SLICE_COPY(bump_ptr, T, src_ptr, count)                                                             \
   ((T *)bump_alloc_copy((bump_ptr), (src_ptr), sizeof(T) * (count), _Alignof(T)))
 
-
 #define BUMP_ALLOC_ZEROED(bump_ptr, T) ((T *)memset(BUMP_ALLOC((bump_ptr), T), 0, sizeof(T)))
-
 
 #define BUMP_ALLOC_SLICE_ZEROED(bump_ptr, T, count)                                                                    \
   ((T *)memset(BUMP_ALLOC_SLICE((bump_ptr), T, (count)), 0, sizeof(T) * (count)))

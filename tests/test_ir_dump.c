@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-
-
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-
 
 #include "ir/basicblock.h"
 #include "ir/builder.h"
@@ -29,7 +26,6 @@
 #include "ir/module.h"
 #include "ir/type.h"
 #include "ir/value.h"
-
 
 #include "test_utils.h"
 #include "utils/bump.h"
@@ -49,8 +45,6 @@ const char *EXPECTED_IR = "module = \"test_indirect_call_module\"\n"
                           "  %result: i32 = call <i32 (i32, i32)> %func_ptr(%x: i32, %y: i32)\n"
                           "  ret %result: i32\n"
                           "}\n";
-
-
 
 IRFunction *
 build_add_function(IRModule *mod)
@@ -83,24 +77,19 @@ test_indirect_call()
 {
   SUITE_START("IR Builder: Indirect Call");
 
-
   Bump arena;
   bump_init(&arena);
   IRContext *ctx = ir_context_create();
   IRModule *mod = ir_module_create(ctx, "test_indirect_call_module");
   IRBuilder *builder = ir_builder_create(ctx);
 
-
   IRType *ty_i32 = ir_type_get_i32(ctx);
-
 
   IRType *add_param_types[2] = {ty_i32, ty_i32};
   IRType *ty_add_func = ir_type_get_function(ctx, ty_i32, add_param_types, 2, false);
   IRType *ty_func_ptr = ir_type_get_ptr(ctx, ty_add_func);
 
-
   build_add_function(mod);
-
 
   IRFunction *caller_func = ir_function_create(mod, "do_operation", ty_i32);
   IRArgument *arg_ptr_s = ir_argument_create(caller_func, ty_func_ptr, "func_ptr");
@@ -111,16 +100,13 @@ test_indirect_call()
   IRValueNode *val_x = &arg_x_s->value;
   IRValueNode *val_y = &arg_y_s->value;
 
-
   IRBasicBlock *bb_entry = ir_basic_block_create(caller_func, "entry");
   ir_function_append_basic_block(caller_func, bb_entry);
   ir_builder_set_insertion_point(builder, bb_entry);
 
-
   IRValueNode *call_args[2] = {val_x, val_y};
   IRValueNode *result = ir_builder_create_call(builder, val_func_ptr, call_args, 2, "result");
   ir_builder_create_ret(builder, result);
-
 
   printf("  (Dumping module to string...)\n");
   const char *dumped_str = ir_module_dump_to_string(mod, &arena);
@@ -134,7 +120,6 @@ test_indirect_call()
                  "--- [!!] ACTUAL OUTPUT [!!] ---\n%s\n",
                  EXPECTED_IR, dumped_str);
   }
-
 
   ir_builder_destroy(builder);
   ir_context_destroy(ctx);

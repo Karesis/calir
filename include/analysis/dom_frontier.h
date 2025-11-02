@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-
 #ifndef CALIR_ANALYSIS_DOM_FRONTIER_H
 #define CALIR_ANALYSIS_DOM_FRONTIER_H
-
 
 #include "analysis/dom_tree.h"
 #include "ir/basicblock.h"

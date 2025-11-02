@@ -14,16 +14,13 @@
  * limitations under the License.
  */
 
-
 #include "utils/hashmap/float.h"
 #include "utils/bump.h"
 #include <assert.h>
 #include <string.h>
 
-
 #define XXH_INLINE_ALL
 #include "utils/xxhash.h"
-
 
 #define _FLOAT_PASTE3(a, b, c) a##b##c
 #define FLOAT_PASTE3(a, b, c) _FLOAT_PASTE3(a, b, c)

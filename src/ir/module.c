@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-
-
 #include "ir/module.h"
 #include "ir/context.h"
 #include "ir/function.h"
@@ -38,26 +36,20 @@ ir_module_create(IRContext *ctx, const char *name)
 {
   assert(ctx != NULL && "IRContext cannot be NULL");
 
-
   IRModule *mod = BUMP_ALLOC_ZEROED(&ctx->ir_arena, IRModule);
   if (!mod)
   {
     return NULL;
   }
 
-
   mod->context = ctx;
-
 
   mod->name = ir_context_intern_str(ctx, name);
   if (!mod->name)
   {
 
-
     return NULL;
   }
-
-
 
   list_init(&mod->functions);
   list_init(&mod->globals);
@@ -79,7 +71,6 @@ ir_module_dump_internal(IRModule *mod, IRPrinter *p)
 
   ir_printf(p, "module = \"%s\"\n", mod->name);
   ir_print_str(p, "\n");
-
 
   StrHashMap *struct_cache = mod->context->named_struct_cache;
   if (struct_cache && str_hashmap_size(struct_cache) > 0)
@@ -110,7 +101,6 @@ ir_module_dump_internal(IRModule *mod, IRPrinter *p)
     ir_print_str(p, "\n");
   }
 
-
   IDList *global_iter;
   list_for_each(&mod->globals, global_iter)
   {
@@ -121,7 +111,6 @@ ir_module_dump_internal(IRModule *mod, IRPrinter *p)
   {
     ir_print_str(p, "\n");
   }
-
 
   IDList *iter_func;
   list_for_each(&mod->functions, iter_func)
@@ -156,13 +145,10 @@ ir_module_dump_to_string(IRModule *mod, Bump *arena)
   StringBuf buf;
   string_buf_init(&buf, arena);
 
-
   IRPrinter p;
   ir_printer_init_string_buf(&p, &buf);
 
-
   ir_module_dump_internal(mod, &p);
-
 
   return string_buf_get(&buf);
 }

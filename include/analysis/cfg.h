@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-
-
 #ifndef CALIR_ANALYSIS_CFG_H
 #define CALIR_ANALYSIS_CFG_H
 
@@ -25,7 +23,6 @@
 #include "utils/bump.h"
 #include "utils/hashmap.h"
 #include "utils/id_list.h"
-
 
 typedef struct CFGNode CFGNode;
 
@@ -47,25 +44,20 @@ struct CFGNode
   IRBasicBlock *block;
   int id;
 
-
   IDList successors;
   IDList predecessors;
 };
-
 
 typedef struct FunctionCFG
 {
   IRFunction *func;
   int num_nodes;
 
-
   Bump arena;
-
 
   CFGNode *nodes;
 
   CFGNode *entry_node;
-
 
   PtrHashMap *block_to_node_map;
 

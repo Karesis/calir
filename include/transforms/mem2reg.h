@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef CALIR_TRANSFORMS_MEM2REG_H
 #define CALIR_TRANSFORMS_MEM2REG_H
 

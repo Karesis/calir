@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-
-
 #include "ir/builder.h"
 #include "ir/context.h"
 #include "ir/module.h"
@@ -33,21 +31,16 @@ test_print_golden_ir()
 {
   SUITE_START("IR Printer: Golden Output");
 
-
   Bump arena;
   bump_init(&arena);
   IRContext *ctx = ir_context_create();
   IRBuilder *builder = ir_builder_create(ctx);
 
-
   IRModule *mod = build_golden_ir(ctx, builder);
-
 
   const char *dumped_str = ir_module_dump_to_string(mod, &arena);
 
-
   const char *expected_str = get_golden_ir_text();
-
 
   SUITE_ASSERT(dumped_str != NULL, "ir_module_dump_to_string() returned NULL");
   if (dumped_str)
@@ -58,7 +51,6 @@ test_print_golden_ir()
                  "--- [!!] ACTUAL OUTPUT [!!] ---\n%s\n",
                  expected_str, dumped_str);
   }
-
 
   ir_builder_destroy(builder);
   ir_context_destroy(ctx);

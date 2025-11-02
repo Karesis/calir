@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 /* include/hashmap/str_slice.h */
 #ifndef HASHMAP_STR_SLICE_H
 #define HASHMAP_STR_SLICE_H
@@ -33,9 +32,7 @@
  * - Values 存储为 void*，由调用者管理其生命周期。
  */
 
-
 typedef struct StrHashMap StrHashMap;
-
 
 typedef struct
 {
@@ -130,7 +127,6 @@ bool str_hashmap_contains(const StrHashMap *map, const char *key_body, size_t ke
  * @return size_t 条目数。
  */
 size_t str_hashmap_size(const StrHashMap *map);
-
 
 StrHashMapIter str_hashmap_iter(const StrHashMap *map);
 bool str_hashmap_iter_next(StrHashMapIter *iter, StrHashMapEntry *entry_out);

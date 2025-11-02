@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef INSTRUCTION_H
 #define INSTRUCTION_H
 
@@ -23,7 +22,6 @@
 #include "ir/value.h"
 #include "utils/id_list.h"
 
-
 typedef enum
 {
 
@@ -31,11 +29,9 @@ typedef enum
   IR_OP_BR,
   IR_OP_COND_BR,
 
-
   IR_OP_ADD,
   IR_OP_SUB,
   IR_OP_ICMP,
-
 
   IR_OP_ALLOCA,
   IR_OP_LOAD,
@@ -44,7 +40,6 @@ typedef enum
   IR_OP_GEP,
   IR_OP_CALL
 } IROpcode;
-
 
 typedef enum
 {
@@ -59,7 +54,6 @@ typedef enum
   IR_ICMP_SLT,
   IR_ICMP_SLE,
 } IRICmpPredicate;
-
 
 typedef struct
 {
@@ -88,8 +82,6 @@ typedef struct
  * @brief 从其父基本块中安全地擦除一条指令
  */
 void ir_instruction_erase_from_parent(IRInstruction *inst);
-
-
 
 /**
  * @brief 将单条指令的 IR 打印到 IRPrinter

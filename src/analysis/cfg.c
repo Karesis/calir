@@ -14,17 +14,11 @@
  * limitations under the License.
  */
 
-
-
 #include "analysis/cfg.h"
 #include "ir/instruction.h"
 #include "ir/use.h"
 #include "ir/value.h"
 #include "utils/id_list.h"
-
-
-
-
 
 /**
  * @brief 获取指令的第 N 个操作数 (ValueNode)
@@ -46,10 +40,6 @@ get_operand(IRInstruction *inst, int index)
   return NULL;
 }
 
-
-
-
-
 /**
  * @brief [内部] 向 CFG 添加一条边 (使用你的 bump.h API)
  */
@@ -59,21 +49,14 @@ cfg_add_edge(FunctionCFG *cfg, CFGNode *from, CFGNode *to)
   if (!from || !to)
     return;
 
-
-
   CFGEdge *succ_edge = BUMP_ALLOC(&cfg->arena, CFGEdge);
   succ_edge->node = to;
   list_add_tail(&from->successors, &succ_edge->list_node);
-
 
   CFGEdge *pred_edge = BUMP_ALLOC(&cfg->arena, CFGEdge);
   pred_edge->node = from;
   list_add_tail(&to->predecessors, &pred_edge->list_node);
 }
-
-
-
-
 
 FunctionCFG *
 cfg_build(IRFunction *func, Bump *arena)
@@ -82,11 +65,7 @@ cfg_build(IRFunction *func, Bump *arena)
   FunctionCFG *cfg = BUMP_ALLOC_ZEROED(arena, FunctionCFG);
   cfg->func = func;
 
-
   bump_init(&cfg->arena);
-
-
-
 
   cfg->num_nodes = 0;
   IDList *bb_it;
@@ -95,7 +74,6 @@ cfg_build(IRFunction *func, Bump *arena)
     cfg->num_nodes++;
   }
 
-
   cfg->block_to_node_map = ptr_hashmap_create(&cfg->arena, cfg->num_nodes);
 
   if (cfg->num_nodes == 0)
@@ -103,11 +81,8 @@ cfg_build(IRFunction *func, Bump *arena)
     cfg->nodes = NULL;
     cfg->entry_node = NULL;
 
-
     return cfg;
   }
-
-
 
   cfg->nodes = BUMP_ALLOC_SLICE(&cfg->arena, CFGNode, cfg->num_nodes);
 
@@ -117,26 +92,21 @@ cfg_build(IRFunction *func, Bump *arena)
     IRBasicBlock *bb = list_entry(bb_it, IRBasicBlock, list_node);
     CFGNode *node = &cfg->nodes[current_id];
 
-
     node->block = bb;
     node->id = current_id;
 
     list_init(&node->successors);
     list_init(&node->predecessors);
 
-
     if (current_id == 0)
     {
       cfg->entry_node = node;
     }
 
-
     ptr_hashmap_put(cfg->block_to_node_map, bb, node);
 
     current_id++;
   }
-
-
 
   for (int i = 0; i < cfg->num_nodes; i++)
   {
@@ -152,8 +122,7 @@ cfg_build(IRFunction *func, Bump *arena)
 
     switch (term->opcode)
     {
-    case IR_OP_BR:
-    {
+    case IR_OP_BR: {
       IRValueNode *target_val = get_operand(term, 0);
 
       IRBasicBlock *target_bb = (IRBasicBlock *)target_val;
@@ -163,15 +132,13 @@ cfg_build(IRFunction *func, Bump *arena)
       break;
     }
 
-    case IR_OP_COND_BR:
-    {
+    case IR_OP_COND_BR: {
 
       IRValueNode *true_val = get_operand(term, 1);
       IRBasicBlock *true_bb = (IRBasicBlock *)true_val;
       CFGNode *true_node = cfg_get_node(cfg, true_bb);
 
       cfg_add_edge(cfg, current_node, true_node);
-
 
       IRValueNode *false_val = get_operand(term, 2);
       IRBasicBlock *false_bb = (IRBasicBlock *)false_val;
@@ -187,7 +154,6 @@ cfg_build(IRFunction *func, Bump *arena)
     case IR_OP_RET:
     default: {
 
-
       break;
     }
     }
@@ -202,11 +168,5 @@ cfg_destroy(FunctionCFG *cfg)
   if (!cfg)
     return;
 
-
-
-
-
   bump_destroy(&cfg->arena);
-
-
 }

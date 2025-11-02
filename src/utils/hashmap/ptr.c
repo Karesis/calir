@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 /* utils/hashmap/ptr.c */
 #include "utils/hashmap/ptr.h"
 #include "utils/bump.h"
@@ -37,7 +36,6 @@ typedef struct
   void *key;
   void *value;
 } PtrHashMapBucket;
-
 
 struct PtrHashMap
 {
@@ -73,19 +71,12 @@ ptr_hashmap_get_hash(void *key)
  * ========================================
  */
 
-
 #define CHM_PREFIX ptr
 #define CHM_K_TYPE void *
 #define CHM_V_TYPE void *
 #define CHM_API_TYPE PtrHashMap
 #define CHM_STRUCT_TYPE PtrHashMap
 #define CHM_BUCKET_TYPE PtrHashMapBucket
-
-
-
-
-
-
 
 #include "utils/hashmap/core.inc"
 
@@ -106,12 +97,9 @@ ptr_hashmap_create(Bump *arena, size_t initial_capacity)
   if (!map)
     return NULL;
 
-
   PtrHashMapBucket *buckets = BUMP_ALLOC_SLICE(arena, PtrHashMapBucket, num_buckets);
   if (!buckets)
     return NULL;
-
-
 
   uint8_t *states = BUMP_ALLOC_SLICE_ZEROED(arena, uint8_t, num_buckets);
   if (!states)
@@ -149,7 +137,6 @@ ptr_hashmap_remove(PtrHashMap *map, void *key)
     size_t bucket_idx = (size_t)(bucket - map->buckets);
     map->states[bucket_idx] = BUCKET_TOMBSTONE;
 
-
     bucket->value = NULL;
     map->num_entries--;
     map->num_tombstones++;
@@ -171,9 +158,7 @@ ptr_hashmap_put(PtrHashMap *map, void *key, void *value)
     return true;
   }
 
-
   assert(bucket != NULL && "find_bucket must return a valid slot");
-
 
   size_t total_load = map->num_entries + map->num_tombstones + 1;
   if (total_load * 4 >= map->num_buckets * 3)
@@ -190,12 +175,10 @@ ptr_hashmap_put(PtrHashMap *map, void *key, void *value)
 
   size_t bucket_idx = (size_t)(bucket - map->buckets);
 
-
   if (map->states[bucket_idx] == BUCKET_TOMBSTONE)
   {
     map->num_tombstones--;
   }
-
 
   bucket->key = key;
   bucket->value = value;
@@ -224,11 +207,9 @@ ptr_hashmap_size(const PtrHashMap *map)
  * ========================================
  */
 
-
 #define _CHM_PASTE3(a, b, c) a##b##c
 #define CHM_PASTE3(a, b, c) _CHM_PASTE3(a, b, c)
 #define CHM_FUNC(prefix, suffix) CHM_PASTE3(prefix, _hashmap_, suffix)
-
 
 #define CHM_PREFIX ptr
 #define CHM_API_TYPE PtrHashMap
@@ -236,9 +217,6 @@ ptr_hashmap_size(const PtrHashMap *map)
 #define CHM_BUCKET_TYPE PtrHashMapBucket
 #define CHM_ENTRY_TYPE PtrHashMapEntry
 #define CHM_ITER_TYPE PtrHashMapIter
-
-
-
 
 #include "utils/hashmap/iterator.inc"
 

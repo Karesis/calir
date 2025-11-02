@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 /* include/utils/hashmap/generic.h */
 #ifndef HASHMAP_GENERIC_H
 #define HASHMAP_GENERIC_H
@@ -47,7 +46,6 @@ typedef bool (*GenericEqualFn)(const void *key1, const void *key2);
  * - Values 存储为 void*。
  * - 哈希和比较逻辑由用户在创建时通过函数指针提供。
  */
-
 
 typedef struct GenericHashMap GenericHashMap;
 

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-
-
 #ifndef CALIR_ANALYSIS_DOM_TREE_H
 #define CALIR_ANALYSIS_DOM_TREE_H
 
@@ -23,7 +21,6 @@
 #include "ir/basicblock.h"
 #include "utils/bump.h"
 #include "utils/id_list.h"
-
 
 typedef struct DominatorTree DominatorTree;
 typedef struct DomTreeNode DomTreeNode;
@@ -57,20 +54,13 @@ struct DomTreeNode
   CFGNode *cfg_node;
   DomTreeNode *idom;
 
-
   IDList children;
-
-
-
 
   DomTreeNode *parent;
   int dfs_num;
 
-
   int semi_dom;
   IDList bucket;
-
-
 
   DomTreeNode *ancestor;
   DomTreeNode *label;
@@ -86,11 +76,7 @@ struct DominatorTree
 
   DomTreeNode *root;
 
-
-
   DomTreeNode **nodes;
-
-
 
   DomTreeNode **dfs_order;
 };

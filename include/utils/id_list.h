@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef IR_LIST_H
 #define IR_LIST_H
 
@@ -32,8 +31,6 @@ typedef struct IDList
   struct IDList *prev;
   struct IDList *next;
 } IDList;
-
-
 
 /**
  * @brief 初始化一个链表头 (或一个独立的节点)
@@ -106,8 +103,6 @@ list_empty(const IDList *head)
 {
   return head->next == head;
 }
-
-
 
 /**
  * @brief container_of 宏

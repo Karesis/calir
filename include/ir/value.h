@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef VALUE_H
 #define VALUE_H
 

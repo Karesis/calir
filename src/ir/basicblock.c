@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include "ir/basicblock.h"
 #include "ir/context.h"
 #include "ir/function.h"
@@ -27,14 +26,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-
-
 IRBasicBlock *
 ir_basic_block_create(IRFunction *func, const char *name)
 {
   assert(func != NULL && "Parent function cannot be NULL");
   IRContext *ctx = func->parent->context;
-
 
   IRBasicBlock *bb = (IRBasicBlock *)BUMP_ALLOC_ZEROED(&ctx->ir_arena, IRBasicBlock);
   if (!bb)
@@ -42,15 +38,12 @@ ir_basic_block_create(IRFunction *func, const char *name)
 
   bb->parent = func;
 
-
   list_init(&bb->list_node);
   list_init(&bb->instructions);
-
 
   bb->label_address.kind = IR_KIND_BASIC_BLOCK;
   bb->label_address.name = ir_context_intern_str(ctx, name);
   list_init(&bb->label_address.uses);
-
 
   bb->label_address.type = ctx->type_label;
 
@@ -66,8 +59,6 @@ ir_function_append_basic_block(IRFunction *func, IRBasicBlock *bb)
 
   list_add_tail(&func->basic_blocks, &bb->list_node);
 }
-
-
 
 /**
  * @brief [!!] 重构 [!!]
@@ -85,9 +76,7 @@ ir_basic_block_dump(IRBasicBlock *bb, IRPrinter *p)
     return;
   }
 
-
   ir_printf(p, "$%s:\n", bb->label_address.name);
-
 
   IDList *iter;
   list_for_each(&bb->instructions, iter)
@@ -95,7 +84,6 @@ ir_basic_block_dump(IRBasicBlock *bb, IRPrinter *p)
     IRInstruction *inst = list_entry(iter, IRInstruction, list_node);
 
     ir_print_str(p, "  ");
-
 
     ir_instruction_dump(inst, p);
 

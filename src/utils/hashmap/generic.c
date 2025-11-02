@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 /* src/utils/hashmap/generic.c */
 #include "utils/hashmap/generic.h"
 #include "utils/bump.h"
@@ -23,7 +22,6 @@
 
 #define XXH_INLINE_ALL
 #include "utils/xxhash.h"
-
 
 #include "utils/hashmap/common.h"
 
@@ -39,7 +37,6 @@ typedef struct
   void *value;
 } GenericHashMapBucket;
 
-
 struct GenericHashMap
 {
   Bump *arena;
@@ -48,7 +45,6 @@ struct GenericHashMap
   size_t num_entries;
   size_t num_tombstones;
   size_t num_buckets;
-
 
   GenericHashFn hash_fn;
   GenericEqualFn equal_fn;
@@ -60,17 +56,11 @@ struct GenericHashMap
  * ========================================
  */
 
-
-
-
-
-
 /*
  * ========================================
  * --- 3. 包含泛型核心实现 ---
  * ========================================
  */
-
 
 #define CHM_PREFIX generic
 #define CHM_K_TYPE const void *
@@ -79,23 +69,9 @@ struct GenericHashMap
 #define CHM_STRUCT_TYPE GenericHashMap
 #define CHM_BUCKET_TYPE GenericHashMapBucket
 
-
-
-
-
 #define CHM_HASH_FUNC map->hash_fn
 
-
-
-
-
 #define CHM_TRAIT(suffix) map->equal_fn
-
-
-
-
-
-
 
 #include "utils/hashmap/core.inc"
 
@@ -118,11 +94,9 @@ generic_hashmap_create(Bump *arena, size_t initial_capacity, GenericHashFn hash_
   if (!map)
     return NULL;
 
-
   GenericHashMapBucket *buckets = BUMP_ALLOC_SLICE(arena, GenericHashMapBucket, num_buckets);
   if (!buckets)
     return NULL;
-
 
   uint8_t *states = BUMP_ALLOC_SLICE_ZEROED(arena, uint8_t, num_buckets);
   if (!states)
@@ -183,9 +157,7 @@ generic_hashmap_put(GenericHashMap *map, const void *key, void *value)
     return true;
   }
 
-
   assert(bucket != NULL && "find_bucket must return a valid slot");
-
 
   size_t total_load = map->num_entries + map->num_tombstones + 1;
   if (total_load * 4 >= map->num_buckets * 3)
@@ -202,12 +174,10 @@ generic_hashmap_put(GenericHashMap *map, const void *key, void *value)
 
   size_t bucket_idx = (size_t)(bucket - map->buckets);
 
-
   if (map->states[bucket_idx] == BUCKET_TOMBSTONE)
   {
     map->num_tombstones--;
   }
-
 
   bucket->key = key;
   bucket->value = value;
@@ -236,11 +206,9 @@ generic_hashmap_size(const GenericHashMap *map)
  * ========================================
  */
 
-
 #define _CHM_PASTE3(a, b, c) a##b##c
 #define CHM_PASTE3(a, b, c) _CHM_PASTE3(a, b, c)
 #define CHM_FUNC(prefix, suffix) CHM_PASTE3(prefix, _hashmap_, suffix)
-
 
 #define CHM_PREFIX generic
 #define CHM_API_TYPE GenericHashMap
@@ -249,10 +217,7 @@ generic_hashmap_size(const GenericHashMap *map)
 #define CHM_ENTRY_TYPE GenericHashMapEntry
 #define CHM_ITER_TYPE GenericHashMapIter
 
-
-
 #include "utils/hashmap/iterator.inc"
-
 
 #undef _CHM_PASTE3
 #undef CHM_PASTE3

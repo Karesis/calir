@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include "ir/printer.h"
 #include <stdio.h>
 

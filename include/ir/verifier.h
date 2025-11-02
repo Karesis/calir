@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef IR_VERIFIER_H
 #define IR_VERIFIER_H
 

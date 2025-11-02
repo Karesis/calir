@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-
 #include "interpreter/interpreter.h"
-
 
 #include "ir/basicblock.h"
 #include "ir/constant.h"
@@ -25,7 +23,6 @@
 #include "ir/type.h"
 #include "ir/use.h"
 #include "ir/value.h"
-
 
 #include "utils/bump.h"
 #include "utils/hashmap.h"
@@ -37,20 +34,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-
-
-
-
-
 typedef struct HostAllocation
 {
   void *ptr;
   IDList list_node;
 } HostAllocation;
-
-
-
-
 
 /**
  * @brief [辅助] 获取指令的第 N 个操作数 (IRValueNode*)
@@ -139,9 +127,7 @@ eval_constant(Interpreter *interp, PtrHashMap *frame, IRConstant *constant)
 {
   IRValueNode *val_node = &constant->value;
 
-
   RuntimeValue *rt_val = BUMP_ALLOC_ZEROED(interp->arena, RuntimeValue);
-
 
   switch (constant->const_kind)
   {
@@ -187,7 +173,6 @@ eval_constant(Interpreter *interp, PtrHashMap *frame, IRConstant *constant)
     break;
   }
 
-
   ptr_hashmap_put(frame, val_node, rt_val);
   return rt_val;
 }
@@ -205,15 +190,11 @@ get_value(Interpreter *interp, PtrHashMap *frame, IRValueNode *val_node)
     return rt_val;
   }
 
-
   if (val_node->kind == IR_KIND_CONSTANT)
   {
     IRConstant *constant = container_of(val_node, IRConstant, value);
     return eval_constant(interp, frame, constant);
   }
-
-
-
 
   return NULL;
 }
@@ -226,10 +207,6 @@ set_value(PtrHashMap *frame, IRValueNode *val_node, RuntimeValue *rt_val)
 {
   ptr_hashmap_put(frame, val_node, rt_val);
 }
-
-
-
-
 
 Interpreter *
 interpreter_create(void)
@@ -255,24 +232,13 @@ interpreter_destroy(Interpreter *interp)
   free(interp);
 }
 
-
-
-
-
 bool
 interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **args, size_t num_args,
                          RuntimeValue *result_out)
 {
   assert(interp && func && result_out && "Invalid arguments for interpreter");
 
-
-
-
-
-
-
   PtrHashMap *frame = ptr_hashmap_create(interp->arena, 64);
-
 
   IDList host_allocs;
   list_init(&host_allocs);
@@ -280,7 +246,6 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
   IRBasicBlock *entry_bb = list_entry(func->basic_blocks.next, IRBasicBlock, list_node);
   IRBasicBlock *prev_block = NULL;
   IRBasicBlock *current_block = entry_bb;
-
 
   IDList *inst_node;
   list_for_each(&entry_bb->instructions, inst_node)
@@ -292,24 +257,19 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
       IRType *pointee_type = ptr_type->as.pointee_type;
       size_t alloc_size = get_type_size(pointee_type);
 
-
       void *host_ptr = malloc(alloc_size);
-
 
       HostAllocation *alloc_track = BUMP_ALLOC(interp->arena, HostAllocation);
       alloc_track->ptr = host_ptr;
       list_add_tail(&host_allocs, &alloc_track->list_node);
 
-
       RuntimeValue *rt_ptr_val = BUMP_ALLOC(interp->arena, RuntimeValue);
       rt_ptr_val->kind = RUNTIME_VAL_PTR;
       rt_ptr_val->as.val_ptr = host_ptr;
 
-
       set_value(frame, &inst->result, rt_ptr_val);
     }
   }
-
 
   size_t arg_idx = 0;
   IDList *arg_node;
@@ -321,7 +281,6 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
     arg_idx++;
   }
 
-
   while (current_block)
   {
     IRBasicBlock *next_block = NULL;
@@ -329,7 +288,6 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
     list_for_each(&current_block->instructions, inst_node)
     {
       IRInstruction *inst = list_entry(inst_node, IRInstruction, list_node);
-
 
       RuntimeValue *rt_lhs, *rt_rhs, *rt_val, *rt_ptr, *rt_res;
       IRValueNode *node_lhs;
@@ -372,7 +330,6 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
         next_block = container_of(node_lhs, IRBasicBlock, label_address);
         goto next_bb;
 
-
       case IR_OP_ALLOCA:
         break;
 
@@ -393,12 +350,10 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
         rt_res = BUMP_ALLOC(interp->arena, RuntimeValue);
         rt_res->kind = ir_to_runtime_kind(inst->result.type->kind);
 
-
         memcpy(&rt_res->as, host_ptr, get_type_size(inst->result.type));
 
         set_value(frame, &inst->result, rt_res);
         break;
-
 
       case IR_OP_PHI:
         rt_val = NULL;
@@ -408,7 +363,6 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
           IRValueNode *val_in_node = get_operand_node(inst, i);
           IRValueNode *bb_in_node = get_operand_node(inst, i + 1);
           IRBasicBlock *bb_in = container_of(bb_in_node, IRBasicBlock, label_address);
-
 
           if (bb_in == prev_block)
           {
@@ -430,7 +384,6 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
         rt_res = BUMP_ALLOC(interp->arena, RuntimeValue);
         rt_res->kind = rt_lhs->kind;
 
-
         assert(rt_lhs->kind == RUNTIME_VAL_I32);
         if (inst->opcode == IR_OP_ADD)
         {
@@ -448,7 +401,6 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
         rt_rhs = get_value(interp, frame, get_operand_node(inst, 1));
         rt_res = BUMP_ALLOC(interp->arena, RuntimeValue);
         rt_res->kind = RUNTIME_VAL_I1;
-
 
         assert(rt_lhs->kind == RUNTIME_VAL_I32);
         int32_t lhs_i32 = rt_lhs->as.val_i32;
@@ -496,14 +448,14 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
 
 cleanup:
 
+{
+  IDList *iter, *temp;
+  list_for_each_safe(&host_allocs, iter, temp)
   {
-    IDList *iter, *temp;
-    list_for_each_safe(&host_allocs, iter, temp)
-    {
-      HostAllocation *alloc = list_entry(iter, HostAllocation, list_node);
-      free(alloc->ptr);
-    }
+    HostAllocation *alloc = list_entry(iter, HostAllocation, list_node);
+    free(alloc->ptr);
   }
+}
 
   return true;
 }

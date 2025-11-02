@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-
-
 #ifndef IR_BUILDER_H
 #define IR_BUILDER_H
 
 #include "ir/instruction.h"
 #include "ir/value.h"
 #include <stddef.h>
-
 
 typedef struct IRContext IRContext;
 typedef struct IRBasicBlock IRBasicBlock;
@@ -39,18 +36,14 @@ typedef struct IRBuilder
   size_t next_temp_reg_id;
 } IRBuilder;
 
-
 IRBuilder *ir_builder_create(IRContext *ctx);
 void ir_builder_destroy(IRBuilder *builder);
 void ir_builder_set_insertion_point(IRBuilder *builder, IRBasicBlock *bb);
-
 
 IRValueNode *ir_builder_create_ret(IRBuilder *builder, IRValueNode *val);
 IRValueNode *ir_builder_create_br(IRBuilder *builder, IRValueNode *target_bb);
 IRValueNode *ir_builder_create_cond_br(IRBuilder *builder, IRValueNode *cond, IRValueNode *true_bb,
                                        IRValueNode *false_bb);
-
-
 
 /** * @brief 构建 'add <type> <lhs>, <rhs>'
  * @param name_hint [!!] (可选) 用于调试的名字 (e.g., "sum")
@@ -67,8 +60,6 @@ IRValueNode *ir_builder_create_sub(IRBuilder *builder, IRValueNode *lhs, IRValue
  */
 IRValueNode *ir_builder_create_icmp(IRBuilder *builder, IRICmpPredicate pred, IRValueNode *lhs, IRValueNode *rhs,
                                     const char *name_hint);
-
-
 
 /** * @brief 构建 'alloca <type>'
  * @param name_hint [!!] (可选) (e.g., "ptr_x")
@@ -96,8 +87,6 @@ IRValueNode *ir_builder_create_store(IRBuilder *builder, IRValueNode *val, IRVal
 IRValueNode *ir_builder_create_gep(IRBuilder *builder, IRType *source_type, IRValueNode *base_ptr,
                                    IRValueNode **indices, size_t num_indices, bool inbounds, const char *name_hint);
 
-
-
 /**
  * @brief 构建 'phi <type>'
  * @param name_hint [!!] (可选) (e.g., "phi_res")
@@ -106,7 +95,6 @@ IRValueNode *ir_builder_create_phi(IRBuilder *builder, IRType *type, const char 
 
 /** @brief 向 PHI 节点添加 [value, basic_block] 对 (保持不变) */
 void ir_phi_add_incoming(IRValueNode *phi_node, IRValueNode *value, IRBasicBlock *incoming_bb);
-
 
 /**
  * @brief 构建 'call <callee>, <arg1>, ...'

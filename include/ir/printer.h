@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef CALIR_IR_PRINTER_H
 #define CALIR_IR_PRINTER_H
 

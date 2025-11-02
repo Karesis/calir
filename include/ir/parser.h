@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 /* include/ir/parser.h */
 #ifndef IR_PARSER_H
 #define IR_PARSER_H

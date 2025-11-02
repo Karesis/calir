@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 /* hashmap/_ptr.h */
 #ifndef HASHMAP_PTR_H
 #define HASHMAP_PTR_H
@@ -33,9 +32,7 @@
  * - Values 存储为 void*，由调用者管理其生命周期。
  */
 
-
 typedef struct PtrHashMap PtrHashMap;
-
 
 typedef struct
 {
@@ -107,7 +104,6 @@ bool ptr_hashmap_contains(const PtrHashMap *map, void *key);
  * @return size_t 条目数。
  */
 size_t ptr_hashmap_size(const PtrHashMap *map);
-
 
 PtrHashMapIter ptr_hashmap_iter(const PtrHashMap *map);
 bool ptr_hashmap_iter_next(PtrHashMapIter *iter, PtrHashMapEntry *entry_out);

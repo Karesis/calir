@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef IR_GLOBAL_H
 #define IR_GLOBAL_H
 
@@ -34,7 +33,6 @@
 typedef struct IRGlobalVariable
 {
   IRValueNode value;
-
 
   IDList list_node;
   IRModule *parent;

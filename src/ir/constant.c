@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include "ir/constant.h"
 #include "ir/context.h"
 #include "ir/type.h"
@@ -33,19 +32,15 @@ ir_constant_create_undef(IRContext *ctx, IRType *type)
 {
   assert(type != NULL);
 
-
   IRConstant *konst = BUMP_ALLOC_ZEROED(&ctx->permanent_arena, IRConstant);
   if (!konst)
     return NULL;
-
 
   konst->value.kind = IR_KIND_CONSTANT;
   konst->value.type = type;
   konst->value.name = NULL;
 
-
   list_init(&konst->value.uses);
-
 
   konst->const_kind = CONST_KIND_UNDEF;
 
@@ -65,14 +60,11 @@ ir_constant_create_int(IRContext *ctx, IRType *type, int64_t value)
   if (!konst)
     return NULL;
 
-
   konst->value.kind = IR_KIND_CONSTANT;
   konst->value.type = type;
   konst->value.name = NULL;
 
-
   list_init(&konst->value.uses);
-
 
   konst->const_kind = CONST_KIND_INT;
   konst->data.int_val = value;
@@ -93,17 +85,13 @@ ir_constant_create_float(IRContext *ctx, IRType *type, double value)
   if (!konst)
     return NULL;
 
-
   konst->value.kind = IR_KIND_CONSTANT;
   konst->value.type = type;
   konst->value.name = NULL;
 
-
   list_init(&konst->value.uses);
 
-
   konst->const_kind = CONST_KIND_FLOAT;
-
 
   if (type->kind == IR_TYPE_F32)
   {

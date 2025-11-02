@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef IR_CONTEXT_H
 #define IR_CONTEXT_H
 
@@ -48,17 +47,12 @@
 struct IRContext
 {
 
-
   /** 永久 Arena (用于 Types, Constants, Strings, Hashes) */
   Bump permanent_arena;
   /** 临时 IR Arena (用于 Modules, Functions, Instructions, ...) */
   Bump ir_arena;
 
-
-
-
   PtrHashMap *pointer_type_cache;
-
 
   I8HashMap *i8_constant_cache;
   I16HashMap *i16_constant_cache;
@@ -69,21 +63,13 @@ struct IRContext
   PtrHashMap *undef_constant_cache;
   PtrHashMap *array_type_cache;
 
-
-
   StrHashMap *named_struct_cache;
 
   GenericHashMap *anon_struct_cache;
 
-
   GenericHashMap *function_type_cache;
 
-
   StrHashMap *string_intern_cache;
-
-
-
-
 
   IRType *type_void;
   IRType *type_i1;
@@ -95,7 +81,6 @@ struct IRContext
   IRType *type_f64;
   IRType *type_label;
 
-
   IRValueNode *const_i1_true;
   IRValueNode *const_i1_false;
 };
@@ -105,8 +90,6 @@ struct IRContext
  * --- 公共 API ---
  * =================================================================
  */
-
-
 
 /**
  * @brief 创建一个新的 IRContext
@@ -132,8 +115,6 @@ void ir_context_destroy(IRContext *ctx);
  * @param ctx Context
  */
 void ir_context_reset_ir_arena(IRContext *ctx);
-
-
 
 IRType *ir_type_get_void(IRContext *ctx);
 IRType *ir_type_get_i1(IRContext *ctx);
@@ -182,8 +163,6 @@ IRType *ir_type_get_anonymous_struct(IRContext *ctx, IRType **member_types, size
 IRType *ir_type_get_function(IRContext *ctx, IRType *return_type, IRType **param_types, size_t param_count,
                              bool is_variadic);
 
-
-
 /**
  * @brief 获取一个 'undef' 常量 (唯一化)
  * @param ctx Context
@@ -228,8 +207,6 @@ IRValueNode *ir_constant_get_f32(IRContext *ctx, float value);
  * @warning Key 不能是 NaN 或 Inf (根据你的哈希表实现)
  */
 IRValueNode *ir_constant_get_f64(IRContext *ctx, double value);
-
-
 
 /**
  * @brief 唯一化一个字符串 (String Interning)

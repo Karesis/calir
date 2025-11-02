@@ -14,33 +14,22 @@
  * limitations under the License.
  */
 
-
-
 #include "utils/bitset.h"
 #include <assert.h>
 #include <stddef.h>
 #include <string.h>
 
-
-
-
 #define BITSET_NUM_WORDS(num_bits) (((num_bits) + 63) / 64)
-
 
 #define BITSET_WORD_INDEX(bit) ((bit) / 64)
 
-
 #define BITSET_BIT_INDEX(bit) ((bit) % 64)
 
-
 #define BITSET_WORD_MASK(bit) ((uint64_t)1 << BITSET_BIT_INDEX(bit))
-
-
 
 Bitset *
 bitset_create(size_t num_bits, Bump *arena)
 {
-
 
   Bitset *bs = BUMP_ALLOC_ZEROED(arena, Bitset);
 
@@ -53,7 +42,6 @@ bitset_create(size_t num_bits, Bump *arena)
   }
 
   bs->num_words = BITSET_NUM_WORDS(num_bits);
-
 
   bs->words = BUMP_ALLOC_SLICE_ZEROED(arena, uint64_t, bs->num_words);
 
@@ -76,9 +64,7 @@ bitset_create_all(size_t num_bits, Bump *arena)
 
   bs->num_words = BITSET_NUM_WORDS(num_bits);
 
-
   bs->words = BUMP_ALLOC_SLICE(arena, uint64_t, bs->num_words);
-
 
   bitset_set_all(bs);
 
@@ -123,11 +109,8 @@ bitset_set_all(Bitset *bs)
       full_words = bs->num_words - 1;
     }
 
-
-
     bs->words[bs->num_words - 1] = ((uint64_t)1 << remaining_bits) - 1;
   }
-
 
   for (size_t i = 0; i < full_words; i++)
   {
@@ -200,7 +183,6 @@ size_t
 bitset_count_slow(const Bitset *bs)
 {
 
-
   size_t count = 0;
   for (size_t i = 0; i < bs->num_words; i++)
   {
@@ -213,7 +195,6 @@ bitset_count_slow(const Bitset *bs)
     }
   }
 
-
   size_t remaining_bits = bs->num_bits % 64;
   if (remaining_bits != 0 && bs->num_words > 0)
   {
@@ -221,7 +202,6 @@ bitset_count_slow(const Bitset *bs)
 
     uint64_t invalid_mask = (uint64_t)-1 << remaining_bits;
     uint64_t invalid_bits_set = last_word & invalid_mask;
-
 
     while (invalid_bits_set > 0)
     {

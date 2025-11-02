@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include "ir/context.h"
 #include "ir/constant.h"
 #include "ir/type.h"
@@ -24,7 +23,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 #define INITIAL_CACHE_CAPACITY 64
 
 /*
@@ -32,7 +30,6 @@
  * --- 私有辅助函数 ---
  * =================================================================
  */
-
 
 /**
  * @brief [内部] 匿名结构体缓存的 "Key" 结构体。
@@ -45,7 +42,6 @@ typedef struct
   IRType **members;
   size_t count;
 } AnonStructKey;
-
 
 #define XXH_INLINE_ALL
 #include "utils/xxhash.h"
@@ -78,7 +74,6 @@ anon_struct_equal_fn(const void *key1, const void *key2)
     return false;
   }
 
-
   return memcmp(k1->members, k2->members, k1->count * sizeof(IRType *)) == 0;
 }
 
@@ -102,9 +97,7 @@ function_type_hash_fn(const void *key)
 {
   const FunctionTypeKey *k = (const FunctionTypeKey *)key;
 
-
   uint64_t hash = XXH3_64bits(k->param_types, k->param_count * sizeof(IRType *));
-
 
   hash = XXH3_64bits_withSeed(&k->return_type, sizeof(k->return_type), hash);
   hash = XXH3_64bits_withSeed(&k->is_variadic, sizeof(k->is_variadic), hash);
@@ -121,18 +114,15 @@ function_type_equal_fn(const void *key1, const void *key2)
   const FunctionTypeKey *k1 = (const FunctionTypeKey *)key1;
   const FunctionTypeKey *k2 = (const FunctionTypeKey *)key2;
 
-
   if (k1->return_type != k2->return_type || k1->param_count != k2->param_count || k1->is_variadic != k2->is_variadic)
   {
     return false;
   }
 
-
   if (k1->param_count == 0)
   {
     return true;
   }
-
 
   return memcmp(k1->param_types, k2->param_types, k1->param_count * sizeof(IRType *)) == 0;
 }
@@ -144,7 +134,6 @@ function_type_equal_fn(const void *key1, const void *key2)
 static bool
 ir_context_init_singleton_types(IRContext *ctx)
 {
-
 
 #define CREATE_TYPE(ty_kind, field)                                                                                    \
   do                                                                                                                   \
@@ -176,13 +165,9 @@ static bool
 ir_context_init_singleton_constants(IRContext *ctx)
 {
 
-
-
-
   ctx->const_i1_true = ir_constant_create_int(ctx, ctx->type_i1, 1);
   if (!ctx->const_i1_true)
     return false;
-
 
   ctx->const_i1_false = ir_constant_create_int(ctx, ctx->type_i1, 0);
   if (!ctx->const_i1_false)
@@ -208,27 +193,19 @@ ir_context_init_caches(IRContext *ctx)
       return false;                                                                                                    \
   } while (0)
 
-
   CREATE_CACHE(ptr_hashmap_create, pointer_type_cache);
   CREATE_CACHE(ptr_hashmap_create, array_type_cache);
   CREATE_CACHE(str_hashmap_create, named_struct_cache);
 
-
-  ctx->anon_struct_cache = generic_hashmap_create(&ctx->permanent_arena, INITIAL_CACHE_CAPACITY,
-                                                  anon_struct_hash_fn,
-                                                  anon_struct_equal_fn
-  );
+  ctx->anon_struct_cache =
+    generic_hashmap_create(&ctx->permanent_arena, INITIAL_CACHE_CAPACITY, anon_struct_hash_fn, anon_struct_equal_fn);
   if (!ctx->anon_struct_cache)
     return false;
 
-
   ctx->function_type_cache = generic_hashmap_create(&ctx->permanent_arena, INITIAL_CACHE_CAPACITY,
-                                                    function_type_hash_fn,
-                                                    function_type_equal_fn
-  );
+                                                    function_type_hash_fn, function_type_equal_fn);
   if (!ctx->function_type_cache)
     return false;
-
 
   CREATE_CACHE(i8_hashmap_create, i8_constant_cache);
   CREATE_CACHE(i16_hashmap_create, i16_constant_cache);
@@ -237,7 +214,6 @@ ir_context_init_caches(IRContext *ctx)
   CREATE_CACHE(f32_hashmap_create, f32_constant_cache);
   CREATE_CACHE(f64_hashmap_create, f64_constant_cache);
   CREATE_CACHE(ptr_hashmap_create, undef_constant_cache);
-
 
   CREATE_CACHE(str_hashmap_create, string_intern_cache);
 
@@ -259,11 +235,8 @@ ir_context_create(void)
   if (!ctx)
     return NULL;
 
-
-
   bump_init(&ctx->permanent_arena);
   bump_init(&ctx->ir_arena);
-
 
   if (!ir_context_init_caches(ctx))
   {
@@ -274,7 +247,6 @@ ir_context_create(void)
     return NULL;
   }
 
-
   if (!ir_context_init_singleton_types(ctx))
   {
 
@@ -283,7 +255,6 @@ ir_context_create(void)
     free(ctx);
     return NULL;
   }
-
 
   if (!ir_context_init_singleton_constants(ctx))
   {
@@ -303,11 +274,8 @@ ir_context_destroy(IRContext *ctx)
   if (!ctx)
     return;
 
-
-
   bump_destroy(&ctx->permanent_arena);
   bump_destroy(&ctx->ir_arena);
-
 
   free(ctx);
 }
@@ -317,7 +285,6 @@ ir_context_reset_ir_arena(IRContext *ctx)
 {
   assert(ctx != NULL);
 
-
   bump_reset(&ctx->ir_arena);
 }
 
@@ -326,7 +293,6 @@ ir_context_reset_ir_arena(IRContext *ctx)
  * --- 公共 API: 类型 (Types) ---
  * =================================================================
  */
-
 
 IRType *
 ir_type_get_void(IRContext *ctx)
@@ -378,14 +344,11 @@ ir_type_get_ptr(IRContext *ctx, IRType *pointee_type)
   assert(ctx != NULL);
   assert(pointee_type != NULL);
 
-
-
   void *cached = ptr_hashmap_get(ctx->pointer_type_cache, (void *)pointee_type);
   if (cached)
   {
     return (IRType *)cached;
   }
-
 
   IRType *new_ptr_type = ir_type_create_ptr(ctx, pointee_type);
   if (!new_ptr_type)
@@ -393,9 +356,6 @@ ir_type_get_ptr(IRContext *ctx, IRType *pointee_type)
 
     return NULL;
   }
-
-
-
 
   ptr_hashmap_put(ctx->pointer_type_cache, (void *)pointee_type, (void *)new_ptr_type);
 
@@ -411,7 +371,6 @@ ir_type_get_array(IRContext *ctx, IRType *element_type, size_t element_count)
   assert(ctx != NULL);
   assert(element_type != NULL);
 
-
   SizeHashMap *inner_map = (SizeHashMap *)ptr_hashmap_get(ctx->array_type_cache, (void *)element_type);
 
   if (!inner_map)
@@ -421,10 +380,8 @@ ir_type_get_array(IRContext *ctx, IRType *element_type, size_t element_count)
     if (!inner_map)
       return NULL;
 
-
     ptr_hashmap_put(ctx->array_type_cache, (void *)element_type, (void *)inner_map);
   }
-
 
   IRType *array_type = (IRType *)sz_hashmap_get(inner_map, element_count);
 
@@ -433,11 +390,9 @@ ir_type_get_array(IRContext *ctx, IRType *element_type, size_t element_count)
     return array_type;
   }
 
-
   array_type = ir_type_create_array(ctx, element_type, element_count);
   if (!array_type)
     return NULL;
-
 
   sz_hashmap_put(inner_map, element_count, (void *)array_type);
 
@@ -452,10 +407,7 @@ ir_type_get_anonymous_struct(IRContext *ctx, IRType **member_types, size_t membe
 {
   assert(ctx != NULL);
 
-
   AnonStructKey temp_key = {.members = member_types, .count = member_count};
-
-
 
   IRType *struct_type = (IRType *)generic_hashmap_get(ctx->anon_struct_cache, &temp_key);
 
@@ -464,24 +416,16 @@ ir_type_get_anonymous_struct(IRContext *ctx, IRType **member_types, size_t membe
     return struct_type;
   }
 
-
-
   struct_type = ir_type_create_struct(ctx, member_types, member_count, NULL);
   if (!struct_type)
     return NULL;
-
-
 
   AnonStructKey *perm_key = BUMP_ALLOC(&ctx->permanent_arena, AnonStructKey);
   if (!perm_key)
     return NULL;
 
-
   perm_key->count = struct_type->as.aggregate.member_count;
   perm_key->members = struct_type->as.aggregate.member_types;
-
-
-
 
   generic_hashmap_put(ctx->anon_struct_cache, (void *)perm_key, (void *)struct_type);
 
@@ -496,7 +440,6 @@ ir_type_get_named_struct(IRContext *ctx, const char *name, IRType **member_types
 {
   assert(ctx != NULL);
   assert(name != NULL && "Named struct must have a name");
-
 
   size_t name_len = strlen(name);
   IRType *struct_type = (IRType *)str_hashmap_get(ctx->named_struct_cache, name, name_len);
@@ -520,18 +463,12 @@ ir_type_get_named_struct(IRContext *ctx, const char *name, IRType **member_types
     return struct_type;
   }
 
-
-
   struct_type = ir_type_create_struct(ctx, member_types, member_count, name);
   if (!struct_type)
     return NULL;
 
-
-
   const char *interned_name = struct_type->as.aggregate.name;
-  str_hashmap_put_preallocated_key(ctx->named_struct_cache, interned_name,
-                                   strlen(interned_name),
-                                   (void *)struct_type);
+  str_hashmap_put_preallocated_key(ctx->named_struct_cache, interned_name, strlen(interned_name), (void *)struct_type);
 
   return struct_type;
 }
@@ -546,11 +483,8 @@ ir_type_get_function(IRContext *ctx, IRType *return_type, IRType **param_types, 
   assert(ctx != NULL);
   assert(return_type != NULL);
 
-
-
   FunctionTypeKey temp_key = {
     .return_type = return_type, .param_types = param_types, .param_count = param_count, .is_variadic = is_variadic};
-
 
   IRType *func_type = (IRType *)generic_hashmap_get(ctx->function_type_cache, &temp_key);
 
@@ -559,26 +493,18 @@ ir_type_get_function(IRContext *ctx, IRType *return_type, IRType **param_types, 
     return func_type;
   }
 
-
-
   func_type = ir_type_create_function(ctx, return_type, param_types, param_count, is_variadic);
   if (!func_type)
     return NULL;
-
-
 
   FunctionTypeKey *perm_key = BUMP_ALLOC(&ctx->permanent_arena, FunctionTypeKey);
   if (!perm_key)
     return NULL;
 
-
   perm_key->return_type = func_type->as.function.return_type;
   perm_key->param_types = func_type->as.function.param_types;
   perm_key->param_count = func_type->as.function.param_count;
   perm_key->is_variadic = func_type->as.function.is_variadic;
-
-
-
 
   generic_hashmap_put(ctx->function_type_cache, (void *)perm_key, (void *)func_type);
 
@@ -600,18 +526,15 @@ ir_constant_get_undef(IRContext *ctx, IRType *type)
   assert(ctx != NULL);
   assert(type != NULL);
 
-
   void *cached = ptr_hashmap_get(ctx->undef_constant_cache, (void *)type);
   if (cached)
   {
     return (IRValueNode *)cached;
   }
 
-
   IRValueNode *new_undef = ir_constant_create_undef(ctx, type);
   if (!new_undef)
     return NULL;
-
 
   ptr_hashmap_put(ctx->undef_constant_cache, (void *)type, (void *)new_undef);
 
@@ -627,7 +550,6 @@ ir_constant_get_i1(IRContext *ctx, bool value)
   assert(ctx != NULL);
   return value ? ctx->const_i1_true : ctx->const_i1_false;
 }
-
 
 #define DEFINE_GET_INT_CONSTANT(BITS, C_TYPE, HASHMAP_TYPE, HASHMAP_FIELD, GET_FUNC)                                   \
   IRValueNode *ir_constant_get_##BITS(IRContext *ctx, C_TYPE value)                                                    \
@@ -649,12 +571,10 @@ ir_constant_get_i1(IRContext *ctx, bool value)
     return new_const;                                                                                                  \
   }
 
-
 DEFINE_GET_INT_CONSTANT(i8, int8_t, i8_hashmap, i8_constant_cache, i8_hashmap_get)
 DEFINE_GET_INT_CONSTANT(i16, int16_t, i16_hashmap, i16_constant_cache, i16_hashmap_get)
 DEFINE_GET_INT_CONSTANT(i32, int32_t, i32_hashmap, i32_constant_cache, i32_hashmap_get)
 DEFINE_GET_INT_CONSTANT(i64, int64_t, i64_hashmap, i64_constant_cache, i64_hashmap_get)
-
 
 #define DEFINE_GET_FLOAT_CONSTANT(BITS, C_TYPE, HASHMAP_TYPE, HASHMAP_FIELD, GET_FUNC)                                 \
   IRValueNode *ir_constant_get_##BITS(IRContext *ctx, C_TYPE value)                                                    \
@@ -676,7 +596,6 @@ DEFINE_GET_INT_CONSTANT(i64, int64_t, i64_hashmap, i64_constant_cache, i64_hashm
     return new_const;                                                                                                  \
   }
 
-
 DEFINE_GET_FLOAT_CONSTANT(f32, float, f32_hashmap, f32_constant_cache, f32_hashmap_get)
 DEFINE_GET_FLOAT_CONSTANT(f64, double, f64_hashmap, f64_constant_cache, f64_hashmap_get)
 
@@ -695,15 +614,12 @@ ir_context_intern_str_slice(IRContext *ctx, const char *str, size_t len)
   assert(ctx != NULL);
   assert(str != NULL || len == 0);
 
-
   void *cached = str_hashmap_get(ctx->string_intern_cache, str, len);
   if (cached)
   {
 
     return (const char *)cached;
   }
-
-
 
   char *new_str = (char *)bump_alloc(&ctx->permanent_arena, len + 1, 1);
   if (!new_str)
@@ -712,23 +628,13 @@ ir_context_intern_str_slice(IRContext *ctx, const char *str, size_t len)
   memcpy(new_str, str, len);
   new_str[len] = '\0';
 
-
-
-
-
-  bool put_ok = str_hashmap_put_preallocated_key(ctx->string_intern_cache,
-                                                 new_str,
-                                                 len,
-                                                 (void *)new_str
-  );
+  bool put_ok = str_hashmap_put_preallocated_key(ctx->string_intern_cache, new_str, len, (void *)new_str);
 
   if (!put_ok)
   {
 
-
     return NULL;
   }
-
 
   return (const char *)new_str;
 }

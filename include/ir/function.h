@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef FUNCTION_H
 #define FUNCTION_H
 

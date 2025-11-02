@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef TYPE_H
 #define TYPE_H
 
@@ -56,13 +55,11 @@ struct IRType
 
     IRType *pointee_type;
 
-
     struct
     {
       IRType *element_type;
       size_t element_count;
     } array;
-
 
     struct
     {
@@ -137,8 +134,6 @@ IRType *ir_type_create_struct(IRContext *ctx, IRType **member_types, size_t memb
  */
 IRType *ir_type_create_function(IRContext *ctx, IRType *return_type, IRType **param_types, size_t param_count,
                                 bool is_variadic);
-
-
 
 void ir_type_dump(IRType *type, IRPrinter *p);
 

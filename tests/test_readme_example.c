@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 /* tests/test_readme_example.c */
 #include <stdbool.h>
 #include <stdio.h>
@@ -68,30 +67,19 @@ build_readme_ir(IRModule *mod)
 {
   IRContext *ctx = mod->context;
 
-
   IRType *i32_type = ir_type_get_i32(ctx);
   IRType *i64_type = ir_type_get_i64(ctx);
   IRType *void_type = ir_type_get_void(ctx);
 
-
   IRType *point_members[2] = {i32_type, i64_type};
   IRType *point_type = ir_type_get_named_struct(ctx, "point", point_members, 2);
 
-
   IRType *array_type = ir_type_get_array(ctx, i32_type, 10);
-
 
   IRType *packet_members[2] = {point_type, array_type};
   IRType *data_packet_type = ir_type_get_named_struct(ctx, "data_packet", packet_members, 2);
 
-
-
-  ir_global_variable_create(mod,
-                            "g_data",
-                            array_type,
-                            NULL);
-
-
+  ir_global_variable_create(mod, "g_data", array_type, NULL);
 
   IRFunction *func = ir_function_create(mod, "test_func", void_type);
   IRArgument *arg_idx_s = ir_argument_create(func, i32_type, "idx");
@@ -104,23 +92,17 @@ build_readme_ir(IRModule *mod)
   IRBuilder *builder = ir_builder_create(ctx);
   ir_builder_set_insertion_point(builder, entry_bb);
 
-
-
-
   IRValueNode *packet_ptr = ir_builder_create_alloca(builder, data_packet_type, "packet_ptr");
-
 
   IRValueNode *const_0 = ir_constant_get_i32(ctx, 0);
   IRValueNode *const_1 = ir_constant_get_i32(ctx, 1);
   IRValueNode *const_123 = ir_constant_get_i32(ctx, 123);
 
-
   IRValueNode *gep_indices[] = {const_0, const_1, arg_idx};
-  IRValueNode *elem_ptr = ir_builder_create_gep(builder, data_packet_type, packet_ptr, gep_indices, 3,
-                                                true /* inbounds */, "elem_ptr");
+  IRValueNode *elem_ptr =
+    ir_builder_create_gep(builder, data_packet_type, packet_ptr, gep_indices, 3, true /* inbounds */, "elem_ptr");
 
   ir_builder_create_store(builder, const_123, elem_ptr);
-
 
   ir_builder_create_ret(builder, NULL);
   ir_builder_destroy(builder);
@@ -138,15 +120,12 @@ test_readme_ir_builder()
 {
   SUITE_START("README Example: IR Builder");
 
-
   Bump arena;
   bump_init(&arena);
   IRContext *ctx = ir_context_create();
   IRModule *mod = ir_module_create(ctx, "test_module");
 
-
   build_readme_ir(mod);
-
 
   printf("  (Dumping module to string...)\n");
   const char *dumped_str = ir_module_dump_to_string(mod, &arena);
@@ -161,7 +140,6 @@ test_readme_ir_builder()
                  "--- [!!] ACTUAL OUTPUT [!!] ---\n%s\n",
                  EXPECTED_README_IR, dumped_str);
   }
-
 
   ir_context_destroy(ctx);
   bump_destroy(&arena);

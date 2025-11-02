@@ -99,8 +99,6 @@ $(LIB_TARGET): $(LIB_OBJS)
 	@mkdir -p $(@D)
 	$(AR) rcs $@ $^
 
-# --- [!!] 移除了链接主目标的规则 ---
-
 # --- 自动化测试链接规则 ---
 $(TEST_TARGETS): $(BUILD_DIR)/%: $(OBJ_DIR)/tests/%.o $(LIB_TARGET)
 	@echo "Linking Test ($@)..."
@@ -134,21 +132,30 @@ $(OBJ_DIR)/tests/%.o: tests/%.c
 
 .PHONY: help
 help:
-	@echo "Available commands:"
-	@echo "  make (all)           - Build the main library (libcalir.a) and all test binaries."
+	@echo "Calico-IR Makefile Commands"
+	@echo ""
+	@echo "  Usage: make [target]"
+	@echo ""
+	@echo "  --- 🎯 Main Targets ---"
+	@echo "  make (all)           - Build library (libcalir.a) and all test binaries."
 	@echo "  make lib             - Build only the static library (libcalir.a)."
-	@echo "  make build_tests     - Build ALL test executables in tests/."
-	@echo "  make test            - Run ALL test suites (e.g., test_bitset, test_hashmap)."
-	@echo "  make run             - Alias for 'make test'. Runs ALL test suites."
-	@echo "  make re              - Clean and rebuild 'all'."
-	@echo "  make clean           - Remove all build artifacts."
-	@echo "  make clean-comments  - Clean temporary comments ('//')"
-	@echo "  --- License Management ---"
-	@echo "  make headers         - Apply missing license headers to all .c/.h files."
+	@echo "  make test            - Build and run ALL test suites (alias: 'make run')."
+	@echo ""
+	@echo "  --- 🧼 Code Quality & Formatting (CI / Linting) ---"
+	@echo "  make format          - Auto-format all .c/.h files with clang-format."
+	@echo "  make check-format    - Check if all files are formatted (CI mode)."
+	@echo "  make headers         - Apply missing license headers."
 	@echo "  make check-headers   - Check for missing license headers (CI mode)."
-	@echo "  --- Individual Tests (for development) ---"
-	@echo "  make build/test_X    - Build only a *single* test (e.g., make build/test_bitset)."
+	@echo "  make clean-comments  - Remove temporary '//' comments from code."
+	@echo ""
+	@echo "  --- 🛠️ Development & Debugging ---"
+	@echo "  make build_tests     - Build ALL test executables (does not run them)."
+	@echo "  make build/test_X    - Build a *single* test (e.g., make build/test_bitset)."
 	@echo "  make run_test_X      - Build and run a *single* test (e.g., make run_test_bitset)."
+	@echo ""
+	@echo "  --- 🧹 Utility ---"
+	@echo "  make clean           - Remove all build artifacts."
+	@echo "  make re              - Clean and rebuild 'all'."
 
 # 只构建库的快捷方式
 .PHONY: lib
@@ -184,6 +191,18 @@ check-headers:
 clean-comments:
 	@echo "Cleaning temporary (//) comments..."
 	@$(PYTHON) scripts/clean_comments.py
+
+# 格式化 C 代码
+.PHONY: format
+format:
+	@echo "Formatting C files..."
+	@$(PYTHON) scripts/run_formatter.py
+
+# 检查 C 代码格式 (用于 CI)
+.PHONY: check-format
+check-format:
+	@echo "Checking C formatting..."
+	@$(PYTHON) scripts/run_formatter.py --check
 
 # 自动化运行规则 
 .PHONY: $(TEST_RUNNERS)

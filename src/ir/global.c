@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include "ir/global.h"
 
 #include "ir/context.h"
@@ -37,40 +36,28 @@ ir_global_variable_create(IRModule *mod, const char *name, IRType *allocated_typ
   assert(mod != NULL && "Parent module cannot be NULL");
   IRContext *ctx = mod->context;
 
-
   assert(allocated_type != NULL && allocated_type->kind != IR_TYPE_VOID);
 
-
-  assert(initializer == NULL || initializer->kind == IR_KIND_CONSTANT ||
-         initializer->kind == IR_KIND_FUNCTION ||
+  assert(initializer == NULL || initializer->kind == IR_KIND_CONSTANT || initializer->kind == IR_KIND_FUNCTION ||
          initializer->kind == IR_KIND_GLOBAL);
 
-
   assert(initializer == NULL || initializer->type == allocated_type);
-
 
   IRGlobalVariable *global = BUMP_ALLOC_ZEROED(&ctx->ir_arena, IRGlobalVariable);
   if (!global)
     return NULL;
 
-
   global->parent = mod;
   global->allocated_type = allocated_type;
   global->initializer = initializer;
 
-
   list_init(&global->list_node);
-
 
   global->value.kind = IR_KIND_GLOBAL;
   global->value.name = ir_context_intern_str(ctx, name);
   list_init(&global->value.uses);
 
-
-
-
   global->value.type = ir_type_get_ptr(ctx, allocated_type);
-
 
   list_add_tail(&mod->globals, &global->list_node);
 
@@ -93,23 +80,16 @@ ir_global_variable_dump(IRGlobalVariable *global, IRPrinter *p)
     return;
   }
 
-
-
   ir_value_dump_name(&global->value, p);
   ir_print_str(p, " = ");
 
-
   ir_print_str(p, "global ");
 
-
   ir_type_dump(global->allocated_type, p);
-
 
   if (global->initializer)
   {
     ir_print_str(p, " ");
-
-
 
     ir_value_dump_with_type(global->initializer, p);
   }

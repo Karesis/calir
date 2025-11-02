@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef MODULE_H
 #define MODULE_H
 

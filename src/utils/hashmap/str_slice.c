@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-
 /* utils/hashmap/str_slice.c */
 #include "utils/hashmap/str_slice.h"
 #include "utils/bump.h"
 #include <assert.h>
 #include <string.h>
-
 
 #define XXH_INLINE_ALL
 #include "utils/xxhash.h"
@@ -33,20 +31,17 @@
  * ========================================
  */
 
-
 typedef struct
 {
   const char *body;
   size_t len;
 } StrSlice;
 
-
 typedef struct
 {
   StrSlice key;
   void *value;
 } StrHashMapBucket;
-
 
 struct StrHashMap
 {
@@ -87,19 +82,12 @@ str_hashmap_get_hash(StrSlice key)
  * ========================================
  */
 
-
 #define CHM_PREFIX str
 #define CHM_K_TYPE StrSlice
 #define CHM_V_TYPE void *
 #define CHM_API_TYPE StrHashMap
 #define CHM_STRUCT_TYPE StrHashMap
 #define CHM_BUCKET_TYPE StrHashMapBucket
-
-
-
-
-
-
 
 #include "utils/hashmap/core.inc"
 
@@ -120,11 +108,9 @@ str_hashmap_create(Bump *arena, size_t initial_capacity)
   if (!map)
     return NULL;
 
-
   StrHashMapBucket *buckets = BUMP_ALLOC_SLICE(arena, StrHashMapBucket, num_buckets);
   if (!buckets)
     return NULL;
-
 
   uint8_t *states = BUMP_ALLOC_SLICE_ZEROED(arena, uint8_t, num_buckets);
   if (!states)
@@ -146,7 +132,6 @@ str_hashmap_get(const StrHashMap *map, const char *key_body, size_t key_len)
 
   StrSlice key_to_find = {.body = key_body, .len = key_len};
   StrHashMapBucket *bucket;
-
 
   if (str_hashmap_find_bucket(map, key_to_find, &bucket))
   {
@@ -213,13 +198,10 @@ str_hashmap_put(StrHashMap *map, const char *key_body, size_t key_len, void *val
 
   size_t bucket_idx = (size_t)(bucket - map->buckets);
 
-
   if (map->states[bucket_idx] == BUCKET_TOMBSTONE)
   {
     map->num_tombstones--;
   }
-
-
 
   const char *new_key_body = bump_alloc_copy(map->arena, key_body, key_len, 1);
   if (!new_key_body && key_len > 0)
@@ -266,13 +248,10 @@ str_hashmap_put_preallocated_key(StrHashMap *map, const char *key_body, size_t k
 
   size_t bucket_idx = (size_t)(bucket - map->buckets);
 
-
   if (map->states[bucket_idx] == BUCKET_TOMBSTONE)
   {
     map->num_tombstones--;
   }
-
-
 
   bucket->key.body = key_body;
   bucket->key.len = key_len;
@@ -295,11 +274,9 @@ str_hashmap_size(const StrHashMap *map)
  * ========================================
  */
 
-
 #define _CHM_PASTE3(a, b, c) a##b##c
 #define CHM_PASTE3(a, b, c) _CHM_PASTE3(a, b, c)
 #define CHM_FUNC(prefix, suffix) CHM_PASTE3(prefix, _hashmap_, suffix)
-
 
 #define CHM_PREFIX str
 #define CHM_API_TYPE StrHashMap
@@ -307,8 +284,6 @@ str_hashmap_size(const StrHashMap *map)
 #define CHM_BUCKET_TYPE StrHashMapBucket
 #define CHM_ENTRY_TYPE StrHashMapEntry
 #define CHM_ITER_TYPE StrHashMapIter
-
-
 
 #define CHM_ITER_ASSIGN_ENTRY(entry_out, bucket)                                                                       \
   do                                                                                                                   \
@@ -318,9 +293,7 @@ str_hashmap_size(const StrHashMap *map)
     (entry_out)->value = (bucket)->value;                                                                              \
   } while (0)
 
-
 #include "utils/hashmap/iterator.inc"
-
 
 #undef CHM_ITER_ASSIGN_ENTRY
 

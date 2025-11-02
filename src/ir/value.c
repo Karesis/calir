@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-
-
-
 #include "ir/value.h"
 #include "ir/constant.h"
 #include "ir/function.h"
@@ -101,7 +98,6 @@ ir_constant_dump_value(IRConstant *konst, IRPrinter *p)
   {
     ir_print_str(p, "undef");
   }
-
 }
 
 /**
@@ -116,13 +112,11 @@ ir_value_dump_name(IRValueNode *val, IRPrinter *p)
     return;
   }
 
-
   if (val->kind == IR_KIND_CONSTANT)
   {
     ir_constant_dump_value((IRConstant *)val, p);
     return;
   }
-
 
   assert(val->name != NULL && "Value name is NULL");
 
@@ -157,9 +151,7 @@ ir_value_dump_with_type(IRValueNode *val, IRPrinter *p)
     return;
   }
 
-
   ir_value_dump_name(val, p);
-
 
   switch (val->kind)
   {
@@ -168,7 +160,6 @@ ir_value_dump_with_type(IRValueNode *val, IRPrinter *p)
   case IR_KIND_INSTRUCTION:
 
     ir_print_str(p, ": ");
-
 
     ir_type_dump(val->type, p);
     break;
@@ -205,15 +196,11 @@ ir_value_set_name(IRValueNode *val, const char *name)
 {
   assert(val != NULL);
 
-
   if (name)
   {
 
     IRContext *ctx = get_context_from_value(val);
     assert(ctx != NULL && "Could not find IRContext from IRValueNode!");
-
-
-
 
     val->name = (char *)ir_context_intern_str(ctx, name);
   }
@@ -232,28 +219,19 @@ ir_value_replace_all_uses_with(IRValueNode *old_val, IRValueNode *new_val)
   assert(old_val != NULL);
   assert(new_val != NULL);
 
-
   if (old_val == new_val)
   {
     return;
   }
 
-
-
   IDList *iter, *temp;
   list_for_each_safe(&old_val->uses, iter, temp)
   {
 
-
     IRUse *use = list_entry(iter, IRUse, value_node);
-
-
-
-
 
     ir_use_set_value(use, new_val);
   }
-
 
   assert(list_empty(&old_val->uses));
 }

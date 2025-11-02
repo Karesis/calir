@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef IR_USE_H
 #define IR_USE_H
 

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-
-
 #include "ir/instruction.h"
 #include "ir/basicblock.h"
 #include "ir/constant.h"
@@ -30,9 +28,6 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-
-
-
 
 static const char *
 ir_icmp_predicate_to_string(IRICmpPredicate pred)
@@ -85,8 +80,6 @@ get_operand(IRInstruction *inst, int index)
   return use->value;
 }
 
-
-
 /**
  * @brief 从其父基本块中安全地擦除一条指令
  */
@@ -96,13 +89,10 @@ ir_instruction_erase_from_parent(IRInstruction *inst)
   if (!inst)
     return;
 
-
-
   assert(inst->parent != NULL && "Instruction has no parent BasicBlock");
   assert(inst->parent->parent != NULL && "BasicBlock has no parent Function");
   assert(inst->parent->parent->parent != NULL && "Function has no parent Module");
   IRContext *ctx = inst->parent->parent->parent->context;
-
 
   if (inst->result.type->kind != IR_TYPE_VOID && !list_empty(&inst->result.uses))
   {
@@ -112,21 +102,15 @@ ir_instruction_erase_from_parent(IRInstruction *inst)
   }
   assert(list_empty(&inst->result.uses) && "Instruction result still in use!");
 
-
-
   IDList *iter, *temp;
   list_for_each_safe(&inst->operands, iter, temp)
   {
     IRUse *use = list_entry(iter, IRUse, user_node);
     ir_use_unlink(use);
-
   }
-
 
   list_del(&inst->list_node);
 }
-
-
 
 void
 ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
@@ -137,7 +121,6 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
     return;
   }
 
-
   int has_result = (inst->result.type && inst->result.type->kind != IR_TYPE_VOID);
   if (has_result)
   {
@@ -145,7 +128,6 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
     ir_value_dump_with_type(&inst->result, p);
     ir_print_str(p, " = ");
   }
-
 
   IRValueNode *op1, *op2;
 

@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-
 #ifndef CALIR_IR_LEXER_H
 #define CALIR_IR_LEXER_H
 
 #include "ir/context.h"
 #include <stddef.h>
 #include <stdint.h>
-
 
 typedef struct IRContext IRContext;
 
@@ -33,17 +31,14 @@ typedef enum
   TK_ILLEGAL,
   TK_EOF,
 
-
   TK_IDENT,
   TK_GLOBAL_IDENT,
   TK_LOCAL_IDENT,
   TK_LABEL_IDENT,
 
-
   TK_INTEGER_LITERAL,
   TK_FLOAT_LITERAL,
   TK_STRING_LITERAL,
-
 
   TK_EQ,
   TK_COMMA,
@@ -58,9 +53,6 @@ typedef enum
   TK_GT,
   TK_ELLIPSIS,
   TK_SEMICOLON,
-
-
-
 
 } TokenType;
 
@@ -77,12 +69,9 @@ typedef struct Token
 
   union {
 
-
     const char *ident_val;
 
-
     int64_t int_val;
-
 
     double float_val;
   } as;
@@ -104,8 +93,6 @@ typedef struct Lexer
   Token current;
   Token peek;
 } Lexer;
-
-
 
 /**
  * @brief 初始化 Lexer

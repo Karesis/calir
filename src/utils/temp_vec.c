@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-
 #include "utils/temp_vec.h"
 #include <string.h>
-
 
 #define TEMP_VEC_INITIAL_CAPACITY 8
 
@@ -34,16 +32,9 @@ temp_vec_grow_if_needed(TempVec *vec)
     return true;
   }
 
-
   size_t new_cap = (vec->capacity == 0) ? TEMP_VEC_INITIAL_CAPACITY : vec->capacity * 2;
 
-
-  void **new_data = BUMP_REALLOC_SLICE(vec->arena,
-                                       void *,
-                                       vec->data,
-                                       vec->len,
-                                       new_cap
-  );
+  void **new_data = BUMP_REALLOC_SLICE(vec->arena, void *, vec->data, vec->len, new_cap);
 
   if (new_data == NULL)
   {
@@ -55,8 +46,6 @@ temp_vec_grow_if_needed(TempVec *vec)
   vec->capacity = new_cap;
   return true;
 }
-
-
 
 void
 temp_vec_init(TempVec *vec, Bump *arena)
@@ -82,7 +71,6 @@ temp_vec_push(TempVec *vec, void *element)
   {
     return false;
   }
-
 
   vec->data[vec->len++] = element;
   return true;

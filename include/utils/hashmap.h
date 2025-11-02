@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef CHASHMAP_H
 #define CHASHMAP_H
 

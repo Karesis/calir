@@ -14,12 +14,10 @@
  * limitations under the License.
  */
 
-
 #include "utils/string_buf.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-
 
 #define STRING_BUF_INITIAL_CAPACITY 64
 
@@ -39,20 +37,13 @@ string_buf_ensure_capacity(StringBuf *buf, size_t additional_len)
     return;
   }
 
-
   size_t new_cap = (buf->capacity == 0) ? STRING_BUF_INITIAL_CAPACITY : buf->capacity * 2;
   if (new_cap < needed_cap)
   {
     new_cap = needed_cap;
   }
 
-
-
-  char *new_data = (char *)bump_realloc(buf->arena,
-                                        buf->data,
-                                        buf->len,
-                                        new_cap,
-                                        __alignof(char));
+  char *new_data = (char *)bump_realloc(buf->arena, buf->data, buf->len, new_cap, __alignof(char));
 
   if (new_data == NULL)
   {
@@ -63,15 +54,11 @@ string_buf_ensure_capacity(StringBuf *buf, size_t additional_len)
     return;
   }
 
-
   buf->data = new_data;
   buf->capacity = new_cap;
 
-
   buf->data[buf->len] = '\0';
 }
-
-
 
 void
 string_buf_init(StringBuf *buf, Bump *arena)
@@ -95,17 +82,14 @@ string_buf_append_bytes(StringBuf *buf, const char *data, size_t len)
   if (len == 0)
     return;
 
-
   string_buf_ensure_capacity(buf, len);
   if (buf->data == NULL)
   {
     return;
   }
 
-
   memcpy(buf->data + buf->len, data, len);
   buf->len += len;
-
 
   buf->data[buf->len] = '\0';
 }
@@ -122,7 +106,6 @@ string_buf_vappend_fmt(StringBuf *buf, const char *fmt, va_list args)
   va_list args_copy;
   va_copy(args_copy, args);
 
-
   if (buf->data == NULL)
   {
     string_buf_ensure_capacity(buf, 0);
@@ -134,7 +117,6 @@ string_buf_vappend_fmt(StringBuf *buf, const char *fmt, va_list args)
   }
 
   size_t remaining_cap = buf->capacity - buf->len;
-
 
   int n = vsnprintf(buf->data + buf->len, remaining_cap, fmt, args);
 
@@ -155,15 +137,12 @@ string_buf_vappend_fmt(StringBuf *buf, const char *fmt, va_list args)
     return;
   }
 
-
-
   string_buf_ensure_capacity(buf, bytes_needed);
   if (buf->data == NULL)
   {
     va_end(args_copy);
     return;
   }
-
 
   remaining_cap = buf->capacity - buf->len;
   n = vsnprintf(buf->data + buf->len, remaining_cap, fmt, args_copy);
@@ -173,7 +152,6 @@ string_buf_vappend_fmt(StringBuf *buf, const char *fmt, va_list args)
   {
     return;
   }
-
 
   buf->len += (size_t)n;
 }
@@ -201,7 +179,6 @@ string_buf_get(StringBuf *buf)
 
     return empty_str;
   }
-
 
   return buf->data;
 }

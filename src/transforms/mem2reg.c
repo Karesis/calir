@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-
 #include "transforms/mem2reg.h"
-
 
 #include "analysis/cfg.h"
 #include "analysis/dom_frontier.h"
@@ -37,10 +35,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-
-
-
-
 /**
  * @brief 存储 mem2reg pass 期间所需的所有上下文。
  */
@@ -52,7 +46,6 @@ typedef struct
   IRContext *ctx;
   Bump *arena;
   IRBuilder *builder;
-
 
   size_t num_blocks;
 } Mem2RegContext;
@@ -93,10 +86,6 @@ typedef struct
   PtrHashMap *alloca_to_stack_top;
 } RenameState;
 
-
-
-
-
 /**
  * @brief 检查 alloca 是否只被 load/store 使用。
  *
@@ -108,7 +97,6 @@ is_promotable(IRInstruction *alloca_inst)
 {
   assert(alloca_inst->opcode == IR_OP_ALLOCA);
   IRValueNode *alloca_val = &alloca_inst->result;
-
 
   IDList *use_node;
   list_for_each(&alloca_val->uses, use_node)
@@ -125,7 +113,6 @@ is_promotable(IRInstruction *alloca_inst)
     if (user_inst->opcode == IR_OP_STORE)
     {
 
-
       IRUse *val_use = list_entry(user_inst->operands.next, IRUse, user_node);
       IRUse *ptr_use = list_entry(val_use->user_node.next, IRUse, user_node);
 
@@ -135,8 +122,6 @@ is_promotable(IRInstruction *alloca_inst)
         continue;
       }
     }
-
-
 
     return false;
   }
@@ -157,7 +142,6 @@ find_promotable_allocas(Mem2RegContext *ctx, IDList *promotable_allocas)
   }
   IRBasicBlock *entry_bb = list_entry(ctx->func->basic_blocks.next, IRBasicBlock, list_node);
 
-
   IDList *inst_node;
   list_for_each(&entry_bb->instructions, inst_node)
   {
@@ -166,7 +150,6 @@ find_promotable_allocas(Mem2RegContext *ctx, IDList *promotable_allocas)
     {
       continue;
     }
-
 
     IRType *ptr_type = inst->result.type;
     if (ptr_type->kind != IR_TYPE_PTR)
@@ -179,20 +162,16 @@ find_promotable_allocas(Mem2RegContext *ctx, IDList *promotable_allocas)
       continue;
     }
 
-
     if (!is_promotable(inst))
     {
       continue;
     }
-
-
 
     AllocaInfo *info = BUMP_ALLOC_ZEROED(ctx->arena, AllocaInfo);
     info->alloca_inst = inst;
     info->allocated_type = pointee_type;
     info->def_blocks = bitset_create(ctx->num_blocks, ctx->arena);
     info->phi_blocks = bitset_create(ctx->num_blocks, ctx->arena);
-
 
     IDList *use_node;
     list_for_each(&inst->result.uses, use_node)
@@ -210,41 +189,29 @@ find_promotable_allocas(Mem2RegContext *ctx, IDList *promotable_allocas)
   }
 }
 
-
-
-
-
 static void
 compute_phi_placement(Mem2RegContext *ctx, AllocaInfo *info)
 {
 
-
-
   size_t *worklist_stack = BUMP_ALLOC_SLICE(ctx->arena, size_t, ctx->num_blocks);
   size_t worklist_count = 0;
-
 
   for (size_t b_id = 0; b_id < ctx->num_blocks; b_id++)
   {
     if (bitset_test(info->def_blocks, b_id))
     {
       worklist_stack[worklist_count++] = b_id;
-
-
     }
   }
-
 
   while (worklist_count > 0)
   {
     size_t b_id = worklist_stack[--worklist_count];
     CFGNode *b_node = &ctx->dt->cfg->nodes[b_id];
 
-
     Bitset *df_b = ir_analysis_dom_frontier_get(ctx->df, b_node->block);
     if (!df_b)
       continue;
-
 
     for (size_t d_id = 0; d_id < ctx->num_blocks; d_id++)
     {
@@ -261,10 +228,6 @@ compute_phi_placement(Mem2RegContext *ctx, AllocaInfo *info)
     }
   }
 }
-
-
-
-
 
 /**
  * @brief 在所有标记的块中插入空的 PHI 节点
@@ -288,14 +251,10 @@ insert_phi_nodes(Mem2RegContext *ctx, IDList *promotable_allocas)
       {
         IRBasicBlock *bb = ctx->dt->cfg->nodes[b_id].block;
 
-
         ir_builder_set_insertion_point(ctx->builder, bb);
-
-
 
         IRValueNode *phi_val = ir_builder_create_phi(ctx->builder, info->allocated_type, NULL);
         IRInstruction *phi_inst = container_of(phi_val, IRInstruction, result);
-
 
         ptr_hashmap_put(phi_to_alloca_map, phi_inst, info->alloca_inst);
       }
@@ -303,12 +262,6 @@ insert_phi_nodes(Mem2RegContext *ctx, IDList *promotable_allocas)
   }
   return phi_to_alloca_map;
 }
-
-
-
-
-
-
 
 static void
 push_stack(RenameState *state, IRInstruction *alloca, IRValueNode *value)
@@ -326,7 +279,6 @@ pop_stack(RenameState *state, IRInstruction *alloca)
   RenameStackNode *top = ptr_hashmap_get(state->alloca_to_stack_top, alloca);
   assert(top && "Popping an empty stack!");
   ptr_hashmap_put(state->alloca_to_stack_top, alloca, top->prev);
-
 }
 
 static IRValueNode *
@@ -346,14 +298,11 @@ rename_recursive(Mem2RegContext *ctx, DomTreeNode *node, RenameState *state, Ptr
 {
   IRBasicBlock *bb = node->cfg_node->block;
 
-
   IRInstruction *pushed_allocas[64];
   size_t pushed_count = 0;
 
-
   IRInstruction *to_delete[256];
   size_t delete_count = 0;
-
 
   IDList *inst_node, *tmp_node;
   list_for_each_safe(&bb->instructions, inst_node, tmp_node)
@@ -417,13 +366,11 @@ rename_recursive(Mem2RegContext *ctx, DomTreeNode *node, RenameState *state, Ptr
     }
   }
 
-
   IDList *succ_edge_node;
   list_for_each(&node->cfg_node->successors, succ_edge_node)
   {
     CFGEdge *edge = list_entry(succ_edge_node, CFGEdge, list_node);
     IRBasicBlock *succ_bb = edge->node->block;
-
 
     IDList *succ_inst_node;
     list_for_each(&succ_bb->instructions, succ_inst_node)
@@ -433,7 +380,6 @@ rename_recursive(Mem2RegContext *ctx, DomTreeNode *node, RenameState *state, Ptr
       {
         break;
       }
-
 
       IRInstruction *alloca = ptr_hashmap_get(phi_to_alloca_map, succ_phi);
       if (alloca)
@@ -446,7 +392,6 @@ rename_recursive(Mem2RegContext *ctx, DomTreeNode *node, RenameState *state, Ptr
     }
   }
 
-
   IDList *child_node;
   list_for_each(&node->children, child_node)
   {
@@ -454,12 +399,10 @@ rename_recursive(Mem2RegContext *ctx, DomTreeNode *node, RenameState *state, Ptr
     rename_recursive(ctx, child->node, state, phi_to_alloca_map);
   }
 
-
   for (size_t i = 0; i < pushed_count; i++)
   {
     pop_stack(state, pushed_allocas[i]);
   }
-
 
   for (size_t i = 0; i < delete_count; i++)
   {
@@ -469,18 +412,9 @@ rename_recursive(Mem2RegContext *ctx, DomTreeNode *node, RenameState *state, Ptr
   }
 }
 
-
-
-
-
 bool
 ir_transform_mem2reg_run(IRFunction *func, DominatorTree *dt, DominanceFrontier *df)
 {
-
-
-
-
-
 
   IRContext *ctx = func->parent->context;
   Mem2RegContext m2r_ctx = {
@@ -496,7 +430,6 @@ ir_transform_mem2reg_run(IRFunction *func, DominatorTree *dt, DominanceFrontier 
   IDList promotable_allocas;
   list_init(&promotable_allocas);
 
-
   find_promotable_allocas(&m2r_ctx, &promotable_allocas);
 
   if (list_empty(&promotable_allocas))
@@ -505,7 +438,6 @@ ir_transform_mem2reg_run(IRFunction *func, DominatorTree *dt, DominanceFrontier 
     return false;
   }
 
-
   IDList *info_node;
   list_for_each(&promotable_allocas, info_node)
   {
@@ -513,16 +445,12 @@ ir_transform_mem2reg_run(IRFunction *func, DominatorTree *dt, DominanceFrontier 
     compute_phi_placement(&m2r_ctx, info);
   }
 
-
   PtrHashMap *phi_to_alloca_map = insert_phi_nodes(&m2r_ctx, &promotable_allocas);
-
-
 
   RenameState rename_state = {
     .arena = m2r_ctx.arena,
     .alloca_to_stack_top = ptr_hashmap_create(m2r_ctx.arena, 16),
   };
-
 
   list_for_each(&promotable_allocas, info_node)
   {
@@ -532,9 +460,7 @@ ir_transform_mem2reg_run(IRFunction *func, DominatorTree *dt, DominanceFrontier 
     push_stack(&rename_state, info->alloca_inst, undef);
   }
 
-
   rename_recursive(&m2r_ctx, dt->root, &rename_state, phi_to_alloca_map);
-
 
   IDList *tmp_node;
   list_for_each_safe(&promotable_allocas, info_node, tmp_node)
@@ -544,9 +470,7 @@ ir_transform_mem2reg_run(IRFunction *func, DominatorTree *dt, DominanceFrontier 
 
     list_del(&alloca_inst->list_node);
     ir_instruction_erase_from_parent(alloca_inst);
-
   }
-
 
   ir_builder_destroy(m2r_ctx.builder);
 

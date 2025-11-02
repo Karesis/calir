@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef BASIC_BLOCK_H
 #define BASIC_BLOCK_H
 
@@ -49,7 +48,6 @@ IRBasicBlock *ir_basic_block_create(IRFunction *func, const char *name);
  * @param bb 要附加的基本块
  */
 void ir_function_append_basic_block(IRFunction *func, IRBasicBlock *bb);
-
 
 /**
  * @brief 将单个基本块的 IR 打印到 IRPrinter

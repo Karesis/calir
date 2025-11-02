@@ -83,13 +83,11 @@ aligned_free_internal(void *ptr)
  * --- 对齐和常量 ---
  */
 
-
 static bool
 is_power_of_two(size_t n)
 {
   return (n != 0) && ((n & (n - 1)) == 0);
 }
-
 
 static size_t
 round_up_to(size_t n, size_t divisor)
@@ -98,14 +96,12 @@ round_up_to(size_t n, size_t divisor)
   return (n + divisor - 1) & ~(divisor - 1);
 }
 
-
 static uintptr_t
 round_down_to(uintptr_t n, size_t divisor)
 {
   assert(is_power_of_two(divisor));
   return n & ~(divisor - 1);
 }
-
 
 #define CHUNK_ALIGN 16
 
@@ -117,7 +113,6 @@ round_down_to(uintptr_t n, size_t divisor)
  * --- 哨兵 (Sentinel) 空 Chunk ---
  */
 
-
 static ChunkFooter EMPTY_CHUNK_SINGLETON;
 static bool EMPTY_CHUNK_INITIALIZED = false;
 
@@ -126,8 +121,6 @@ get_empty_chunk()
 {
   if (!EMPTY_CHUNK_INITIALIZED)
   {
-
-
 
     EMPTY_CHUNK_SINGLETON.data = (unsigned char *)&EMPTY_CHUNK_SINGLETON;
     EMPTY_CHUNK_SINGLETON.chunk_size = 0;
@@ -149,7 +142,6 @@ chunk_is_empty(ChunkFooter *footer)
  * --- 内部 Chunk 管理 ---
  */
 
-
 static void
 dealloc_chunk_list(ChunkFooter *footer)
 {
@@ -162,12 +154,9 @@ dealloc_chunk_list(ChunkFooter *footer)
   }
 }
 
-
 static ChunkFooter *
 new_chunk(Bump *bump, size_t new_size_without_footer, size_t align, ChunkFooter *prev)
 {
-
-
 
   new_size_without_footer = round_up_to(new_size_without_footer, CHUNK_ALIGN);
 
@@ -177,7 +166,6 @@ new_chunk(Bump *bump, size_t new_size_without_footer, size_t align, ChunkFooter 
     return NULL;
   }
 
-
   alloc_size = round_up_to(alloc_size, align);
   if (alloc_size == 0)
     return NULL;
@@ -186,21 +174,16 @@ new_chunk(Bump *bump, size_t new_size_without_footer, size_t align, ChunkFooter 
   if (!data)
     return NULL;
 
-
   ChunkFooter *footer_ptr = (ChunkFooter *)(data + new_size_without_footer);
 
   footer_ptr->data = data;
   footer_ptr->chunk_size = alloc_size;
   footer_ptr->prev = prev;
 
-
   footer_ptr->allocated_bytes = prev->allocated_bytes + new_size_without_footer;
-
-
 
   uintptr_t ptr_start = (uintptr_t)footer_ptr;
   footer_ptr->ptr = (unsigned char *)round_down_to(ptr_start, bump->min_align);
-
 
   assert(footer_ptr->ptr >= footer_ptr->data);
 
@@ -211,13 +194,10 @@ new_chunk(Bump *bump, size_t new_size_without_footer, size_t align, ChunkFooter 
  * --- 分配慢速路径 (Slow Path) ---
  */
 
-
-
 static void *
 alloc_layout_slow(Bump *bump, BumpLayout layout)
 {
   ChunkFooter *current_footer = bump->current_chunk_footer;
-
 
   size_t prev_usable_size = 0;
   if (!chunk_is_empty(current_footer))
@@ -236,7 +216,6 @@ alloc_layout_slow(Bump *bump, BumpLayout layout)
     new_size_without_footer = DEFAULT_CHUNK_SIZE_WITHOUT_FOOTER;
   }
 
-
   size_t requested_align = (layout.align > bump->min_align) ? layout.align : bump->min_align;
   size_t requested_size = round_up_to(layout.size, requested_align);
 
@@ -244,7 +223,6 @@ alloc_layout_slow(Bump *bump, BumpLayout layout)
   {
     new_size_without_footer = requested_size;
   }
-
 
   if (bump->allocation_limit != SIZE_MAX)
   {
@@ -264,10 +242,8 @@ alloc_layout_slow(Bump *bump, BumpLayout layout)
     }
   }
 
-
   size_t chunk_align = (layout.align > CHUNK_ALIGN) ? layout.align : CHUNK_ALIGN;
   chunk_align = (chunk_align > bump->min_align) ? chunk_align : bump->min_align;
-
 
   ChunkFooter *new_footer = new_chunk(bump, new_size_without_footer, chunk_align, current_footer);
   if (!new_footer)
@@ -275,13 +251,7 @@ alloc_layout_slow(Bump *bump, BumpLayout layout)
     return NULL;
   }
 
-
   bump->current_chunk_footer = new_footer;
-
-
-
-
-
 
   ChunkFooter *footer = new_footer;
   unsigned char *ptr = footer->ptr;
@@ -289,7 +259,6 @@ alloc_layout_slow(Bump *bump, BumpLayout layout)
 
   unsigned char *result_ptr;
   size_t aligned_size;
-
 
   assert(((uintptr_t)ptr % bump->min_align) == 0);
 
@@ -332,7 +301,6 @@ alloc_layout_slow(Bump *bump, BumpLayout layout)
  * --- 分配快速路径 (Fast Path) ---
  */
 
-
 static void *
 try_alloc_layout_fast(Bump *bump, BumpLayout layout)
 {
@@ -343,7 +311,6 @@ try_alloc_layout_fast(Bump *bump, BumpLayout layout)
 
   unsigned char *result_ptr;
   size_t aligned_size;
-
 
   assert_print((chunk_is_empty(footer) || ((uintptr_t)ptr % min_align) == 0), "Bump pointer invariant broken");
 
@@ -378,7 +345,6 @@ try_alloc_layout_fast(Bump *bump, BumpLayout layout)
 
     result_ptr = aligned_ptr_end - aligned_size;
   }
-
 
   footer->ptr = result_ptr;
   return (void *)result_ptr;
@@ -458,16 +424,12 @@ bump_reset(Bump *bump)
     return;
   }
 
-
   dealloc_chunk_list(current_footer->prev);
-
 
   current_footer->prev = get_empty_chunk();
 
-
   uintptr_t ptr_start = (uintptr_t)current_footer;
   current_footer->ptr = (unsigned char *)round_down_to(ptr_start, bump->min_align);
-
 
   size_t usable_size = (size_t)((unsigned char *)current_footer - current_footer->data);
   current_footer->allocated_bytes = usable_size;
@@ -493,13 +455,11 @@ bump_alloc_layout(Bump *bump, BumpLayout layout)
     layout.align = 1;
   }
 
-
   void *alloc = try_alloc_layout_fast(bump, layout);
   if (alloc)
   {
     return alloc;
   }
-
 
   return alloc_layout_slow(bump, layout);
 }
@@ -555,16 +515,11 @@ bump_realloc(Bump *bump, void *old_ptr, size_t old_size, size_t new_size, size_t
     return bump_alloc(bump, new_size, align);
   }
 
-
   if (new_size == 0)
   {
 
-
-
     return NULL;
   }
-
-
 
   void *new_ptr = bump_alloc(bump, new_size, align);
   if (new_ptr == NULL)
@@ -572,14 +527,11 @@ bump_realloc(Bump *bump, void *old_ptr, size_t old_size, size_t new_size, size_t
     return NULL;
   }
 
-
-
   size_t copy_size = (old_size < new_size) ? old_size : new_size;
   if (copy_size > 0)
   {
     memcpy(new_ptr, old_ptr, copy_size);
   }
-
 
   return new_ptr;
 }

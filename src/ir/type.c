@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include "ir/type.h"
 #include "ir/context.h"
 #include "ir/printer.h"
@@ -30,7 +29,6 @@ ir_type_create_primitive(IRContext *ctx, IRTypeKind kind)
 {
 
   assert(kind != IR_TYPE_PTR && "Use ir_type_create_ptr for pointer types");
-
 
   IRType *type = BUMP_ALLOC_ZEROED(&ctx->permanent_arena, IRType);
   if (!type)
@@ -51,7 +49,6 @@ IRType *
 ir_type_create_ptr(IRContext *ctx, IRType *pointee_type)
 {
   assert(pointee_type != NULL && "Pointer must point to a type");
-
 
   IRType *type = BUMP_ALLOC_ZEROED(&ctx->permanent_arena, IRType);
   if (!type)
@@ -74,7 +71,6 @@ ir_type_create_array(IRContext *ctx, IRType *element_type, size_t element_count)
   assert(ctx != NULL);
   assert(element_type != NULL);
 
-
   IRType *type = BUMP_ALLOC_ZEROED(&ctx->permanent_arena, IRType);
   if (!type)
     return NULL;
@@ -95,13 +91,11 @@ ir_type_create_struct(IRContext *ctx, IRType **member_types, size_t member_count
   assert(ctx != NULL);
   assert(member_types != NULL || member_count == 0);
 
-
   IRType *type = BUMP_ALLOC_ZEROED(&ctx->permanent_arena, IRType);
   if (!type)
     return NULL;
 
   type->kind = IR_TYPE_STRUCT;
-
 
   if (member_count > 0)
   {
@@ -117,7 +111,6 @@ ir_type_create_struct(IRContext *ctx, IRType **member_types, size_t member_count
     type->as.aggregate.member_types = NULL;
   }
   type->as.aggregate.member_count = member_count;
-
 
   if (name)
   {
@@ -141,17 +134,14 @@ ir_type_create_function(IRContext *ctx, IRType *return_type, IRType **param_type
   assert(return_type != NULL);
   assert(param_types != NULL || param_count == 0);
 
-
   IRType *type = BUMP_ALLOC_ZEROED(&ctx->permanent_arena, IRType);
   if (!type)
     return NULL;
 
   type->kind = IR_TYPE_FUNCTION;
 
-
   type->as.function.return_type = return_type;
   type->as.function.is_variadic = is_variadic;
-
 
   if (param_count > 0)
   {
@@ -225,7 +215,6 @@ ir_type_dump(IRType *type, IRPrinter *p)
     ir_print_str(p, "label");
     break;
 
-
   case IR_TYPE_PTR:
 
     ir_print_str(p, "<");
@@ -244,14 +233,12 @@ ir_type_dump(IRType *type, IRPrinter *p)
 
   case IR_TYPE_STRUCT:
 
-
     if (type->as.aggregate.name)
     {
       ir_print_str(p, "%");
       ir_print_str(p, type->as.aggregate.name);
       break;
     }
-
 
     ir_print_str(p, "{ ");
     for (size_t i = 0; i < type->as.aggregate.member_count; i++)

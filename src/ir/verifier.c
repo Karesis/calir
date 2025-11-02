@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include "ir/verifier.h"
 
 #include "analysis/cfg.h"
@@ -43,7 +42,6 @@
  * =================================================================
  */
 
-
 typedef struct
 {
   IRFunction *current_function;
@@ -69,12 +67,10 @@ verify_error_impl(VerifierContext *vctx, IRValueNode *obj, const char *file, int
   }
   vctx->has_error = true;
 
-
   if (!vctx->p)
   {
     return false;
   }
-
 
   ir_print_str(vctx->p, "\n--- [CALIR VERIFIER ERROR] ---\n");
   ir_printf(vctx->p, "At:          %s:%d\n", file, line);
@@ -88,14 +84,12 @@ verify_error_impl(VerifierContext *vctx, IRValueNode *obj, const char *file, int
     ir_printf(vctx->p, "In Block:    %s\n", vctx->current_block->label_address.name);
   }
 
-
   ir_print_str(vctx->p, "Error:       ");
   va_list args;
   va_start(args, fmt);
   vctx->p->append_vfmt_func(vctx->p->target, fmt, args);
   va_end(args);
   ir_print_str(vctx->p, "\n");
-
 
   if (obj)
   {
@@ -190,7 +184,6 @@ get_operand(IRInstruction *inst, int index)
  * =================================================================
  */
 
-
 static bool verify_basic_block(VerifierContext *vctx, IRBasicBlock *bb);
 static bool verify_instruction(VerifierContext *vctx, IRInstruction *inst);
 
@@ -217,7 +210,6 @@ is_terminator_predecessor(IRInstruction *term, IRBasicBlock *target_bb)
     return (get_operand(term, 1) == target_val || get_operand(term, 2) == target_val);
   }
 
-
   return false;
 }
 
@@ -233,7 +225,6 @@ find_in_phi(IRInstruction *phi_inst, IRBasicBlock *pred_bb)
 {
   IRValueNode *pred_val = &pred_bb->label_address;
   int count = get_operand_count(phi_inst);
-
 
   for (int i = 1; i < count; i += 2)
   {
@@ -261,10 +252,8 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
   IRContext *ctx = func->parent->context;
   VERIFY_ASSERT(ctx != NULL, vctx, value, "Failed to get Context from Function.");
 
-
   IRType *result_type = value->type;
   VERIFY_ASSERT(result_type != NULL, vctx, value, "Instruction result has NULL type.");
-
 
   IDList *iter_node;
   list_for_each(&inst->operands, iter_node)
@@ -274,23 +263,15 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
     VERIFY_ASSERT(use->value != NULL, vctx, value, "Instruction has a NULL operand (use->value is NULL).");
     VERIFY_ASSERT(use->value->type != NULL, vctx, use->value, "Instruction operand has NULL type.");
 
-
-
-
-
-
     if (use->value->kind != IR_KIND_INSTRUCTION)
     {
       continue;
     }
 
-
-
     if (inst->opcode == IR_OP_PHI)
     {
       continue;
     }
-
 
     IRInstruction *def_inst = container_of(use->value, IRInstruction, result);
     IRBasicBlock *def_bb = def_inst->parent;
@@ -299,12 +280,8 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
     if (def_bb == use_bb)
     {
 
-
-
-
       bool def_found_before_use = false;
       IDList *prev_node = inst->list_node.prev;
-
 
       while (prev_node != &use_bb->instructions)
       {
@@ -322,19 +299,14 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
     else
     {
 
-
-
-
       bool dominates = dom_tree_dominates(vctx->dom_tree, def_bb, use_bb);
 
       VERIFY_ASSERT(dominates, vctx, &inst->result,
                     "SSA VIOLATION: Definition in block '%s' does not dominate use in block '%s'.",
                     def_bb->label_address.name, use_bb->label_address.name);
     }
-
   }
   int op_count = get_operand_count(inst);
-
 
   switch (inst->opcode)
   {
@@ -372,7 +344,6 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
     break;
   }
 
-
   case IR_OP_ADD:
   case IR_OP_SUB: {
     VERIFY_ASSERT(op_count == 2, vctx, value, "Binary op must have 2 operands.");
@@ -398,11 +369,9 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
     break;
   }
 
-
   case IR_OP_ALLOCA: {
     VERIFY_ASSERT(op_count == 0, vctx, value, "'alloca' instruction should have no operands.");
     VERIFY_ASSERT(result_type->kind == IR_TYPE_PTR, vctx, value, "'alloca' result must be a pointer type.");
-
 
     IDList *entry_bb_node = func->basic_blocks.next;
     IRBasicBlock *entry_block = list_entry(entry_bb_node, IRBasicBlock, list_node);
@@ -439,17 +408,14 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
     IRFunction *func = vctx->current_function;
     IRBasicBlock *current_bb = vctx->current_block;
 
-
     for (int i = 0; i < op_count; i += 2)
     {
       IRValueNode *val = get_operand(inst, i);
       IRValueNode *incoming_bb_val = get_operand(inst, i + 1);
 
-
       VERIFY_ASSERT(val->type == result_type, vctx, val, "PHI incoming value type mismatch.");
       VERIFY_ASSERT(incoming_bb_val->kind == IR_KIND_BASIC_BLOCK, vctx, incoming_bb_val,
                     "PHI incoming block must be a Basic Block.");
-
 
       for (int j = i + 2; j < op_count; j += 2)
       {
@@ -459,14 +425,11 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
       }
     }
 
-
-
     int actual_pred_count = 0;
     IDList *all_blocks_iter;
     list_for_each(&func->basic_blocks, all_blocks_iter)
     {
       IRBasicBlock *potential_pred = list_entry(all_blocks_iter, IRBasicBlock, list_node);
-
 
       if (potential_pred == current_bb)
         continue;
@@ -474,24 +437,17 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
       if (list_empty(&potential_pred->instructions))
         continue;
 
-
       IRInstruction *term = list_entry(potential_pred->instructions.prev, IRInstruction, list_node);
-
 
       if (is_terminator_predecessor(term, current_bb))
       {
         actual_pred_count++;
-
 
         bool found_in_phi = find_in_phi(inst, potential_pred);
         VERIFY_ASSERT(found_in_phi, vctx, &inst->result, "PHI node is missing an entry for predecessor block '%s'.",
                       potential_pred->label_address.name);
       }
     }
-
-
-
-
 
     VERIFY_ASSERT(phi_entry_count == actual_pred_count, vctx, &inst->result,
                   "PHI node has incorrect number of entries. Found %d, but expected %d (actual predecessors).",
@@ -501,26 +457,19 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
   }
   case IR_OP_GEP: {
 
-
     IRType *current_type = inst->as.gep.source_type;
-
 
     for (int i = 1; i < op_count; i++)
     {
       IRValueNode *index_val = get_operand(inst, i);
 
-
       bool is_int_type = (index_val->type->kind >= IR_TYPE_I8 && index_val->type->kind <= IR_TYPE_I64);
       VERIFY_ASSERT(is_int_type, vctx, index_val, "GEP index must be an integer type (i8-i64).");
-
-
 
       if (i == 1)
       {
         continue;
       }
-
-
 
       switch (current_type->kind)
       {
@@ -531,11 +480,8 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
 
       case IR_TYPE_STRUCT: {
 
-
-
         VERIFY_ASSERT(index_val->kind == IR_KIND_CONSTANT, vctx, index_val,
                       "GEP index into a struct *must* be a constant integer.");
-
 
         IRConstant *k = (IRConstant *)index_val;
         VERIFY_ASSERT(k->const_kind == CONST_KIND_INT, vctx, index_val,
@@ -543,10 +489,8 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
 
         uint64_t member_idx = (uint64_t)k->data.int_val;
 
-
         VERIFY_ASSERT(member_idx < current_type->as.aggregate.member_count, vctx, index_val,
                       "GEP struct index is out of bounds.");
-
 
         current_type = current_type->as.aggregate.member_types[member_idx];
         break;
@@ -557,13 +501,9 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
       }
     }
 
-
-
-
     IRType *expected_result_type = ir_type_get_ptr(ctx, current_type);
     VERIFY_ASSERT(result_type == expected_result_type, vctx, &inst->result,
                   "GEP result type is incorrect. Builder calculation does not match verifier calculation.");
-
 
     break;
   }
@@ -572,7 +512,6 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
 
     VERIFY_ASSERT(op_count >= 1, vctx, value, "'call' must have at least 1 operand (the callee).");
 
-
     IRValueNode *callee_val = get_operand(inst, 0);
     VERIFY_ASSERT(callee_val->type->kind == IR_TYPE_PTR, vctx, callee_val, "'call' callee must be a pointer type.");
 
@@ -580,13 +519,10 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
     VERIFY_ASSERT(callee_pointee_type->kind == IR_TYPE_FUNCTION, vctx, callee_val,
                   "'call' callee must be a *pointer to a function type*.");
 
-
     IRType *func_type = callee_pointee_type;
-
 
     VERIFY_ASSERT(result_type == func_type->as.function.return_type, vctx, value,
                   "'call' result type does not match callee's function type return type.");
-
 
     size_t expected_arg_count = func_type->as.function.param_count;
     size_t provided_arg_count = op_count - 1;
@@ -605,7 +541,6 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
                     provided_arg_count);
     }
 
-
     for (size_t i = 0; i < expected_arg_count; i++)
     {
       IRValueNode *provided_arg = get_operand(inst, i + 1);
@@ -615,7 +550,6 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
                     "'call' argument %zu type mismatch. Expected type %p, got %p.", i, expected_type,
                     provided_arg->type);
     }
-
 
     break;
   }
@@ -643,7 +577,6 @@ verify_basic_block(VerifierContext *vctx, IRBasicBlock *bb)
     VERIFY_ERROR(vctx, &bb->label_address, "BasicBlock cannot be empty. Must have at least one terminator.");
   }
 
-
   IDList *last_inst_node = bb->instructions.prev;
   IRInstruction *last_inst = list_entry(last_inst_node, IRInstruction, list_node);
 
@@ -652,16 +585,13 @@ verify_basic_block(VerifierContext *vctx, IRBasicBlock *bb)
   VERIFY_ASSERT(is_terminator, vctx, &last_inst->result,
                 "BasicBlock must end with a terminator instruction (ret, br, cond_br).");
 
-
   bool processing_phis = true;
   IDList *iter_node;
   list_for_each(&bb->instructions, iter_node)
   {
     IRInstruction *inst = list_entry(iter_node, IRInstruction, list_node);
 
-
     VERIFY_ASSERT(inst->parent == bb, vctx, &inst->result, "Instruction's parent pointer is incorrect.");
-
 
     if (inst->opcode == IR_OP_PHI)
     {
@@ -672,7 +602,6 @@ verify_basic_block(VerifierContext *vctx, IRBasicBlock *bb)
       processing_phis = false;
     }
 
-
     if (inst != last_inst)
     {
       bool inst_is_terminator =
@@ -680,7 +609,6 @@ verify_basic_block(VerifierContext *vctx, IRBasicBlock *bb)
       VERIFY_ASSERT(!inst_is_terminator, vctx, &inst->result,
                     "Terminator instruction found in the middle of a BasicBlock.");
     }
-
 
     if (!verify_instruction(vctx, inst))
     {
@@ -712,14 +640,12 @@ ir_verify_function(IRFunction *func)
 
   vctx.current_function = func;
 
-
   bump_init(&vctx.analysis_arena);
   FunctionCFG *cfg = NULL;
   DominatorTree *doms = NULL;
 
   if (list_empty(&func->basic_blocks))
   {
-
 
     IDList *arg_it;
     list_for_each(&func->arguments, arg_it)
@@ -734,20 +660,11 @@ ir_verify_function(IRFunction *func)
     return !vctx.has_error;
   }
 
-
-
-
-
   cfg = cfg_build(func, &vctx.analysis_arena);
-
 
   doms = dom_tree_build(cfg, &vctx.analysis_arena);
 
   vctx.dom_tree = doms;
-
-
-
-
 
   IDList *arg_it;
   list_for_each(&func->arguments, arg_it)
@@ -760,7 +677,6 @@ ir_verify_function(IRFunction *func)
 
     VERIFY_ASSERT(arg->value.name != NULL, &vctx, &arg->value, "Argument in a function *definition* must have a name.");
   }
-
 
   IDList *bb_it;
   list_for_each(&func->basic_blocks, bb_it)
@@ -780,7 +696,6 @@ ir_verify_function(IRFunction *func)
     }
   }
 
-
   if (doms)
     dom_tree_destroy(doms);
   if (cfg)
@@ -797,13 +712,11 @@ ir_verify_module(IRModule *mod)
   IRPrinter p;
   ir_printer_init_file(&p, stderr);
 
-
   VerifierContext vctx = {0};
   vctx.p = &p;
 
   VERIFY_ASSERT(mod != NULL, &vctx, NULL, "Module is NULL.");
   VERIFY_ASSERT(mod->context != NULL, &vctx, NULL, "Module has no Context.");
-
 
   IDList *global_it;
   list_for_each(&mod->globals, global_it)
@@ -827,7 +740,6 @@ ir_verify_module(IRModule *mod)
                     "Global initializer type mismatch allocated_type.");
     }
   }
-
 
   IDList *func_it;
   list_for_each(&mod->functions, func_it)

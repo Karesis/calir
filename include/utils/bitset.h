@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-
-
 #ifndef CALIR_UTILS_BITSET_H
 #define CALIR_UTILS_BITSET_H
 

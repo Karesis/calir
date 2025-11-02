@@ -14,17 +14,13 @@
  * limitations under the License.
  */
 
-
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
-
-
 #include "utils/bump.h"
-
 
 #include "utils/hashmap/float.h"
 #include "utils/hashmap/generic.h"
@@ -32,10 +28,8 @@
 #include "utils/hashmap/ptr.h"
 #include "utils/hashmap/str_slice.h"
 
-
 #define XXH_INLINE_ALL
 #include "utils/xxhash.h"
-
 
 #include "test_utils.h"
 
@@ -44,7 +38,6 @@
  * --- [!!] 3. 移除旧的测试框架 ---
  * ========================================
  */
-
 
 /*
  * ========================================
@@ -61,7 +54,6 @@ test_int_iterators()
   Bump *arena = bump_new();
   I64HashMap *map = i64_hashmap_create(arena, 0);
 
-
   printf("  Testing empty map...\n");
   int count = 0;
   I64HashMapIter iter = i64_hashmap_iter(map);
@@ -72,7 +64,6 @@ test_int_iterators()
   }
 
   SUITE_ASSERT(count == 0, "Empty map iterator yielded %d items", count);
-
 
   printf("  Testing full map (with grow)...\n");
   int64_t key_sum = 0;
@@ -94,7 +85,6 @@ test_int_iterators()
   SUITE_ASSERT(count == 100, "Full map iterator yielded %d items (expected 100)", count);
   SUITE_ASSERT(key_sum == 5050, "Sum of keys should be 5050, got %lld", (long long)key_sum);
   SUITE_ASSERT(val_sum == 5050, "Sum of values should be 5050, got %ld", (long)val_sum);
-
 
   printf("  Testing map with tombstones...\n");
 
@@ -124,7 +114,6 @@ test_int_iterators()
   SUITE_ASSERT(val_sum == expected_val_sum, "Sum of values should be %ld, got %ld", (long)expected_val_sum,
                (long)val_sum);
 
-
   bump_free(arena);
 
   SUITE_END();
@@ -143,7 +132,6 @@ test_float_iterators()
   Bump *arena = bump_new();
   F64HashMap *map = f64_hashmap_create(arena, 0);
 
-
   printf("  Testing float map with tombstones...\n");
   f64_hashmap_put(map, 1.1, (void *)1);
   f64_hashmap_put(map, 2.2, (void *)2);
@@ -153,7 +141,6 @@ test_float_iterators()
   f64_hashmap_remove(map, 2.2);
   f64_hashmap_remove(map, 4.4);
   SUITE_ASSERT(f64_hashmap_size(map) == 2, "Float map size should be 2, got %zu", f64_hashmap_size(map));
-
 
   int count = 0;
   double key_sum = 0;
@@ -274,7 +261,6 @@ test_str_iterators()
  * ========================================
  */
 
-
 static uint64_t
 generic_hash_fn(const void *key)
 {
@@ -337,7 +323,6 @@ test_generic_iterators()
  * ========================================
  */
 
-
 int
 main()
 {
@@ -373,7 +358,6 @@ main()
   {
     __calir_total_suites_failed++;
   }
-
 
   TEST_SUMMARY();
 }

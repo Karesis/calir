@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 /* include/utils/hashmap/common.h */
 #ifndef HASHMAP_COMMON_H
 #define HASHMAP_COMMON_H

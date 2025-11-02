@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef CALIR_INTERPRETER_INTERPRETER_H
 #define CALIR_INTERPRETER_INTERPRETER_H
 
@@ -69,8 +68,6 @@ typedef struct Interpreter
 {
   Bump *arena;
 } Interpreter;
-
-
 
 /**
  * @brief 创建一个新的解释器实例。

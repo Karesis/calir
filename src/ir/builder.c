@@ -447,23 +447,14 @@ ir_builder_create_call(IRBuilder *builder, IRValueNode *callee_func, IRValueNode
 
   IRType *result_type = func_type->as.function.return_type;
 
-
-
   const bool is_variadic = func_type->as.function.is_variadic;
   const size_t required_params = func_type->as.function.param_count;
 
-
-
   const bool variadic_ok = is_variadic && (num_args >= required_params);
-
 
   const bool non_variadic_ok = !is_variadic && (num_args == required_params);
 
-
-
   const bool is_valid_arg_count = variadic_ok || non_variadic_ok;
-
-
 
   assert(is_valid_arg_count && "call argument count mismatch");
 

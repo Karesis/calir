@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef CALIR_STRING_BUF_H
 #define CALIR_STRING_BUF_H
 

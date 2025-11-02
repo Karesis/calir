@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 /* src/ir/lexer.c */
 #include "ir/lexer.h"
 #include "ir/context.h"
@@ -24,10 +23,6 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-
-
-
-
 
 static bool
 is_ident_start(char c)
@@ -40,10 +35,6 @@ is_ident_continue(char c)
 {
   return isalnum(c) || c == '_' || c == '.';
 }
-
-
-
-
 
 static char
 current_char(Lexer *l)
@@ -174,13 +165,11 @@ parse_number(Lexer *l, Token *out_token)
     advance(l);
   }
 
-
   int64_t int_part = 0;
   while (isdigit(current_char(l)))
   {
     int_part = int_part * 10 + (advance(l) - '0');
   }
-
 
   if (current_char(l) == '.' && isdigit(peek_char(l)))
   {
@@ -206,7 +195,6 @@ parse_number(Lexer *l, Token *out_token)
     out_token->as.int_val = is_negative ? -int_part : int_part;
   }
 
-
   if (is_ident_start(current_char(l)))
   {
     out_token->type = TK_ILLEGAL;
@@ -222,8 +210,6 @@ static void
 parse_string(Lexer *l, Token *out_token)
 {
   const char *start = l->ptr;
-
-
 
   while (current_char(l) != '"' && current_char(l) != '\0')
   {
@@ -245,10 +231,6 @@ parse_string(Lexer *l, Token *out_token)
   out_token->as.ident_val = ir_context_intern_str_slice(l->context, start, len);
 }
 
-
-
-
-
 /**
  * @brief  扫描下一个 Token 并填充 out_token。
  */
@@ -258,10 +240,8 @@ lexer_scan_token(Lexer *l, Token *out_token)
 
   skip_whitespace(l);
 
-
   out_token->line = l->line;
   out_token->column = (l->ptr - l->line_start) + 1;
-
 
   char c = advance(l);
 
@@ -271,7 +251,6 @@ lexer_scan_token(Lexer *l, Token *out_token)
   case '\0':
     out_token->type = TK_EOF;
     break;
-
 
   case '=':
     out_token->type = TK_EQ;
@@ -331,11 +310,9 @@ lexer_scan_token(Lexer *l, Token *out_token)
     parse_global_or_local(l, TK_LABEL_IDENT, out_token);
     break;
 
-
   case '"':
     parse_string(l, out_token);
     break;
-
 
   default:
 
@@ -348,7 +325,6 @@ lexer_scan_token(Lexer *l, Token *out_token)
     else if (isdigit(c) || (c == '-' && isdigit(peek_char(l))))
     {
 
-
       l->ptr--;
       parse_number(l, out_token);
     }
@@ -360,10 +336,6 @@ lexer_scan_token(Lexer *l, Token *out_token)
     break;
   }
 }
-
-
-
-
 
 /**
  * @brief 初始化 Lexer
@@ -378,8 +350,6 @@ ir_lexer_init(Lexer *lexer, const char *buffer, IRContext *ctx)
   lexer->line = 1;
   lexer->line_start = buffer;
 
-
-
   lexer_scan_token(lexer, &lexer->current);
   lexer_scan_token(lexer, &lexer->peek);
 }
@@ -393,12 +363,10 @@ ir_lexer_next(Lexer *lexer)
 
   lexer->current = lexer->peek;
 
-
   if (lexer->current.type != TK_EOF)
   {
     lexer_scan_token(lexer, &lexer->peek);
   }
-
 }
 
 /**
@@ -427,8 +395,6 @@ ir_lexer_eat(Lexer *lexer, TokenType expected)
 {
   if (lexer->current.type != expected)
   {
-
-
 
     return false;
   }

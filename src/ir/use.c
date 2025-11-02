@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include "ir/use.h"
 #include "ir/context.h"
 #include "ir/instruction.h"
@@ -33,7 +32,6 @@ ir_use_create(IRContext *ctx, IRInstruction *user, IRValueNode *value)
   assert(user != NULL);
   assert(value != NULL);
 
-
   IRUse *use = BUMP_ALLOC_ZEROED(&ctx->ir_arena, IRUse);
   if (!use)
     return NULL;
@@ -41,9 +39,7 @@ ir_use_create(IRContext *ctx, IRInstruction *user, IRValueNode *value)
   use->value = value;
   use->user = user;
 
-
   list_add_tail(&user->operands, &use->user_node);
-
 
   list_add_tail(&value->uses, &use->value_node);
 
@@ -70,12 +66,9 @@ ir_use_set_value(IRUse *use, IRValueNode *new_val)
   assert(use != NULL);
   assert(new_val != NULL);
 
-
   list_del(&use->value_node);
 
-
   use->value = new_val;
-
 
   list_add_tail(&new_val->uses, &use->value_node);
 }

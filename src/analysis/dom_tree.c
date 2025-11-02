@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-
-
 #include "analysis/dom_tree.h"
 #include "analysis/cfg.h"
 #include "ir/value.h"
@@ -24,10 +22,6 @@
 
 #include <assert.h>
 #include <stdio.h>
-
-
-
-
 
 /**
  * @brief [辅助] 通过 IRBasicBlock* 获取 DomTreeNode*
@@ -38,30 +32,15 @@ get_dom_node(DominatorTree *tree, IRBasicBlock *bb)
   if (!bb)
     return NULL;
 
-
   CFGNode *cfg_node = cfg_get_node(tree->cfg, bb);
   if (!cfg_node)
   {
 
-
     return NULL;
   }
 
-
-
   return tree->nodes[cfg_node->id];
 }
-
-
-
-
-
-
-
-
-
-
-
 
 static void
 lt_dfs(DominatorTree *tree, DomTreeNode *n, int *current_dfs_num)
@@ -77,7 +56,6 @@ lt_dfs(DominatorTree *tree, DomTreeNode *n, int *current_dfs_num)
   n->label = n;
   tree->dfs_order[n_num] = n;
 
-
   IDList *iter;
   list_for_each(&n->cfg_node->successors, iter)
   {
@@ -87,9 +65,7 @@ lt_dfs(DominatorTree *tree, DomTreeNode *n, int *current_dfs_num)
     assert(succ_cfg_node->id >= 0 && succ_cfg_node->id < tree->cfg->num_nodes &&
            "CFG successor ID is out of bounds (negative or >= num_nodes)!");
 
-
     DomTreeNode *w = tree->nodes[succ_cfg_node->id];
-
 
     if (w->dfs_num == 0)
     {
@@ -98,11 +74,6 @@ lt_dfs(DominatorTree *tree, DomTreeNode *n, int *current_dfs_num)
     }
   }
 }
-
-
-
-
-
 
 static void
 union_find_compress(DomTreeNode *n)
@@ -132,7 +103,6 @@ union_find_eval(DomTreeNode *n)
   {
     union_find_compress(n);
 
-
     return n->label;
   }
 }
@@ -144,27 +114,18 @@ static void
 union_find_link(DomTreeNode *p, DomTreeNode *c)
 {
   c->ancestor = p;
-
 }
-
-
-
-
-
-
 
 static void
 lt_compute_semi_dominators(DominatorTree *tree)
 {
   int num_nodes = tree->cfg->num_nodes;
 
-
   for (int i = num_nodes; i >= 2; i--)
   {
     DomTreeNode *n = tree->dfs_order[i];
     if (!n)
       continue;
-
 
     IDList *iter;
     list_for_each(&n->cfg_node->predecessors, iter)
@@ -174,9 +135,6 @@ lt_compute_semi_dominators(DominatorTree *tree)
       DomTreeNode *v = tree->nodes[pred_cfg_node->id];
       if (!v)
         continue;
-
-
-
 
       DomTreeNode *v_prime;
       if (v->dfs_num <= 0)
@@ -192,22 +150,16 @@ lt_compute_semi_dominators(DominatorTree *tree)
         v_prime = union_find_eval(v);
       }
 
-
-
       if (v_prime->semi_dom < n->semi_dom)
       {
         n->semi_dom = v_prime->semi_dom;
       }
     }
 
-
-
     DomTreeNode *s = tree->dfs_order[n->semi_dom];
     BucketNode *bucket_node = BUMP_ALLOC(tree->arena, BucketNode);
     bucket_node->node = n;
     list_add_tail(&s->bucket, &bucket_node->list_node);
-
-
 
     if (n->parent)
     {
@@ -216,17 +168,10 @@ lt_compute_semi_dominators(DominatorTree *tree)
   }
 }
 
-
-
-
-
-
-
 static void
 lt_compute_idominators(DominatorTree *tree)
 {
   int num_nodes = tree->cfg->num_nodes;
-
 
   for (int i = 2; i <= num_nodes; i++)
   {
@@ -236,13 +181,11 @@ lt_compute_idominators(DominatorTree *tree)
 
     DomTreeNode *s = tree->dfs_order[n->semi_dom];
 
-
     IDList *iter, *temp;
     list_for_each_safe(&s->bucket, iter, temp)
     {
       BucketNode *bucket_node = list_entry(iter, BucketNode, list_node);
       DomTreeNode *w = bucket_node->node;
-
 
       DomTreeNode *u = union_find_eval(w);
 
@@ -256,16 +199,11 @@ lt_compute_idominators(DominatorTree *tree)
 
         w->idom = s;
       }
-
-
     }
     list_init(&s->bucket);
   }
 
-
-
   tree->root->idom = NULL;
-
 
   for (int i = 2; i <= num_nodes; i++)
   {
@@ -279,7 +217,6 @@ lt_compute_idominators(DominatorTree *tree)
       n->idom = n->idom->idom;
     }
 
-
     if (n->idom)
     {
       DomTreeChild *child_node = BUMP_ALLOC(tree->arena, DomTreeChild);
@@ -288,10 +225,6 @@ lt_compute_idominators(DominatorTree *tree)
     }
   }
 }
-
-
-
-
 
 DominatorTree *
 dom_tree_build(FunctionCFG *cfg, Bump *arena)
@@ -303,56 +236,38 @@ dom_tree_build(FunctionCFG *cfg, Bump *arena)
 
   int num_nodes = cfg->num_nodes;
 
-
   DominatorTree *tree = BUMP_ALLOC_ZEROED(arena, DominatorTree);
   tree->cfg = cfg;
   tree->arena = arena;
 
-
-
   tree->nodes = BUMP_ALLOC_SLICE_ZEROED(arena, DomTreeNode *, num_nodes);
 
-
   tree->dfs_order = BUMP_ALLOC_SLICE_ZEROED(arena, DomTreeNode *, num_nodes + 1);
-
 
   for (int i = 0; i < num_nodes; i++)
   {
     CFGNode *cfg_node = &cfg->nodes[i];
     DomTreeNode *dom_node = BUMP_ALLOC_ZEROED(arena, DomTreeNode);
 
-
     dom_node->cfg_node = cfg_node;
     dom_node->dfs_num = 0;
     list_init(&dom_node->children);
     list_init(&dom_node->bucket);
 
-
     dom_node->label = dom_node;
-
 
     tree->nodes[i] = dom_node;
   }
 
-
   tree->root = tree->nodes[cfg->entry_node->id];
-
-
-
 
   int dfs_counter = 1;
   lt_dfs(tree, tree->root, &dfs_counter);
 
-
   int visited_nodes = dfs_counter - 1;
   assert(visited_nodes <= num_nodes && "DFS visited more nodes than cfg->num_nodes reported!");
 
-
-
-
-
   lt_compute_semi_dominators(tree);
-
 
   lt_compute_idominators(tree);
 
@@ -363,14 +278,6 @@ void
 dom_tree_destroy(DominatorTree *tree)
 {
 
-
-
-
-
-
-
-
-
   (void)tree;
 }
 
@@ -378,12 +285,10 @@ bool
 dom_tree_dominates(DominatorTree *tree, IRBasicBlock *a, IRBasicBlock *b)
 {
 
-
   if (a->label_address.kind != IR_KIND_BASIC_BLOCK)
   {
     return true;
   }
-
 
   if (a == b)
   {
@@ -403,8 +308,6 @@ dom_tree_dominates(DominatorTree *tree, IRBasicBlock *a, IRBasicBlock *b)
 
     return false;
   }
-
-
 
   DomTreeNode *current = node_b->idom;
   while (current)

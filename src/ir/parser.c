@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 /* src/ir/parser.c */
 
 #include "ir/parser.h"
@@ -58,7 +57,6 @@ static void parser_record_value(Parser *p, Token *tok, IRValueNode *val);
  * --- 调试辅助 (Debug Helpers) ---
  * =================================================================
  */
-
 
 static const char *
 token_type_to_string(TokenType type)
@@ -156,7 +154,6 @@ print_parse_error(Parser *p, const char *source_buffer)
   if (!p->has_error)
     return;
 
-
   const char *line_start = source_buffer;
   for (size_t i = 1; i < p->error.line; ++i)
   {
@@ -170,30 +167,20 @@ print_parse_error(Parser *p, const char *source_buffer)
     line_start++;
   }
 
-
   const char *line_end = strchr(line_start, '\n');
   if (!line_end)
   {
     line_end = line_start + strlen(line_start);
   }
 
-
   int line_len = (int)(line_end - line_start);
-
-
 
   fprintf(stderr, "\n--- Parse Error ---\n");
   fprintf(stderr, "Error: %zu:%zu: %s\n", p->error.line, p->error.column, p->error.message);
 
-
-
-
-
   fprintf(stderr, "  |\n");
   fprintf(stderr, "%zu | %.*s\n", p->error.line, line_len, line_start);
   fprintf(stderr, "  | ");
-
-
 
   for (size_t i = 0; i < p->error.column - 1; ++i)
   {
@@ -287,7 +274,6 @@ expect_ident(Parser *p, const char *ident_str)
 {
   const Token *tok = current_token(p);
 
-
   if (tok->type == TK_IDENT && strcmp(tok->as.ident_val, ident_str) == 0)
   {
     advance(p);
@@ -353,16 +339,13 @@ parser_record_value(Parser *p, Token *tok, IRValueNode *val)
     return;
   }
 
-
   if (ptr_hashmap_contains(map, (void *)name))
   {
     parser_error_at(p, tok, "Redefinition of value '%c%s'", (tok->type == TK_GLOBAL_IDENT) ? '@' : '%', name);
     return;
   }
 
-
   ir_value_set_name(val, name);
-
 
   if (!ptr_hashmap_put(map, (void *)name, (void *)val))
   {
@@ -397,9 +380,7 @@ parser_init(Parser *p, Lexer *lexer, IRContext *ctx, IRModule *mod, IRBuilder *b
   p->current_function = NULL;
   p->has_error = false;
 
-
   bump_init(&p->temp_arena);
-
 
   p->global_value_map = ptr_hashmap_create(&ctx->ir_arena, 64);
   if (!p->global_value_map)
@@ -421,10 +402,6 @@ parser_destroy(Parser *p)
 
   bump_destroy(&p->temp_arena);
 
-
-
-
-
   p->lexer = NULL;
   p->context = NULL;
   p->module = NULL;
@@ -439,7 +416,6 @@ parser_destroy(Parser *p)
  * =================================================================
  */
 
-
 static void parse_module_body(Parser *p);
 static void parse_top_level_element(Parser *p);
 static void parse_function_definition(Parser *p);
@@ -452,7 +428,6 @@ static IRValueNode *parse_instruction(Parser *p, bool *out_is_terminator);
 static IRValueNode *parse_operation(Parser *p, Token *result_token, IRType *result_type, bool *out_is_terminator);
 static IRType *parse_type(Parser *p);
 static IRValueNode *parse_operand(Parser *p);
-
 
 /**
  * @brief 主循环：解析模块的顶层元素。
@@ -530,7 +505,6 @@ parse_top_level_element(Parser *p)
     parse_global_variable(p);
     break;
 
-
   case TK_LOCAL_IDENT:
 
     parse_type_definition(p);
@@ -554,16 +528,13 @@ parse_function_definition(Parser *p)
 {
   advance(p);
 
-
   IRType *ret_type = parse_type(p);
   if (!ret_type)
     return;
 
-
   Token name_tok = *current_token(p);
   if (!expect(p, TK_GLOBAL_IDENT))
     return;
-
 
   IRFunction *func = ir_function_create(p->module, name_tok.as.ident_val, ret_type);
   if (!func)
@@ -573,7 +544,6 @@ parse_function_definition(Parser *p)
   }
   parser_record_value(p, &name_tok, &func->entry_address);
 
-
   p->current_function = func;
   bump_reset(&p->temp_arena);
   p->local_value_map = ptr_hashmap_create(&p->temp_arena, 64);
@@ -582,7 +552,6 @@ parse_function_definition(Parser *p)
     parser_error_at(p, &name_tok, "OOM creating local value map for function '@%s'", name_tok.as.ident_val);
     return;
   }
-
 
   if (!expect(p, TK_LPAREN))
     return;
@@ -599,7 +568,6 @@ parse_function_definition(Parser *p)
           return;
         break;
       }
-
 
       Token arg_name_tok = *current_token(p);
       if (!expect(p, TK_LOCAL_IDENT))
@@ -631,15 +599,12 @@ parse_function_definition(Parser *p)
 
   ir_function_finalize_signature(func, is_variadic);
 
-
   if (!expect(p, TK_LBRACE))
     return;
   while (current_token(p)->type != TK_RBRACE && current_token(p)->type != TK_EOF)
   {
     if (p->has_error)
       break;
-
-
 
     if (current_token(p)->type == TK_LABEL_IDENT && ir_lexer_peek_token(p->lexer)->type == TK_COLON)
     {
@@ -653,7 +618,6 @@ parse_function_definition(Parser *p)
   }
   if (!expect(p, TK_RBRACE))
     return;
-
 
   p->current_function = NULL;
   p->local_value_map = NULL;
@@ -672,7 +636,6 @@ parse_function_type(Parser *p, IRType *ret_type)
 {
   if (!expect(p, TK_LPAREN))
     return NULL;
-
 
   bump_reset(&p->temp_arena);
   TempVec params;
@@ -713,17 +676,13 @@ parse_function_type(Parser *p, IRType *ret_type)
     advance(p);
   }
 
-
   IRType **permanent_params = BUMP_ALLOC_SLICE_COPY(&p->context->permanent_arena, IRType *,
-                                                    (IRType **)temp_vec_data(&params),
-                                                    temp_vec_len(&params)
-  );
+                                                    (IRType **)temp_vec_data(&params), temp_vec_len(&params));
   if (temp_vec_len(&params) > 0 && !permanent_params)
   {
     parser_error(p, "OOM copying function parameters");
     return NULL;
   }
-
 
   return ir_type_get_function(p->context, ret_type, permanent_params, temp_vec_len(&params), is_variadic);
 }
@@ -756,8 +715,6 @@ parse_function_declaration(Parser *p)
 
   parser_record_value(p, &name_tok, &func->entry_address);
 
-
-
   if (!expect(p, TK_LPAREN))
     return;
 
@@ -773,7 +730,6 @@ parse_function_declaration(Parser *p)
           return;
         break;
       }
-
 
       Token arg_name_tok = *current_token(p);
       IRType *arg_type = NULL;
@@ -796,7 +752,6 @@ parse_function_declaration(Parser *p)
         arg_type = parse_type(p);
         if (!arg_type)
           return;
-
       }
 
       ir_argument_create(func, arg_type, arg_name);
@@ -837,18 +792,14 @@ parse_type_definition(Parser *p)
     return;
   const char *name = name_tok.as.ident_val;
 
-
   if (!expect(p, TK_EQ))
     return;
-
 
   if (!expect_ident(p, "type"))
     return;
 
-
   if (!expect(p, TK_LBRACE))
     return;
-
 
   bump_reset(&p->temp_arena);
   TempVec members;
@@ -879,17 +830,13 @@ parse_type_definition(Parser *p)
     }
   }
 
-
   IRType **permanent_members = BUMP_ALLOC_SLICE_COPY(&p->context->permanent_arena, IRType *,
-                                                     (IRType **)temp_vec_data(&members),
-                                                     temp_vec_len(&members)
-  );
+                                                     (IRType **)temp_vec_data(&members), temp_vec_len(&members));
   if (temp_vec_len(&members) > 0 && !permanent_members)
   {
     parser_error(p, "OOM in permanent_arena copying struct members");
     return;
   }
-
 
   IRType *named_struct = ir_type_get_named_struct(p->context, name, permanent_members, temp_vec_len(&members));
 
@@ -918,7 +865,6 @@ parse_global_variable(Parser *p)
   if (!expect(p, TK_GLOBAL_IDENT))
     return;
 
-
   if (!expect(p, TK_COLON))
     return;
   IRType *ptr_type = parse_type(p);
@@ -931,14 +877,11 @@ parse_global_variable(Parser *p)
 
   IRType *allocated_type = ptr_type->as.pointee_type;
 
-
   if (!expect(p, TK_EQ))
     return;
 
-
   if (!expect_ident(p, "global"))
     return;
-
 
   IRValueNode *initializer = NULL;
   const Token *val_tok = current_token(p);
@@ -946,7 +889,6 @@ parse_global_variable(Parser *p)
   if (val_tok->type == TK_IDENT && strcmp(val_tok->as.ident_val, "zeroinitializer") == 0)
   {
     advance(p);
-
   }
   else
   {
@@ -968,7 +910,6 @@ parse_global_variable(Parser *p)
     }
   }
 
-
   IRGlobalVariable *gvar = ir_global_variable_create(p->module, name_tok.as.ident_val, allocated_type, initializer);
   if (gvar == NULL)
   {
@@ -976,13 +917,11 @@ parse_global_variable(Parser *p)
     return;
   }
 
-
   if (gvar->value.type != ptr_type)
   {
     parser_error_at(p, &name_tok, "Internal: GVar creation type mismatch for '@%s'", name_tok.as.ident_val);
     return;
   }
-
 
   parser_record_value(p, &name_tok, (IRValueNode *)gvar);
 }
@@ -1001,8 +940,6 @@ parse_basic_block(Parser *p)
     return;
   }
 
-
-
   Token name_tok = *current_token(p);
   if (!expect(p, TK_LABEL_IDENT))
     return;
@@ -1010,7 +947,6 @@ parse_basic_block(Parser *p)
     return;
 
   const char *name = name_tok.as.ident_val;
-
 
   IRBasicBlock *bb = NULL;
   IRValueNode *existing_val = (IRValueNode *)ptr_hashmap_get(p->local_value_map, (void *)name);
@@ -1041,12 +977,9 @@ parse_basic_block(Parser *p)
     ptr_hashmap_put(p->local_value_map, (void *)name, (void *)&bb->label_address);
   }
 
-
   ir_function_append_basic_block(p->current_function, bb);
 
-
   ir_builder_set_insertion_point(p->builder, bb);
-
 
   while (true)
   {
@@ -1056,7 +989,6 @@ parse_basic_block(Parser *p)
     const Token *tok = current_token(p);
     if (tok->type == TK_RBRACE)
       return;
-
 
     if (tok->type == TK_LABEL_IDENT && ir_lexer_peek_token(p->lexer)->type == TK_COLON)
     {
@@ -1094,8 +1026,6 @@ parse_instruction(Parser *p, bool *out_is_terminator)
   Token tok = *current_token(p);
   Token peek_tok = *ir_lexer_peek_token(p->lexer);
 
-
-
   if (tok.type == TK_LOCAL_IDENT && peek_tok.type == TK_COLON)
   {
     result_tok = tok;
@@ -1118,9 +1048,7 @@ parse_instruction(Parser *p, bool *out_is_terminator)
     return NULL;
   }
 
-
   IRValueNode *instr_val = parse_operation(p, has_result ? &result_tok : NULL, result_type, out_is_terminator);
-
 
   if (has_result && instr_val)
   {
@@ -1133,7 +1061,6 @@ parse_instruction(Parser *p, bool *out_is_terminator)
       return NULL;
     }
 
-
     assert(instr_val->kind == IR_KIND_INSTRUCTION);
     IRInstruction *inst = container_of(instr_val, IRInstruction, result);
     if (inst->opcode != IR_OP_PHI)
@@ -1141,7 +1068,6 @@ parse_instruction(Parser *p, bool *out_is_terminator)
       parser_record_value(p, &result_tok, instr_val);
     }
   }
-
 
   else if (!has_result && instr_val && instr_val->type->kind != IR_TYPE_VOID)
   {
@@ -1168,13 +1094,10 @@ parse_icmp_predicate(Parser *p)
 
   Token tok = *current_token(p);
 
-
   if (!expect(p, TK_IDENT))
     return IR_ICMP_EQ;
 
-
   const char *pred = tok.as.ident_val;
-
 
   if (strcmp(pred, "eq") == 0)
     return IR_ICMP_EQ;
@@ -1189,7 +1112,6 @@ parse_icmp_predicate(Parser *p)
   if (strcmp(pred, "sge") == 0)
     return IR_ICMP_SGE;
 
-
   if (strcmp(pred, "ugt") == 0)
     return IR_ICMP_UGT;
   if (strcmp(pred, "uge") == 0)
@@ -1198,7 +1120,6 @@ parse_icmp_predicate(Parser *p)
     return IR_ICMP_ULT;
   if (strcmp(pred, "ule") == 0)
     return IR_ICMP_ULE;
-
 
   parser_error_at(p, &tok, "Unknown ICMP predicate '%s'", pred);
   return IR_ICMP_EQ;
@@ -1243,8 +1164,6 @@ parse_operation(Parser *p, Token *result_token, IRType *result_type, bool *out_i
 
   const char *opcode = opcode_tok.as.ident_val;
   const char *name_hint = result_token ? result_token->as.ident_val : NULL;
-
-
 
   if (strcmp(opcode, "ret") == 0)
   {
@@ -1294,7 +1213,6 @@ parse_operation(Parser *p, Token *result_token, IRType *result_type, bool *out_i
     return parse_instr_call(p, name_hint, result_type);
   }
 
-
   parser_error_at(p, &opcode_tok, "Unknown instruction opcode '%s'", opcode);
   return NULL;
 }
@@ -1318,7 +1236,6 @@ parse_instr_ret(Parser *p)
     return ir_builder_create_ret(p->builder, NULL);
   }
 
-
   IRValueNode *ret_val = parse_operand(p);
   if (!ret_val)
     return NULL;
@@ -1341,7 +1258,6 @@ parse_instr_br(Parser *p)
 {
   Token tok = *current_token(p);
 
-
   if (tok.type == TK_LABEL_IDENT)
   {
     IRValueNode *dest = parse_operand(p);
@@ -1349,7 +1265,6 @@ parse_instr_br(Parser *p)
       return NULL;
     return ir_builder_create_br(p->builder, dest);
   }
-
 
   IRValueNode *cond = parse_operand(p);
   if (!cond)
@@ -1412,9 +1327,6 @@ parse_instr_add(Parser *p, const char *name_hint, IRType *result_type)
   return ir_builder_create_add(p->builder, lhs, rhs, name_hint);
 }
 
-
-
-
 static IRValueNode *
 parse_instr_sub(Parser *p, const char *name_hint, IRType *result_type)
 {
@@ -1473,9 +1385,6 @@ parse_instr_icmp(Parser *p, const char *name_hint, IRType *result_type)
 
   return ir_builder_create_icmp(p->builder, pred, lhs, rhs, name_hint);
 }
-
-
-
 
 static IRValueNode *
 parse_instr_alloca(Parser *p, const char *name_hint, IRType *result_type)
@@ -1549,14 +1458,12 @@ parse_instr_gep(Parser *p, const char *name_hint, IRType *result_type)
     return NULL;
   }
 
-
   bool inbounds = false;
   if (current_token(p)->type == TK_IDENT && strcmp(current_token(p)->as.ident_val, "inbounds") == 0)
   {
     inbounds = true;
     advance(p);
   }
-
 
   IRValueNode *base_ptr = parse_operand(p);
   if (!base_ptr || base_ptr->type->kind != IR_TYPE_PTR)
@@ -1566,7 +1473,6 @@ parse_instr_gep(Parser *p, const char *name_hint, IRType *result_type)
   }
 
   IRType *source_type = base_ptr->type->as.pointee_type;
-
 
   bump_reset(&p->temp_arena);
   TempVec indices;
@@ -1600,10 +1506,8 @@ parse_instr_gep(Parser *p, const char *name_hint, IRType *result_type)
     return NULL;
   }
 
-  return ir_builder_create_gep(p->builder, source_type, base_ptr,
-                               (IRValueNode **)temp_vec_data(&indices),
-                               temp_vec_len(&indices),
-                               inbounds, name_hint);
+  return ir_builder_create_gep(p->builder, source_type, base_ptr, (IRValueNode **)temp_vec_data(&indices),
+                               temp_vec_len(&indices), inbounds, name_hint);
 }
 
 /**
@@ -1624,13 +1528,10 @@ parse_instr_phi(Parser *p, Token *result_token, IRType *result_type)
   if (!phi_node)
     return NULL;
 
-
-
   if (result_token)
   {
     parser_record_value(p, result_token, phi_node);
   }
-
 
   if (current_token(p)->type != TK_LBRACKET)
   {
@@ -1638,12 +1539,10 @@ parse_instr_phi(Parser *p, Token *result_token, IRType *result_type)
     return NULL;
   }
 
-
   while (true)
   {
     if (!expect(p, TK_LBRACKET))
       goto phi_error;
-
 
     IRValueNode *val = parse_operand(p);
     if (!val)
@@ -1657,7 +1556,6 @@ parse_instr_phi(Parser *p, Token *result_token, IRType *result_type)
     if (!expect(p, TK_COMMA))
       goto phi_error;
 
-
     IRValueNode *bb_val = parse_operand(p);
     if (!bb_val || bb_val->kind != IR_KIND_BASIC_BLOCK)
     {
@@ -1665,7 +1563,6 @@ parse_instr_phi(Parser *p, Token *result_token, IRType *result_type)
       goto phi_error;
     }
     IRBasicBlock *bb = container_of(bb_val, IRBasicBlock, label_address);
-
 
     ir_phi_add_incoming(phi_node, val, bb);
 
@@ -1700,7 +1597,6 @@ parse_instr_call(Parser *p, const char *name_hint, IRType *result_type)
   }
   IRType *func_type = func_ptr_type->as.pointee_type;
 
-
   if (func_type->as.function.return_type != result_type)
   {
     parser_error(p, "Call result type annotation does not match function's return type");
@@ -1727,7 +1623,6 @@ parse_instr_call(Parser *p, const char *name_hint, IRType *result_type)
     return NULL;
   }
 
-
   if (!expect(p, TK_LPAREN))
     return NULL;
 
@@ -1743,12 +1638,10 @@ parse_instr_call(Parser *p, const char *name_hint, IRType *result_type)
     while (true)
     {
 
-
       IRValueNode *arg_val = parse_operand(p);
       if (!arg_val)
         return NULL;
       IRType *arg_type = arg_val->type;
-
 
       if (!is_variadic && temp_vec_len(&arg_values) >= expected_count)
       {
@@ -1780,7 +1673,6 @@ parse_instr_call(Parser *p, const char *name_hint, IRType *result_type)
     advance(p);
   }
 
-
   if (temp_vec_len(&arg_values) < expected_count)
   {
     if (is_variadic)
@@ -1796,11 +1688,8 @@ parse_instr_call(Parser *p, const char *name_hint, IRType *result_type)
     return NULL;
   }
 
-
-  return ir_builder_create_call(p->builder, callee_val,
-                                (IRValueNode **)temp_vec_data(&arg_values),
-                                temp_vec_len(&arg_values),
-                                name_hint);
+  return ir_builder_create_call(p->builder, callee_val, (IRValueNode **)temp_vec_data(&arg_values),
+                                temp_vec_len(&arg_values), name_hint);
 }
 /*
  * -----------------------------------------------------------------
@@ -1860,19 +1749,15 @@ static IRType *
 parse_struct_type(Parser *p)
 {
 
-
-
   bump_reset(&p->temp_arena);
   TempVec members;
   temp_vec_init(&members, &p->temp_arena);
-
 
   if (current_token(p)->type == TK_RBRACE)
   {
     advance(p);
     return ir_type_get_anonymous_struct(p->context, NULL, 0);
   }
-
 
   while (true)
   {
@@ -1888,12 +1773,10 @@ parse_struct_type(Parser *p)
       return NULL;
     }
 
-
     if (match(p, TK_RBRACE))
     {
       break;
     }
-
 
     if (!expect(p, TK_COMMA))
     {
@@ -1901,18 +1784,13 @@ parse_struct_type(Parser *p)
     }
   }
 
-
-
   IRType **permanent_members = BUMP_ALLOC_SLICE_COPY(&p->context->permanent_arena, IRType *,
-                                                     (IRType **)temp_vec_data(&members),
-                                                     temp_vec_len(&members)
-  );
+                                                     (IRType **)temp_vec_data(&members), temp_vec_len(&members));
   if (temp_vec_len(&members) > 0 && !permanent_members)
   {
     parser_error(p, "OOM in permanent_arena copying struct members");
     return NULL;
   }
-
 
   return ir_type_get_anonymous_struct(p->context, permanent_members, temp_vec_len(&members));
 }
@@ -2007,9 +1885,7 @@ parse_type(Parser *p)
 
     const char *name = name_tok.as.ident_val;
 
-
     size_t name_len = strlen(name);
-
 
     IRType *found_type = (IRType *)str_hashmap_get(p->context->named_struct_cache, name, name_len);
 
@@ -2027,9 +1903,6 @@ parse_type(Parser *p)
     parser_error(p, "Expected a type signature");
     return NULL;
   }
-
-
-
 
   if (current_token(p)->type == TK_LPAREN)
   {
@@ -2148,7 +2021,6 @@ parse_operand(Parser *p)
   Token val_tok = *current_token(p);
   advance(p);
 
-
   if (val_tok.type == TK_LABEL_IDENT)
   {
     const char *label_name = val_tok.as.ident_val;
@@ -2169,15 +2041,12 @@ parse_operand(Parser *p)
     return val;
   }
 
-
-
   if (!expect(p, TK_COLON))
     return NULL;
 
   IRType *type = parse_type(p);
   if (!type)
     return NULL;
-
 
   switch (val_tok.type)
   {
@@ -2196,11 +2065,9 @@ parse_operand(Parser *p)
     return val;
   }
 
-
   case TK_INTEGER_LITERAL:
   case TK_FLOAT_LITERAL:
-  case TK_IDENT:
-  {
+  case TK_IDENT: {
     return parse_constant_from_token(p, &val_tok, type);
   }
 
@@ -2224,10 +2091,8 @@ ir_parse_module(IRContext *ctx, const char *source_buffer)
 {
   assert(ctx && source_buffer);
 
-
   Lexer lexer;
   ir_lexer_init(&lexer, source_buffer, ctx);
-
 
   IRBuilder *builder = ir_builder_create(ctx);
   if (!builder)
@@ -2236,16 +2101,12 @@ ir_parse_module(IRContext *ctx, const char *source_buffer)
     return NULL;
   }
 
-
   const char *module_name = "parsed_module";
   const Token *first_tok = ir_lexer_current_token(&lexer);
-
 
   if (first_tok->type == TK_IDENT && strcmp(first_tok->as.ident_val, "module") == 0)
   {
     ir_lexer_next(&lexer);
-
-
 
     const Token *eq_tok = ir_lexer_current_token(&lexer);
     if (eq_tok->type != TK_EQ)
@@ -2258,7 +2119,6 @@ ir_parse_module(IRContext *ctx, const char *source_buffer)
     }
     ir_lexer_next(&lexer);
 
-
     const Token *name_tok = ir_lexer_current_token(&lexer);
     if (name_tok->type != TK_STRING_LITERAL)
     {
@@ -2269,11 +2129,9 @@ ir_parse_module(IRContext *ctx, const char *source_buffer)
       return NULL;
     }
 
-
     module_name = name_tok->as.ident_val;
     ir_lexer_next(&lexer);
   }
-
 
   IRModule *module = ir_module_create(ctx, module_name);
   if (!module)
@@ -2282,7 +2140,6 @@ ir_parse_module(IRContext *ctx, const char *source_buffer)
     fprintf(stderr, "Fatal: Failed to create IRModule\n");
     return NULL;
   }
-
 
   Parser parser;
   if (!parser_init(&parser, &lexer, ctx, module, builder))
@@ -2293,10 +2150,7 @@ ir_parse_module(IRContext *ctx, const char *source_buffer)
     return NULL;
   }
 
-
-
   parse_module_body(&parser);
-
 
   bool success = !parser.has_error;
 
@@ -2305,7 +2159,6 @@ ir_parse_module(IRContext *ctx, const char *source_buffer)
 
     print_parse_error(&parser, source_buffer);
   }
-
 
   parser_destroy(&parser);
   ir_builder_destroy(builder);

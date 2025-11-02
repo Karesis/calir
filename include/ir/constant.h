@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef IR_CONSTANT_H
 #define IR_CONSTANT_H
 

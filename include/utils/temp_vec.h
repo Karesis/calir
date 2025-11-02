@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #ifndef CALIR_UTILS_TEMP_VEC_H
 #define CALIR_UTILS_TEMP_VEC_H
 
