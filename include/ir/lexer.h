@@ -56,6 +56,7 @@ typedef struct Token
 {
   TokenType type;
   size_t line; // Token 所在的行号 (用于报错)
+  size_t column;
 
   union {
     // 用于 TK_IDENT, TK_GLOBAL_IDENT, TK_LOCAL_IDENT, TK_STRING_LITERAL
@@ -80,6 +81,7 @@ typedef struct Lexer
   IRContext *context;       // 用于字符串驻留
   const char *buffer_start; // 输入的 .cir 文件的完整内容
   const char *ptr;          // 当前解析到的字符位置
+  const char *line_start;   // [!! 新增 !!] 当前行在 buffer_start 中的起始指针
   int line;                 // 当前行号
 
   Token current; // 当前的 Token

@@ -64,6 +64,16 @@ typedef struct Parser
   /** @brief 错误标志。如果解析过程中发生错误，则设置为 true。*/
   bool has_error;
 
+  /**
+   * @brief [!! 新增 !!] 存储发生的*第一个*错误的详细信息
+   */
+  struct
+  {
+    char message[256]; // 格式化后的错误信息
+    size_t line;       // 发生错误的行号
+    size_t column;     // 发生错误的列号
+  } error;
+
 } Parser;
 
 /**

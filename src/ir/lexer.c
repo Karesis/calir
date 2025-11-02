@@ -80,6 +80,7 @@ skip_whitespace(Lexer *l)
     case '\n':
       advance(l);
       l->line++;
+      l->line_start = l->ptr;
       break;
     case ';':
       skip_comment(l);
@@ -232,8 +233,7 @@ parse_string(Lexer *l, Token *out_token)
 // -----------------------------------------------------------------
 
 /**
- * @brief [!! 内部 !!] 扫描下一个 Token 并填充 out_token。
- * (这是旧的 ir_lexer_next)
+ * @brief  扫描下一个 Token 并填充 out_token。
  */
 static void
 lexer_scan_token(Lexer *l, Token *out_token)
@@ -243,6 +243,7 @@ lexer_scan_token(Lexer *l, Token *out_token)
 
   // 2. 存储 Token 的起始行号
   out_token->line = l->line;
+  out_token->column = (l->ptr - l->line_start) + 1;
 
   // 3. 消耗一个字符并进行分派
   char c = advance(l);
@@ -358,6 +359,7 @@ ir_lexer_init(Lexer *lexer, const char *buffer, IRContext *ctx)
   lexer->buffer_start = buffer;
   lexer->ptr = buffer;
   lexer->line = 1;
+  lexer->line_start = buffer;
 
   // [!! 核心 !!]
   // 填充 K=1 和 K=2 (current 和 peek)

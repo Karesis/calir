@@ -19,10 +19,22 @@
 
 #include <assert.h>
 #include <inttypes.h> // For PRId64
-#include <stdio.h>    // For fprintf, stderr, snprintf
+#include <stdarg.h>
+#include <stdio.h> // For fprintf, stderr, snprintf
 #include <stdlib.h>
 #include <string.h> // For strcmp
 
+static const char *token_type_to_string(TokenType type);
+static void parser_error_at(Parser *p, const Token *tok, const char *format, ...);
+static void parser_error(Parser *p, const char *message);
+static void print_parse_error(Parser *p, const char *source_buffer);
+static const Token *current_token(Parser *p);
+static void advance(Parser *p);
+static bool match(Parser *p, TokenType type);
+static bool expect(Parser *p, TokenType type);
+static bool expect_ident(Parser *p, const char *ident_str);
+static IRValueNode *parser_find_value(Parser *p, Token *tok);
+static void parser_record_value(Parser *p, Token *tok, IRValueNode *val);
 /*
  * =================================================================
  * --- 调试辅助 (Debug Helpers) ---
@@ -75,13 +87,15 @@ token_type_to_string(TokenType type)
  */
 
 /**
- * @brief 报告一个解析错误
+ * @brief [!! 新增 !!] 在指定的 Token 位置报告一个格式化的解析错误
  *
  * @param p Parser
- * @param message 错误信息
+ * @param tok 导致错误的 Token
+ * @param format printf 格式的错误信息
+ * @param ...
  */
 static void
-parser_error(Parser *p, const char *message)
+parser_error_at(Parser *p, const Token *tok, const char *format, ...)
 {
   // 仅报告第一个错误，防止错误雪崩
   if (p->has_error)
@@ -89,7 +103,93 @@ parser_error(Parser *p, const char *message)
     return;
   }
   p->has_error = true;
-  fprintf(stderr, "Parse Error (Line %zu): %s\n", p->lexer->current.line, message);
+  p->error.line = tok->line;
+  p->error.column = tok->column;
+
+  va_list args;
+  va_start(args, format);
+  vsnprintf(p->error.message, sizeof(p->error.message), format, args);
+  va_end(args);
+}
+
+/**
+ * @brief [!! 修改 !!] 报告一个解析错误 (在*当前* Token 位置)
+ *
+ * (旧的 parser_error 现在是一个辅助函数)
+ *
+ * @param p Parser
+ * @param message 错误信息
+ */
+static void
+parser_error(Parser *p, const char *message)
+{
+  parser_error_at(p, current_token(p), "%s", message);
+}
+
+/**
+ * @brief [!! 新增 !!] 在解析失败后，打印详细的诊断信息
+ *
+ * @param p 解析失败的 Parser
+ * @param source_buffer 完整的源文件 C 字符串
+ */
+static void
+print_parse_error(Parser *p, const char *source_buffer)
+{
+  if (!p->has_error)
+    return;
+
+  // 1. 找到出错行的开头
+  const char *line_start = source_buffer;
+  for (size_t i = 1; i < p->error.line; ++i)
+  {
+    line_start = strchr(line_start, '\n');
+    if (!line_start)
+    {
+      // 不应该发生
+      fprintf(stderr, "Internal Error: Failed to find error line.\n");
+      return;
+    }
+    line_start++; // 越过 '\n'
+  }
+
+  // 2. 找到出错行的结尾
+  const char *line_end = strchr(line_start, '\n');
+  if (!line_end)
+  {
+    line_end = line_start + strlen(line_start); // 可能是最后一行
+  }
+
+  // 3. 计算行长 (防止打印过多)
+  int line_len = (int)(line_end - line_start);
+
+  // 4. 打印错误
+  // 格式: Error: <line>:<col>: <message>
+  fprintf(stderr, "\n--- Parse Error ---\n");
+  fprintf(stderr, "Error: %zu:%zu: %s\n", p->error.line, p->error.column, p->error.message);
+
+  // 打印上下文
+  // 格式:   |
+  // 格式: L | <line of code>
+  // 格式:   |        ^
+  fprintf(stderr, "  |\n");
+  fprintf(stderr, "%zu | %.*s\n", p->error.line, line_len, line_start);
+  fprintf(stderr, "  | ");
+
+  // 5. 打印 `^` 指示器
+  // (p->error.column 是 1-based, 所以我们需要 p->error.column - 1 个空格)
+  for (size_t i = 0; i < p->error.column - 1; ++i)
+  {
+    // (处理 Tab, 尽管我们的 Lexer 好像是跳过它们的)
+    if (line_start[i] == '\t')
+    {
+      fprintf(stderr, "\t");
+    }
+    else
+    {
+      fprintf(stderr, " ");
+    }
+  }
+  fprintf(stderr, "^\n\n");
 }
 
 /**
@@ -146,16 +246,14 @@ match(Parser *p, TokenType type)
 static bool
 expect(Parser *p, TokenType type)
 {
+  const Token *tok = current_token(p);
   if (match(p, type))
   {
     return true;
   }
 
-  // 格式化错误信息
-  char error_msg[256];
-  snprintf(error_msg, sizeof(error_msg), "Expected %s, but got %s", token_type_to_string(type),
-           token_type_to_string(current_token(p)->type));
-  parser_error(p, error_msg);
+  parser_error_at(p, tok, "Expected %s, but got %s", token_type_to_string(type), token_type_to_string(tok->type));
+
   return false;
 }
 
@@ -178,10 +276,8 @@ expect_ident(Parser *p, const char *ident_str)
     return true;
   }
 
-  char error_msg[256];
-  snprintf(error_msg, sizeof(error_msg), "Expected identifier '%s', but got '%s'", ident_str,
-           (tok->type == TK_IDENT) ? tok->as.ident_val : token_type_to_string(tok->type));
-  parser_error(p, error_msg);
+  const char *got = (tok->type == TK_IDENT) ? tok->as.ident_val : token_type_to_string(tok->type);
+  parser_error_at(p, tok, "Expected identifier '%s', but got '%s'", ident_str, got);
   return false;
 }
 
@@ -2208,6 +2304,11 @@ ir_parse_module(IRContext *ctx, const char *source_buffer)
 
   // 7. 检查错误
   bool success = !parser.has_error;
+
+  if (!success)
+  {
+    print_parse_error(&parser, source_buffer);
+  }
 
   // 8. 清理
   parser_destroy(&parser);
