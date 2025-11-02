@@ -89,7 +89,7 @@ build_tests: $(TEST_TARGETS)
 # 运行所有测试 (会先构建)
 .PHONY: test
 test: $(TEST_RUNNERS)
-	@echo "\nAll tests completed."
+	@echo "All tests completed."
 
 # --- 静态库规则 ---
 $(LIB_TARGET): $(LIB_OBJS)
