@@ -4,6 +4,8 @@
 
 # 编译器
 CC ?= clang
+# 格式化工具
+CLANG_FORMAT ?= clang-format
 # 归档工具 (用于创建静态库)
 AR = ar
 # Python 解释器
@@ -196,13 +198,13 @@ clean-comments:
 .PHONY: format
 format:
 	@echo "Formatting C files..."
-	@$(PYTHON) scripts/run_formatter.py
+	@CLANG_FORMAT_BIN=$(CLANG_FORMAT) $(PYTHON) scripts/run_formatter.py
 
 # 检查 C 代码格式 (用于 CI)
 .PHONY: check-format
 check-format:
 	@echo "Checking C formatting..."
-	@$(PYTHON) scripts/run_formatter.py --check
+	@CLANG_FORMAT_BIN=$(CLANG_FORMAT) $(PYTHON) scripts/run_formatter.py --check
 
 # 自动化运行规则 
 .PHONY: $(TEST_RUNNERS)

@@ -2,6 +2,7 @@
 import sys
 import subprocess
 from pathlib import Path
+import os
 
 # -----------------------------------------------------------------
 # [!!] 配置: 与你其他脚本保持一致
@@ -26,7 +27,7 @@ THIRD_PARTY_PATHS = {
 # 核心功能
 # -----------------------------------------------------------------
 
-CLANG_FORMAT_BIN = "clang-format" # 确保它在你的 PATH 中
+CLANG_FORMAT_BIN = os.environ.get("CLANG_FORMAT_BIN", "clang-format")
 
 def process_file(file_path: Path, check_mode: bool) -> bool:
     """
