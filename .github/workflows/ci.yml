@@ -1,0 +1,53 @@
+# .github/workflows/ci.yml
+
+# 1. 工作流名称
+name: C Project CI (Clang 20)
+
+# 2. 触发条件
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+# 3. 任务
+jobs:
+  build-and-test:
+    # 运行环境
+    runs-on: ubuntu-latest
+
+    # 4. 步骤
+    steps:
+    # 步骤一：检出代码
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    # 步骤二：安装依赖
+    # (Python3 用于 'make check-headers' 和 Clang 20)
+    - name: Install Dependencies (Clang-20 & Python3)
+      run: |
+        # 使用官方脚本安装 Clang 20
+        wget https://apt.llvm.org/llvm.sh
+        chmod +x llvm.sh
+        sudo ./llvm.sh 20 all
+        
+        # 安装 Python 3
+        sudo apt-get update
+        sudo apt-get install -y python3
+
+    # 步骤三：设置环境变量
+    - name: Set Environment Variables
+      run: |
+        # 设置 CC 环境变量为 clang-20
+        echo "CC=clang-20" >> $GITHUB_ENV
+        
+        # (可选, 良好实践) 也为 C++ 编译器设置
+        echo "CXX=clang++-20" >> $GITHUB_ENV
+
+    # 步骤四：构建项目
+    - name: Build project (all)
+      run: make
+
+    # 步骤五：运行测试
+    - name: Run tests
+      run: make test
