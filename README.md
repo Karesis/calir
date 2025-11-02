@@ -238,7 +238,7 @@ main()
 ### Dependencies
 
   * `make`
-  * C11-compliant Compiler (e.g., `gcc` or `clang`)
+  * C23-compliant Compiler (e.g., `gcc` or `clang`)
 
 ### Running
 
