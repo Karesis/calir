@@ -312,31 +312,25 @@ parse_ident(Lexer *l, Token *out_token)
   }
   size_t len = l->ptr - start;
 
-  // [!!] (新增) 检查是否为关键字
-  // 我们需要一个非-interned的C字符串来进行strcmp
-  // (我们假设关键字不会太长)
-  char ident_buffer[64];
-  if (len >= sizeof(ident_buffer))
-  {
-    // 关键字不应该这么长
-    len = sizeof(ident_buffer) - 1;
-  }
-  memcpy(ident_buffer, start, len);
-  ident_buffer[len] = '\0';
+  // [!!] 修复:
+  // 1. 立即将 (start, len) 切片“驻留” (intern) 到上下文中。
+  //    这会返回一个唯一的、以 '\0' 结尾的、可比较的 const char*。
+  const char *interned_ident = ir_context_intern_str_slice(l->context, start, len);
 
-  // 查找关键字
-  out_token->type = lookup_keyword(ident_buffer);
+  // 2. 使用这个唯一的指针进行关键字查找。
+  //    这比在临时缓冲区上操作更干净、更安全。
+  out_token->type = lookup_keyword(interned_ident);
 
-  // 如果它 *不是* 关键字, 那么它就是一个普通的 TK_IDENT
+  // 3. 只有当它 *不是* 关键字时，我们才需要存储这个值。
   if (out_token->type == TK_IDENT)
   {
-    // 只有在它是 TK_IDENT 时才需要 intern 字符串并存储它
-    out_token->as.ident_val = ir_context_intern_str_slice(l->context, start, len);
+    out_token->as.ident_val = interned_ident;
   }
   else
   {
-    // 如果是关键字 (e.g., TK_KW_ADD), 我们不需要存储 'as.ident_val'
-    // 因为类型本身就代表了值。
+    // 它是关键字 (e.g., TK_KW_ADD), 我们不需要存储值。
+    // (我们刚才 interned 的字符串在 context 中是“孤儿”，
+    //  但这没关系，interner 会在下次遇到 "add" 时重用它)
     out_token->as.ident_val = NULL;
   }
 }
