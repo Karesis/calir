@@ -61,21 +61,26 @@ static void parser_record_value(Parser *p, Token *tok, IRValueNode *val);
 static const char *
 token_type_to_string(TokenType type)
 {
-
   switch (type)
   {
-  case TK_EOF:
-    return "EOF";
   case TK_ILLEGAL:
     return "Illegal";
+  case TK_EOF:
+    return "EOF";
   case TK_IDENT:
     return "Identifier";
   case TK_GLOBAL_IDENT:
     return "GlobalIdentifier (@...)";
   case TK_LOCAL_IDENT:
     return "LocalIdentifier (%...)";
+  case TK_LABEL_IDENT:
+    return "LabelIdentifier ($...)";
   case TK_INTEGER_LITERAL:
     return "Integer";
+  case TK_FLOAT_LITERAL:
+    return "Float";
+  case TK_STRING_LITERAL:
+    return "String";
   case TK_EQ:
     return "'='";
   case TK_COMMA:
@@ -86,11 +91,170 @@ token_type_to_string(TokenType type)
     return "'{'";
   case TK_RBRACE:
     return "'}'";
+  case TK_LBRACKET:
+    return "'['";
+  case TK_RBRACKET:
+    return "']'";
   case TK_LPAREN:
     return "'('";
   case TK_RPAREN:
     return "')'";
-
+  case TK_LT:
+    return "'<'";
+  case TK_GT:
+    return "'>'";
+  case TK_ELLIPSIS:
+    return "'...'";
+  case TK_SEMICOLON:
+    return "';'";
+  case TK_KW_MODULE:
+    return "keyword 'module'";
+  case TK_KW_DEFINE:
+    return "keyword 'define'";
+  case TK_KW_DECLARE:
+    return "keyword 'declare'";
+  case TK_KW_GLOBAL:
+    return "keyword 'global'";
+  case TK_KW_TYPE:
+    return "keyword 'type'";
+  case TK_KW_RET:
+    return "keyword 'ret'";
+  case TK_KW_BR:
+    return "keyword 'br'";
+  case TK_KW_COND_BR:
+    return "keyword 'br' (cond)";
+  case TK_KW_SWITCH:
+    return "keyword 'switch'";
+  case TK_KW_DEFAULT:
+    return "keyword 'default'";
+  case TK_KW_ADD:
+    return "keyword 'add'";
+  case TK_KW_SUB:
+    return "keyword 'sub'";
+  case TK_KW_MUL:
+    return "keyword 'mul'";
+  case TK_KW_UDIV:
+    return "keyword 'udiv'";
+  case TK_KW_SDIV:
+    return "keyword 'sdiv'";
+  case TK_KW_UREM:
+    return "keyword 'urem'";
+  case TK_KW_SREM:
+    return "keyword 'srem'";
+  case TK_KW_FADD:
+    return "keyword 'fadd'";
+  case TK_KW_FSUB:
+    return "keyword 'fsub'";
+  case TK_KW_FMUL:
+    return "keyword 'fmul'";
+  case TK_KW_FDIV:
+    return "keyword 'fdiv'";
+  case TK_KW_SHL:
+    return "keyword 'shl'";
+  case TK_KW_LSHR:
+    return "keyword 'lshr'";
+  case TK_KW_ASHR:
+    return "keyword 'ashr'";
+  case TK_KW_AND:
+    return "keyword 'and'";
+  case TK_KW_OR:
+    return "keyword 'or'";
+  case TK_KW_XOR:
+    return "keyword 'xor'";
+  case TK_KW_ALLOCA:
+    return "keyword 'alloca'";
+  case TK_KW_LOAD:
+    return "keyword 'load'";
+  case TK_KW_STORE:
+    return "keyword 'store'";
+  case TK_KW_GEP:
+    return "keyword 'gep'";
+  case TK_KW_INBOUNDS:
+    return "keyword 'inbounds'";
+  case TK_KW_ICMP:
+    return "keyword 'icmp'";
+  case TK_KW_FCMP:
+    return "keyword 'fcmp'";
+  case TK_KW_TRUNC:
+    return "keyword 'trunc'";
+  case TK_KW_ZEXT:
+    return "keyword 'zext'";
+  case TK_KW_SEXT:
+    return "keyword 'sext'";
+  case TK_KW_FPTRUNC:
+    return "keyword 'fptrunc'";
+  case TK_KW_FPEXT:
+    return "keyword 'fpext'";
+  case TK_KW_FPTOUI:
+    return "keyword 'fptoui'";
+  case TK_KW_FPTOSI:
+    return "keyword 'fptosi'";
+  case TK_KW_UITOFP:
+    return "keyword 'uitofp'";
+  case TK_KW_SITOFP:
+    return "keyword 'sitofp'";
+  case TK_KW_PTRTOINT:
+    return "keyword 'ptrtoint'";
+  case TK_KW_INTTOPTR:
+    return "keyword 'inttoptr'";
+  case TK_KW_BITCAST:
+    return "keyword 'bitcast'";
+  case TK_KW_TO:
+    return "keyword 'to'";
+  case TK_KW_PHI:
+    return "keyword 'phi'";
+  case TK_KW_CALL:
+    return "keyword 'call'";
+  case TK_KW_UNDEF:
+    return "keyword 'undef'";
+  case TK_KW_NULL:
+    return "keyword 'null'";
+  case TK_KW_ZEROINITIALIZER:
+    return "keyword 'zeroinitializer'";
+  case TK_KW_EQ:
+    return "predicate 'eq'";
+  case TK_KW_NE:
+    return "predicate 'ne'";
+  case TK_KW_UGT:
+    return "predicate 'ugt'";
+  case TK_KW_UGE:
+    return "predicate 'uge'";
+  case TK_KW_ULT:
+    return "predicate 'ult'";
+  case TK_KW_ULE:
+    return "predicate 'ule'";
+  case TK_KW_SGT:
+    return "predicate 'sgt'";
+  case TK_KW_SGE:
+    return "predicate 'sge'";
+  case TK_KW_SLT:
+    return "predicate 'slt'";
+  case TK_KW_SLE:
+    return "predicate 'sle'";
+  case TK_KW_OEQ:
+    return "predicate 'oeq'";
+  case TK_KW_OGT:
+    return "predicate 'ogt'";
+  case TK_KW_OGE:
+    return "predicate 'oge'";
+  case TK_KW_OLT:
+    return "predicate 'olt'";
+  case TK_KW_OLE:
+    return "predicate 'ole'";
+  case TK_KW_ONE:
+    return "predicate 'one'";
+  case TK_KW_UEQ:
+    return "predicate 'ueq'";
+  case TK_KW_UNE:
+    return "predicate 'une'";
+  case TK_KW_ORD:
+    return "predicate 'ord'";
+  case TK_KW_UNO:
+    return "predicate 'uno'";
+  case TK_KW_TRUE:
+    return "keyword 'true'";
+  case TK_KW_FALSE:
+    return "keyword 'false'";
   default:
     return "Unknown Token";
   }
@@ -103,7 +267,7 @@ token_type_to_string(TokenType type)
  */
 
 /**
- * @brief [!! 新增 !!] 在指定的 Token 位置报告一个格式化的解析错误
+ * @brief 在指定的 Token 位置报告一个格式化的解析错误
  *
  * @param p Parser
  * @param tok 导致错误的 Token
@@ -129,7 +293,7 @@ parser_error_at(Parser *p, const Token *tok, const char *format, ...)
 }
 
 /**
- * @brief [!! 修改 !!] 报告一个解析错误 (在*当前* Token 位置)
+ * @brief 报告一个解析错误 (在*当前* Token 位置)
  *
  * (旧的 parser_error 现在是一个辅助函数)
  *
@@ -143,7 +307,7 @@ parser_error(Parser *p, const char *message)
 }
 
 /**
- * @brief [!! 新增 !!] 在解析失败后，打印详细的诊断信息
+ * @brief 在解析失败后，打印详细的诊断信息
  *
  * @param p 解析失败的 Parser
  * @param source_buffer 完整的源文件 C 字符串
@@ -354,6 +518,24 @@ parser_record_value(Parser *p, Token *tok, IRValueNode *val)
   }
 }
 
+/**
+ * @brief 检查是否为整数类型
+ */
+static inline bool
+ir_type_is_integer(IRType *ty)
+{
+  return (ty->kind >= IR_TYPE_I1 && ty->kind <= IR_TYPE_I64);
+}
+
+/**
+ * @brief 检查是否为浮点类型
+ */
+static inline bool
+ir_type_is_floating(IRType *ty)
+{
+  return (ty->kind == IR_TYPE_F32 || ty->kind == IR_TYPE_F64);
+}
+
 /*
  * =================================================================
  * --- 解析器生命周期 (Parser Lifecycle) ---
@@ -483,21 +665,14 @@ parse_top_level_element(Parser *p)
 
   switch (tok->type)
   {
-  case TK_IDENT:
-    if (strcmp(tok->as.ident_val, "define") == 0)
-    {
-      parse_function_definition(p);
-    }
-    else if (strcmp(tok->as.ident_val, "declare") == 0)
-    {
-      parse_function_declaration(p);
-    }
+  case TK_KW_DEFINE:
 
-    else
-    {
-      parser_error(p, "Expected 'define' or 'declare' at top level");
-      advance(p);
-    }
+    parse_function_definition(p);
+    break;
+
+  case TK_KW_DECLARE:
+
+    parse_function_declaration(p);
     break;
 
   case TK_GLOBAL_IDENT:
@@ -511,7 +686,8 @@ parse_top_level_element(Parser *p)
     break;
 
   default:
-    parser_error(p, "Unexpected token at top level");
+    parser_error_at(p, tok, "Expected 'define', 'declare', '@name' or '%%name' at top level, but got %s",
+                    token_type_to_string(tok->type));
     advance(p);
     break;
   }
@@ -795,7 +971,7 @@ parse_type_definition(Parser *p)
   if (!expect(p, TK_EQ))
     return;
 
-  if (!expect_ident(p, "type"))
+  if (!expect(p, TK_KW_TYPE))
     return;
 
   if (!expect(p, TK_LBRACE))
@@ -880,13 +1056,13 @@ parse_global_variable(Parser *p)
   if (!expect(p, TK_EQ))
     return;
 
-  if (!expect_ident(p, "global"))
+  if (!expect(p, TK_KW_GLOBAL))
     return;
 
   IRValueNode *initializer = NULL;
   const Token *val_tok = current_token(p);
 
-  if (val_tok->type == TK_IDENT && strcmp(val_tok->as.ident_val, "zeroinitializer") == 0)
+  if (val_tok->type == TK_KW_ZEROINITIALIZER)
   {
     advance(p);
   }
@@ -1091,44 +1267,93 @@ parse_instruction(Parser *p, bool *out_is_terminator)
 static IRICmpPredicate
 parse_icmp_predicate(Parser *p)
 {
+  const Token tok = *current_token(p);
+  advance(p);
 
-  Token tok = *current_token(p);
-
-  if (!expect(p, TK_IDENT))
+  switch (tok.type)
+  {
+  case TK_KW_EQ:
     return IR_ICMP_EQ;
-
-  const char *pred = tok.as.ident_val;
-
-  if (strcmp(pred, "eq") == 0)
-    return IR_ICMP_EQ;
-  if (strcmp(pred, "ne") == 0)
+  case TK_KW_NE:
     return IR_ICMP_NE;
-  if (strcmp(pred, "slt") == 0)
-    return IR_ICMP_SLT;
-  if (strcmp(pred, "sle") == 0)
-    return IR_ICMP_SLE;
-  if (strcmp(pred, "sgt") == 0)
-    return IR_ICMP_SGT;
-  if (strcmp(pred, "sge") == 0)
-    return IR_ICMP_SGE;
-
-  if (strcmp(pred, "ugt") == 0)
+  case TK_KW_UGT:
     return IR_ICMP_UGT;
-  if (strcmp(pred, "uge") == 0)
+  case TK_KW_UGE:
     return IR_ICMP_UGE;
-  if (strcmp(pred, "ult") == 0)
+  case TK_KW_ULT:
     return IR_ICMP_ULT;
-  if (strcmp(pred, "ule") == 0)
+  case TK_KW_ULE:
     return IR_ICMP_ULE;
+  case TK_KW_SGT:
+    return IR_ICMP_SGT;
+  case TK_KW_SGE:
+    return IR_ICMP_SGE;
+  case TK_KW_SLT:
+    return IR_ICMP_SLT;
+  case TK_KW_SLE:
+    return IR_ICMP_SLE;
+  default:
+    parser_error_at(p, &tok, "Unknown ICMP predicate '%s'", token_type_to_string(tok.type));
+    return IR_ICMP_EQ; /// default
+  }
+}
 
-  parser_error_at(p, &tok, "Unknown ICMP predicate '%s'", pred);
-  return IR_ICMP_EQ;
+/**
+ * @brief [!!] (新增) 解析 FCMP 谓词
+ * e.g., "oeq", "ugt", "uno", ...
+ */
+static IRFCmpPredicate
+parse_fcmp_predicate(Parser *p)
+{
+  const Token tok = *current_token(p);
+  advance(p); // 消耗谓词
+
+  switch (tok.type)
+  {
+  /// --- FCMP 独有 ---
+  case TK_KW_OEQ:
+    return IR_FCMP_OEQ;
+  case TK_KW_OGT:
+    return IR_FCMP_OGT;
+  case TK_KW_OGE:
+    return IR_FCMP_OGE;
+  case TK_KW_OLT:
+    return IR_FCMP_OLT;
+  case TK_KW_OLE:
+    return IR_FCMP_OLE;
+  case TK_KW_ONE:
+    return IR_FCMP_ONE;
+  case TK_KW_UEQ:
+    return IR_FCMP_UEQ;
+  case TK_KW_UNE:
+    return IR_FCMP_UNE;
+  case TK_KW_ORD:
+    return IR_FCMP_ORD;
+  case TK_KW_UNO:
+    return IR_FCMP_UNO;
+  case TK_KW_TRUE:
+    return IR_FCMP_TRUE;
+  case TK_KW_FALSE:
+    return IR_FCMP_FALSE;
+
+  /// --- 共享谓词 ---
+  case TK_KW_UGT:
+    return IR_FCMP_UGT;
+  case TK_KW_UGE:
+    return IR_FCMP_UGE;
+  case TK_KW_ULT:
+    return IR_FCMP_ULT;
+  case TK_KW_ULE:
+    return IR_FCMP_ULE;
+
+  default:
+    parser_error_at(p, &tok, "Unknown or invalid FCMP predicate '%s'", token_type_to_string(tok.type));
+    return IR_FCMP_OEQ; /// default
+  }
 }
 
 static IRValueNode *parse_instr_ret(Parser *p);
 static IRValueNode *parse_instr_br(Parser *p);
-static IRValueNode *parse_instr_add(Parser *p, const char *name_hint, IRType *result_type);
-static IRValueNode *parse_instr_sub(Parser *p, const char *name_hint, IRType *result_type);
 static IRValueNode *parse_instr_icmp(Parser *p, const char *name_hint, IRType *result_type);
 static IRValueNode *parse_instr_alloca(Parser *p, const char *name_hint, IRType *result_type);
 static IRValueNode *parse_instr_load(Parser *p, const char *name_hint, IRType *result_type);
@@ -1136,6 +1361,10 @@ static IRValueNode *parse_instr_store(Parser *p);
 static IRValueNode *parse_instr_gep(Parser *p, const char *name_hint, IRType *result_type);
 static IRValueNode *parse_instr_phi(Parser *p, Token *result_token, IRType *result_type);
 static IRValueNode *parse_instr_call(Parser *p, const char *name_hint, IRType *result_type);
+static IRValueNode *parse_instr_binary_op(Parser *p, IROpcode op, const char *name_hint, IRType *result_type);
+static IRValueNode *parse_instr_cast_op(Parser *p, IROpcode op, const char *name_hint, IRType *result_type);
+static IRValueNode *parse_instr_fcmp(Parser *p, const char *name_hint, IRType *result_type);
+static IRValueNode *parse_instr_switch(Parser *p);
 
 /**
  * @brief 解析一个操作 (指令的核心)
@@ -1148,73 +1377,119 @@ static IRValueNode *parse_instr_call(Parser *p, const char *name_hint, IRType *r
  * @param out_is_terminator [输出] 如果解析的指令是终结者，则设为 true
  * @return IRValueNode* 指向新创建的指令
  */
-/**
- * @brief [重构] 解析一个操作 (纯分派器)
- *
- * (旧的巨大函数已被拆分)
- */
 static IRValueNode *
 parse_operation(Parser *p, Token *result_token, IRType *result_type, bool *out_is_terminator)
 {
   *out_is_terminator = false;
 
   Token opcode_tok = *current_token(p);
-  if (!expect(p, TK_IDENT))
-    return NULL;
+  advance(p); // 消耗指令关键字
 
-  const char *opcode = opcode_tok.as.ident_val;
   const char *name_hint = result_token ? result_token->as.ident_val : NULL;
 
-  if (strcmp(opcode, "ret") == 0)
+  switch (opcode_tok.type)
   {
+  /// --- 终结者 ---
+  case TK_KW_RET:
     *out_is_terminator = true;
-    return parse_instr_ret(p);
-  }
-  if (strcmp(opcode, "br") == 0)
-  {
+    return parse_instr_ret(p); // (复用你现有的)
+  case TK_KW_BR:
     *out_is_terminator = true;
-    return parse_instr_br(p);
-  }
-  if (strcmp(opcode, "add") == 0)
-  {
-    return parse_instr_add(p, name_hint, result_type);
-  }
-  if (strcmp(opcode, "sub") == 0)
-  {
-    return parse_instr_sub(p, name_hint, result_type);
-  }
-  if (strcmp(opcode, "icmp") == 0)
-  {
-    return parse_instr_icmp(p, name_hint, result_type);
-  }
-  if (strcmp(opcode, "alloc") == 0)
-  {
-    return parse_instr_alloca(p, name_hint, result_type);
-  }
-  if (strcmp(opcode, "load") == 0)
-  {
-    return parse_instr_load(p, name_hint, result_type);
-  }
-  if (strcmp(opcode, "store") == 0)
-  {
-    return parse_instr_store(p);
-  }
-  if (strcmp(opcode, "gep") == 0)
-  {
-    return parse_instr_gep(p, name_hint, result_type);
-  }
-  if (strcmp(opcode, "phi") == 0)
-  {
+    return parse_instr_br(p); // (复用你现有的)
+  case TK_KW_SWITCH:          // [!!] 新增
+    *out_is_terminator = true;
+    return parse_instr_switch(p);
 
-    return parse_instr_phi(p, result_token, result_type);
-  }
-  if (strcmp(opcode, "call") == 0)
-  {
-    return parse_instr_call(p, name_hint, result_type);
-  }
+  /// --- 内存 ---
+  case TK_KW_ALLOCA:
+    return parse_instr_alloca(p, name_hint, result_type); // (复用你现有的)
+  case TK_KW_LOAD:
+    return parse_instr_load(p, name_hint, result_type); // (复用你现有的)
+  case TK_KW_STORE:
+    return parse_instr_store(p); // (复用你现有的)
+  case TK_KW_GEP:
+    return parse_instr_gep(p, name_hint, result_type); // (已更新)
 
-  parser_error_at(p, &opcode_tok, "Unknown instruction opcode '%s'", opcode);
-  return NULL;
+  /// --- 比较 ---
+  case TK_KW_ICMP:
+    return parse_instr_icmp(p, name_hint, result_type); // (已更新)
+  case TK_KW_FCMP:                                      // [!!] 新增
+    return parse_instr_fcmp(p, name_hint, result_type);
+
+  /// --- 整数/位运算 ---
+  case TK_KW_ADD:
+    return parse_instr_binary_op(p, IR_OP_ADD, name_hint, result_type);
+  case TK_KW_SUB:
+    return parse_instr_binary_op(p, IR_OP_SUB, name_hint, result_type);
+  case TK_KW_MUL:
+    return parse_instr_binary_op(p, IR_OP_MUL, name_hint, result_type);
+  case TK_KW_UDIV:
+    return parse_instr_binary_op(p, IR_OP_UDIV, name_hint, result_type);
+  case TK_KW_SDIV:
+    return parse_instr_binary_op(p, IR_OP_SDIV, name_hint, result_type);
+  case TK_KW_UREM:
+    return parse_instr_binary_op(p, IR_OP_UREM, name_hint, result_type);
+  case TK_KW_SREM:
+    return parse_instr_binary_op(p, IR_OP_SREM, name_hint, result_type);
+  case TK_KW_SHL:
+    return parse_instr_binary_op(p, IR_OP_SHL, name_hint, result_type);
+  case TK_KW_LSHR:
+    return parse_instr_binary_op(p, IR_OP_LSHR, name_hint, result_type);
+  case TK_KW_ASHR:
+    return parse_instr_binary_op(p, IR_OP_ASHR, name_hint, result_type);
+  case TK_KW_AND:
+    return parse_instr_binary_op(p, IR_OP_AND, name_hint, result_type);
+  case TK_KW_OR:
+    return parse_instr_binary_op(p, IR_OP_OR, name_hint, result_type);
+  case TK_KW_XOR:
+    return parse_instr_binary_op(p, IR_OP_XOR, name_hint, result_type);
+
+  /// --- 浮点运算  ---
+  case TK_KW_FADD:
+    return parse_instr_binary_op(p, IR_OP_FADD, name_hint, result_type);
+  case TK_KW_FSUB:
+    return parse_instr_binary_op(p, IR_OP_FSUB, name_hint, result_type);
+  case TK_KW_FMUL:
+    return parse_instr_binary_op(p, IR_OP_FMUL, name_hint, result_type);
+  case TK_KW_FDIV:
+    return parse_instr_binary_op(p, IR_OP_FDIV, name_hint, result_type);
+
+  /// --- 类型转换  ---
+  case TK_KW_TRUNC:
+    return parse_instr_cast_op(p, IR_OP_TRUNC, name_hint, result_type);
+  case TK_KW_ZEXT:
+    return parse_instr_cast_op(p, IR_OP_ZEXT, name_hint, result_type);
+  case TK_KW_SEXT:
+    return parse_instr_cast_op(p, IR_OP_SEXT, name_hint, result_type);
+  case TK_KW_FPTRUNC:
+    return parse_instr_cast_op(p, IR_OP_FPTRUNC, name_hint, result_type);
+  case TK_KW_FPEXT:
+    return parse_instr_cast_op(p, IR_OP_FPEXT, name_hint, result_type);
+  case TK_KW_FPTOUI:
+    return parse_instr_cast_op(p, IR_OP_FPTOUI, name_hint, result_type);
+  case TK_KW_FPTOSI:
+    return parse_instr_cast_op(p, IR_OP_FPTOSI, name_hint, result_type);
+  case TK_KW_UITOFP:
+    return parse_instr_cast_op(p, IR_OP_UITOFP, name_hint, result_type);
+  case TK_KW_SITOFP:
+    return parse_instr_cast_op(p, IR_OP_SITOFP, name_hint, result_type);
+  case TK_KW_PTRTOINT:
+    return parse_instr_cast_op(p, IR_OP_PTRTOINT, name_hint, result_type);
+  case TK_KW_INTTOPTR:
+    return parse_instr_cast_op(p, IR_OP_INTTOPTR, name_hint, result_type);
+  case TK_KW_BITCAST:
+    return parse_instr_cast_op(p, IR_OP_BITCAST, name_hint, result_type);
+
+  /// --- 其他 ---
+  case TK_KW_PHI:
+    return parse_instr_phi(p, result_token, result_type); // (复用你现有的)
+  case TK_KW_CALL:
+    return parse_instr_call(p, name_hint, result_type); // (复用你现有的)
+
+  default:
+    parser_error_at(p, &opcode_tok, "Unknown instruction opcode '%s'", token_type_to_string(opcode_tok.type));
+    return NULL;
+  }
 }
 
 /**
@@ -1225,7 +1500,7 @@ static IRValueNode *
 parse_instr_ret(Parser *p)
 {
 
-  if (current_token(p)->type == TK_IDENT && strcmp(current_token(p)->as.ident_val, "void") == 0)
+  if (match(p, TK_IDENT) && strcmp(current_token(p)->as.ident_val, "void") == 0) /// TODO: 'void' 应为 TK_KW_VOID
   {
     advance(p);
     if (p->current_function->return_type->kind != IR_TYPE_VOID)
@@ -1296,16 +1571,13 @@ parse_instr_br(Parser *p)
   return ir_builder_create_cond_br(p->builder, cond, true_dest, false_dest);
 }
 
-/**
- * @brief [新] 解析 'add'
- * 语法: %res: type = add %lhs: type, %rhs: type
- */
+/// --- 通用二元运算解析器 ---
 static IRValueNode *
-parse_instr_add(Parser *p, const char *name_hint, IRType *result_type)
+parse_instr_binary_op(Parser *p, IROpcode op, const char *name_hint, IRType *result_type)
 {
   if (!result_type)
   {
-    parser_error(p, "'add' instruction must produce a result");
+    parser_error(p, "Binary instruction must produce a result");
     return NULL;
   }
 
@@ -1320,39 +1592,114 @@ parse_instr_add(Parser *p, const char *name_hint, IRType *result_type)
 
   if (lhs->type != result_type || rhs->type != result_type)
   {
-    parser_error(p, "Operands types must match result type for 'add'");
+    parser_error(p, "Operands types must match result type for binary op");
     return NULL;
   }
 
-  return ir_builder_create_add(p->builder, lhs, rhs, name_hint);
+  // 使用我们的 builder API
+  switch (op)
+  {
+  // Int
+  case IR_OP_ADD:
+    return ir_builder_create_add(p->builder, lhs, rhs, name_hint);
+  case IR_OP_SUB:
+    return ir_builder_create_sub(p->builder, lhs, rhs, name_hint);
+  case IR_OP_MUL:
+    return ir_builder_create_mul(p->builder, lhs, rhs, name_hint);
+  case IR_OP_UDIV:
+    return ir_builder_create_udiv(p->builder, lhs, rhs, name_hint);
+  case IR_OP_SDIV:
+    return ir_builder_create_sdiv(p->builder, lhs, rhs, name_hint);
+  case IR_OP_UREM:
+    return ir_builder_create_urem(p->builder, lhs, rhs, name_hint);
+  case IR_OP_SREM:
+    return ir_builder_create_srem(p->builder, lhs, rhs, name_hint);
+  // Float
+  case IR_OP_FADD:
+    return ir_builder_create_fadd(p->builder, lhs, rhs, name_hint);
+  case IR_OP_FSUB:
+    return ir_builder_create_fsub(p->builder, lhs, rhs, name_hint);
+  case IR_OP_FMUL:
+    return ir_builder_create_fmul(p->builder, lhs, rhs, name_hint);
+  case IR_OP_FDIV:
+    return ir_builder_create_fdiv(p->builder, lhs, rhs, name_hint);
+  // Bitwise
+  case IR_OP_SHL:
+    return ir_builder_create_shl(p->builder, lhs, rhs, name_hint);
+  case IR_OP_LSHR:
+    return ir_builder_create_lshr(p->builder, lhs, rhs, name_hint);
+  case IR_OP_ASHR:
+    return ir_builder_create_ashr(p->builder, lhs, rhs, name_hint);
+  case IR_OP_AND:
+    return ir_builder_create_and(p->builder, lhs, rhs, name_hint);
+  case IR_OP_OR:
+    return ir_builder_create_or(p->builder, lhs, rhs, name_hint);
+  case IR_OP_XOR:
+    return ir_builder_create_xor(p->builder, lhs, rhs, name_hint);
+  default:
+    parser_error(p, "Internal: unhandled binary op in parser");
+    return NULL;
+  }
 }
 
+/// --- 通用类型转换解析器 ---
 static IRValueNode *
-parse_instr_sub(Parser *p, const char *name_hint, IRType *result_type)
+parse_instr_cast_op(Parser *p, IROpcode op, const char *name_hint, IRType *result_type)
 {
   if (!result_type)
   {
-    parser_error(p, "'sub' instruction must produce a result");
+    parser_error(p, "Cast instruction must produce a result");
     return NULL;
   }
 
-  IRValueNode *lhs = parse_operand(p);
-  if (!lhs)
+  IRValueNode *val = parse_operand(p);
+  if (!val)
     return NULL;
 
-  if (!expect(p, TK_COMMA))
+  if (!expect(p, TK_KW_TO))
     return NULL;
 
-  IRValueNode *rhs = parse_operand(p);
-  if (!rhs)
+  IRType *dest_type = parse_type(p);
+  if (!dest_type)
     return NULL;
 
-  if (lhs->type != result_type || rhs->type != result_type)
+  if (dest_type != result_type)
   {
-    parser_error(p, "Operands types must match result type for 'sub'");
+    parser_error(p, "Cast 'to <type>' does not match result type annotation");
     return NULL;
   }
-  return ir_builder_create_sub(p->builder, lhs, rhs, name_hint);
+
+  // 使用我们的 builder API
+  switch (op)
+  {
+  case IR_OP_TRUNC:
+    return ir_builder_create_trunc(p->builder, val, dest_type, name_hint);
+  case IR_OP_ZEXT:
+    return ir_builder_create_zext(p->builder, val, dest_type, name_hint);
+  case IR_OP_SEXT:
+    return ir_builder_create_sext(p->builder, val, dest_type, name_hint);
+  case IR_OP_FPTRUNC:
+    return ir_builder_create_fptrunc(p->builder, val, dest_type, name_hint);
+  case IR_OP_FPEXT:
+    return ir_builder_create_fpext(p->builder, val, dest_type, name_hint);
+  case IR_OP_FPTOUI:
+    return ir_builder_create_fptoui(p->builder, val, dest_type, name_hint);
+  case IR_OP_FPTOSI:
+    return ir_builder_create_fptosi(p->builder, val, dest_type, name_hint);
+  case IR_OP_UITOFP:
+    return ir_builder_create_uitofp(p->builder, val, dest_type, name_hint);
+  case IR_OP_SITOFP:
+    return ir_builder_create_sitofp(p->builder, val, dest_type, name_hint);
+  case IR_OP_PTRTOINT:
+    return ir_builder_create_ptrtoint(p->builder, val, dest_type, name_hint);
+  case IR_OP_INTTOPTR:
+    return ir_builder_create_inttoptr(p->builder, val, dest_type, name_hint);
+  case IR_OP_BITCAST:
+    return ir_builder_create_bitcast(p->builder, val, dest_type, name_hint);
+  default:
+    parser_error(p, "Internal: unhandled cast op in parser");
+    return NULL;
+  }
 }
 
 static IRValueNode *
@@ -1363,27 +1710,58 @@ parse_instr_icmp(Parser *p, const char *name_hint, IRType *result_type)
     parser_error(p, "'icmp' must produce an 'i1' result");
     return NULL;
   }
-
+  // [!!] (已更新)
   IRICmpPredicate pred = parse_icmp_predicate(p);
 
   IRValueNode *lhs = parse_operand(p);
   if (!lhs)
     return NULL;
-
   if (!expect(p, TK_COMMA))
     return NULL;
+  IRValueNode *rhs = parse_operand(p);
+  if (!rhs)
+    return NULL;
+  if (lhs->type != rhs->type)
+  {
+    parser_error(p, "Operands types must match for 'icmp'");
+    return NULL;
+  }
+  return ir_builder_create_icmp(p->builder, pred, lhs, rhs, name_hint);
+}
 
+// --- [!!] (新增) `parse_instr_fcmp` ---
+static IRValueNode *
+parse_instr_fcmp(Parser *p, const char *name_hint, IRType *result_type)
+{
+  if (!result_type || result_type->kind != IR_TYPE_I1)
+  {
+    parser_error(p, "'fcmp' must produce an 'i1' result");
+    return NULL;
+  }
+
+  IRFCmpPredicate pred = parse_fcmp_predicate(p); // [!!] (新增)
+
+  IRValueNode *lhs = parse_operand(p);
+  if (!lhs)
+    return NULL;
+  if (!expect(p, TK_COMMA))
+    return NULL;
   IRValueNode *rhs = parse_operand(p);
   if (!rhs)
     return NULL;
 
   if (lhs->type != rhs->type)
   {
-    parser_error(p, "Operands types must match for 'icmp'");
+    parser_error(p, "Operands types must match for 'fcmp'");
+    return NULL;
+  }
+  if (!ir_type_is_floating(lhs->type))
+  {
+    parser_error(p, "Operands for 'fcmp' must be floating point types");
     return NULL;
   }
 
-  return ir_builder_create_icmp(p->builder, pred, lhs, rhs, name_hint);
+  return ir_builder_create_fcmp(p->builder, pred, lhs, rhs, name_hint);
 }
 
 static IRValueNode *
@@ -1458,12 +1836,7 @@ parse_instr_gep(Parser *p, const char *name_hint, IRType *result_type)
     return NULL;
   }
 
-  bool inbounds = false;
-  if (current_token(p)->type == TK_IDENT && strcmp(current_token(p)->as.ident_val, "inbounds") == 0)
-  {
-    inbounds = true;
-    advance(p);
-  }
+  bool inbounds = match(p, TK_KW_INBOUNDS);
 
   IRValueNode *base_ptr = parse_operand(p);
   if (!base_ptr || base_ptr->type->kind != IR_TYPE_PTR)
@@ -1508,6 +1881,72 @@ parse_instr_gep(Parser *p, const char *name_hint, IRType *result_type)
 
   return ir_builder_create_gep(p->builder, source_type, base_ptr, (IRValueNode **)temp_vec_data(&indices),
                                temp_vec_len(&indices), inbounds, name_hint);
+}
+
+static IRValueNode *
+parse_instr_switch(Parser *p)
+{
+  /// switch %cond: i32, default $dest [ ... ]
+
+  IRValueNode *cond = parse_operand(p);
+  if (!cond)
+    return NULL;
+  if (!ir_type_is_integer(cond->type))
+  {
+    parser_error(p, "switch condition must be an integer");
+    return NULL;
+  }
+
+  if (!expect(p, TK_COMMA))
+    return NULL;
+  if (!expect(p, TK_KW_DEFAULT))
+    return NULL;
+
+  IRValueNode *default_bb = parse_operand(p);
+  if (!default_bb || default_bb->kind != IR_KIND_BASIC_BLOCK)
+  {
+    parser_error(p, "switch default must be a basic block label");
+    return NULL;
+  }
+
+  IRValueNode *switch_inst = ir_builder_create_switch(p->builder, cond, default_bb);
+
+  if (!expect(p, TK_LBRACKET))
+    return NULL;
+
+  while (current_token(p)->type != TK_RBRACKET)
+  {
+    /// <const>: <type>, $dest
+
+    IRValueNode *case_val = parse_operand(p);
+    if (!case_val || case_val->kind != IR_KIND_CONSTANT)
+    {
+      parser_error(p, "switch case value must be a constant");
+      return NULL;
+    }
+    if (case_val->type != cond->type)
+    {
+      parser_error(p, "switch case value type must match condition type");
+      return NULL;
+    }
+
+    if (!expect(p, TK_COMMA))
+      return NULL;
+
+    IRValueNode *case_bb = parse_operand(p);
+    if (!case_bb || case_bb->kind != IR_KIND_BASIC_BLOCK)
+    {
+      parser_error(p, "switch case destination must be a basic block label");
+      return NULL;
+    }
+
+    ir_switch_add_case(switch_inst, case_val, case_bb);
+  }
+
+  if (!expect(p, TK_RBRACKET))
+    return NULL;
+
+  return switch_inst;
 }
 
 /**
@@ -1968,33 +2407,24 @@ parse_constant_from_token(Parser *p, Token *val_tok, IRType *type)
     }
   }
 
-  case TK_IDENT: {
-    const char *name = val_tok->as.ident_val;
-    if (strcmp(name, "true") == 0)
-    {
-      if (type->kind != IR_TYPE_I1)
-        parser_error_at(p, val_tok, "'true' must have type 'i1'");
-      return ir_constant_get_i1(p->context, true);
-    }
-    if (strcmp(name, "false") == 0)
-    {
-      if (type->kind != IR_TYPE_I1)
-        parser_error_at(p, val_tok, "'false' must have type 'i1'");
-      return ir_constant_get_i1(p->context, false);
-    }
-    if (strcmp(name, "undef") == 0)
-    {
-      return ir_constant_get_undef(p->context, type);
-    }
-    if (strcmp(name, "null") == 0)
-    {
-      if (type->kind != IR_TYPE_PTR)
-        parser_error_at(p, val_tok, "'null' must have 'ptr' type");
-      return ir_constant_get_undef(p->context, type);
-    }
-    parser_error_at(p, val_tok, "Unexpected identifier '%s' as constant value", name);
-    return NULL;
-  }
+  case TK_KW_TRUE:
+    if (type->kind != IR_TYPE_I1)
+      parser_error_at(p, val_tok, "'true' must have type 'i1'");
+    return ir_constant_get_i1(p->context, true);
+
+  case TK_KW_FALSE:
+    if (type->kind != IR_TYPE_I1)
+      parser_error_at(p, val_tok, "'false' must have type 'i1'");
+    return ir_constant_get_i1(p->context, false);
+
+  case TK_KW_UNDEF:
+    return ir_constant_get_undef(p->context, type);
+
+  case TK_KW_NULL:
+    if (type->kind != IR_TYPE_PTR)
+      parser_error_at(p, val_tok, "'null' must have 'ptr' type");
+    return ir_constant_get_undef(p->context, type); /// null 也是 undef ?
+
   default:
     parser_error_at(p, val_tok, "Unexpected token '%s' as constant value", token_type_to_string(val_tok->type));
     return NULL;
@@ -2104,7 +2534,7 @@ ir_parse_module(IRContext *ctx, const char *source_buffer)
   const char *module_name = "parsed_module";
   const Token *first_tok = ir_lexer_current_token(&lexer);
 
-  if (first_tok->type == TK_IDENT && strcmp(first_tok->as.ident_val, "module") == 0)
+  if (first_tok->type == TK_KW_MODULE)
   {
     ir_lexer_next(&lexer);
 
