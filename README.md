@@ -264,6 +264,8 @@ The core framework is stable. Future goals are focused on implementing the inter
       * **(Current Goal)** Implement a tree-walking interpreter for executing and debugging IR.
   * [x] **IR Text Parser (`ir/parser`)**
       * **Completed.**
+  * [x] **Core Instruction Set (`ir/*`)**
+      * **Completed.** Defined and implemented the full set of standard opcodes (integer, float, bitwise, casts) across the entire framework (Builder, Parser, Verifier, Printer).
   * [x] **Dominance Frontier (`analysis/dom_frontier`)**
       * **Completed.**
   * [x] **Mem2Reg Pass (`transforms/mem2reg`)**
