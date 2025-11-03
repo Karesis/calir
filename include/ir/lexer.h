@@ -59,6 +59,7 @@ typedef enum
   /// --- 顶级关键字 ---
   TK_KW_MODULE,
   TK_KW_DEFINE,
+  TK_KW_DECLARE,
   TK_KW_GLOBAL,
   TK_KW_TYPE,
 
@@ -112,23 +113,28 @@ typedef enum
   TK_KW_BITCAST,
   TK_KW_TO, // 用于转换指令
 
+  /// --- 常量关键字 ---
+  TK_KW_UNDEF,
+  TK_KW_NULL,
+  TK_KW_ZEROINITIALIZER,
+
   /// --- 其他 ---
   TK_KW_PHI,
   TK_KW_CALL,
 
-  /// --- ICMP 谓词 ---
-  TK_KW_EQ,
-  TK_KW_NE,
-  TK_KW_UGT,
-  TK_KW_UGE,
-  TK_KW_ULT,
-  TK_KW_ULE,
-  TK_KW_SGT,
-  TK_KW_SGE,
-  TK_KW_SLT,
-  TK_KW_SLE,
+  /// ICMP, FCMP 共有谓词
+  TK_KW_EQ,  /// eq (ICMP)
+  TK_KW_NE,  /// ne (ICMP)
+  TK_KW_UGT, /// ugt (ICMP + FCMP)
+  TK_KW_UGE, /// uge (ICMP + FCMP)
+  TK_KW_ULT, /// ult (ICMP + FCMP)
+  TK_KW_ULE, /// ule (ICMP + FCMP)
+  TK_KW_SGT, /// sgt (ICMP)
+  TK_KW_SGE, /// sge (ICMP)
+  TK_KW_SLT, /// slt (ICMP)
+  TK_KW_SLE, /// sle (ICMP)
 
-  /// --- FCMP 谓词 ---
+  /// FCMP 独有
   TK_KW_OEQ,
   TK_KW_OGT,
   TK_KW_OGE,
@@ -136,10 +142,7 @@ typedef enum
   TK_KW_OLE,
   TK_KW_ONE,
   TK_KW_UEQ,
-  TK_KW_UGT,
-  TK_KW_UGE,
-  TK_KW_ULT,
-  TK_KW_ULE,
+  /// (UGT, UGE, ULT, ULE 在上面)
   TK_KW_UNE,
   TK_KW_ORD,
   TK_KW_UNO,
