@@ -28,33 +28,33 @@ typedef struct IRContext IRContext;
  */
 typedef enum
 {
-  TK_ILLEGAL, // 非法
-  TK_EOF,     // 文件结束
+  TK_ILLEGAL,
+  TK_EOF,
 
   /// --- 标识符和字面量 ---
-  TK_IDENT,        // 普通标识符 (e.g., "i32", "my_struct")
-  TK_GLOBAL_IDENT, // @name
-  TK_LOCAL_IDENT,  // %name
-  TK_LABEL_IDENT,  // $name
+  TK_IDENT,
+  TK_GLOBAL_IDENT,
+  TK_LOCAL_IDENT,
+  TK_LABEL_IDENT,
 
   TK_INTEGER_LITERAL,
   TK_FLOAT_LITERAL,
   TK_STRING_LITERAL,
 
   /// --- 标点符号 ---
-  TK_EQ,        // =
-  TK_COMMA,     // ,
-  TK_COLON,     // :
-  TK_LBRACE,    // {
-  TK_RBRACE,    // }
-  TK_LBRACKET,  // [
-  TK_RBRACKET,  // ]
-  TK_LPAREN,    // (
-  TK_RPAREN,    // )
-  TK_LT,        // <
-  TK_GT,        // >
-  TK_ELLIPSIS,  // ... (用于可变参数)
-  TK_SEMICOLON, // ; (用于注释)
+  TK_EQ,
+  TK_COMMA,
+  TK_COLON,
+  TK_LBRACE,
+  TK_RBRACE,
+  TK_LBRACKET,
+  TK_RBRACKET,
+  TK_LPAREN,
+  TK_RPAREN,
+  TK_LT,
+  TK_GT,
+  TK_ELLIPSIS,
+  TK_SEMICOLON,
 
   /// --- 顶级关键字 ---
   TK_KW_MODULE,
@@ -66,9 +66,9 @@ typedef enum
   /// --- 终结者指令 ---
   TK_KW_RET,
   TK_KW_BR,
-  TK_KW_COND_BR, // [注意] 你的 parser 可能会决定只用 'br'
+  TK_KW_COND_BR,
   TK_KW_SWITCH,
-  TK_KW_DEFAULT, // 用于 switch
+  TK_KW_DEFAULT,
 
   /// --- 二元运算 ---
   TK_KW_ADD,
@@ -94,7 +94,7 @@ typedef enum
   TK_KW_LOAD,
   TK_KW_STORE,
   TK_KW_GEP,
-  TK_KW_INBOUNDS, // 用于 GEP
+  TK_KW_INBOUNDS,
   TK_KW_ICMP,
   TK_KW_FCMP,
 
@@ -111,7 +111,7 @@ typedef enum
   TK_KW_PTRTOINT,
   TK_KW_INTTOPTR,
   TK_KW_BITCAST,
-  TK_KW_TO, // 用于转换指令
+  TK_KW_TO,
 
   /// --- 常量关键字 ---
   TK_KW_UNDEF,

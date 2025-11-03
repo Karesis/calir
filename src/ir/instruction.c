@@ -59,7 +59,7 @@ ir_icmp_predicate_to_string(IRICmpPredicate pred)
   }
 }
 
-// [!!] 新增的辅助函数
+
 static const char *
 ir_fcmp_predicate_to_string(IRFCmpPredicate pred)
 {
@@ -202,7 +202,7 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
     return;
   }
 
-  // 1. 打印结果 (e.g., "%res: i32 = ")
+
   int has_result = (inst->result.type && inst->result.type->kind != IR_TYPE_VOID);
   if (has_result)
   {
@@ -212,13 +212,13 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
 
   IRValueNode *op1, *op2, *op3;
 
-  // 2. 打印指令体 (分发)
+
   switch (inst->opcode)
   {
   /// --- 终止指令 ---
   case IR_OP_RET:
     ir_print_str(p, "ret ");
-    op1 = get_operand(inst, 0); // May be NULL for "ret void"
+    op1 = get_operand(inst, 0);
     if (op1)
     {
       ir_value_dump_with_type(op1, p);
@@ -233,7 +233,7 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
     ir_print_str(p, "br ");
     op1 = get_operand(inst, 0);
     assert(op1 && "br must have a target");
-    ir_value_dump_with_type(op1, p); // 打印 "$label"
+    ir_value_dump_with_type(op1, p);
     break;
 
   case IR_OP_COND_BR:
@@ -262,7 +262,7 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
 
     ir_print_str(p, " [");
 
-    // 遍历 case, 它们从索引 2 开始，成对出现
+
     int i = 2;
     IRValueNode *case_val = get_operand(inst, i);
     while (case_val)
@@ -270,15 +270,15 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
       IRValueNode *case_bb = get_operand(inst, i + 1);
       assert(case_bb && "switch case pair is incomplete");
 
-      ir_print_str(p, "\n    ");            // 缩进
-      ir_value_dump_with_type(case_val, p); // 10: i32
+      ir_print_str(p, "\n    ");
+      ir_value_dump_with_type(case_val, p);
       ir_print_str(p, ", ");
-      ir_value_dump_with_type(case_bb, p); // $case_1
+      ir_value_dump_with_type(case_bb, p);
 
       i += 2;
       case_val = get_operand(inst, i);
     }
-    ir_print_str(p, "\n  ]"); // 闭合
+    ir_print_str(p, "\n  ]");
     break;
 
   /// --- 整数二元运算 ---
@@ -342,24 +342,24 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
   case IR_OP_ALLOCA:
     ir_print_str(p, "alloc ");
     assert(inst->result.type->kind == IR_TYPE_PTR);
-    ir_type_dump(inst->result.type->as.pointee_type, p); // 打印被分配的类型
+    ir_type_dump(inst->result.type->as.pointee_type, p);
     break;
 
   case IR_OP_LOAD:
     ir_print_str(p, "load ");
     op1 = get_operand(inst, 0);
     assert(op1 && "load needs a pointer operand");
-    ir_value_dump_with_type(op1, p); // %ptr: <*i32>
+    ir_value_dump_with_type(op1, p);
     break;
 
   case IR_OP_STORE:
     ir_print_str(p, "store ");
-    op1 = get_operand(inst, 0); // value
-    op2 = get_operand(inst, 1); // pointer
+    op1 = get_operand(inst, 0);
+    op2 = get_operand(inst, 1);
     assert(op1 && op2 && "store needs value and pointer operands");
-    ir_value_dump_with_type(op1, p); // %val: i32
+    ir_value_dump_with_type(op1, p);
     ir_print_str(p, ", ");
-    ir_value_dump_with_type(op2, p); // %ptr: <*i32>
+    ir_value_dump_with_type(op2, p);
     break;
 
   case IR_OP_GEP:
@@ -369,11 +369,11 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
       ir_print_str(p, "inbounds ");
     }
 
-    op1 = get_operand(inst, 0); // base pointer
+    op1 = get_operand(inst, 0);
     assert(op1 && "gep must have at least one operand");
     ir_value_dump_with_type(op1, p);
 
-    // 打印索引
+
     int gep_idx = 1;
     IRValueNode *idx = get_operand(inst, gep_idx);
     while (idx)
@@ -470,19 +470,19 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
 
   case IR_OP_CALL: {
     ir_print_str(p, "call ");
-    IRValueNode *callee = get_operand(inst, 0); // callee
+    IRValueNode *callee = get_operand(inst, 0);
     assert(callee != NULL && "call must have a callee");
 
-    // [!!] 修复：
-    // 恢复到打印 callee 的 *完整指针类型*
-    // 而不是它的 pointee_type
+
+
+
     ir_type_dump(callee->type, p);
 
     ir_print_str(p, " ");
-    ir_value_dump_name(callee, p); // @func_name
+    ir_value_dump_name(callee, p);
     ir_print_str(p, "(");
 
-    // 打印参数 (从索引 1 开始)
+
     int arg_idx = 1;
     IRValueNode *arg = get_operand(inst, arg_idx);
     while (arg)

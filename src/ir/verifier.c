@@ -222,7 +222,7 @@ ir_is_terminator(IROpcode op)
   case IR_OP_RET:
   case IR_OP_BR:
   case IR_OP_COND_BR:
-  case IR_OP_SWITCH: // [!!] 新增
+  case IR_OP_SWITCH:
     return true;
   default:
     return false;
@@ -249,7 +249,7 @@ is_terminator_predecessor(IRInstruction *term, IRBasicBlock *target_bb)
   case IR_OP_COND_BR:
     return (get_operand(term, 1) == target_val || get_operand(term, 2) == target_val);
 
-  case IR_OP_SWITCH: { // [!!] 新增
+  case IR_OP_SWITCH: {
     /// 检查 default (op 1)
     if (get_operand(term, 1) == target_val)
     {
@@ -425,7 +425,7 @@ verify_op_compare(VerifierContext *vctx, IRInstruction *inst)
     bool is_valid_type = ir_type_is_integer(op1->type) || ir_type_is_pointer(op1->type);
     VERIFY_ASSERT(is_valid_type, vctx, op1, "'icmp' operands must be integer or pointer type.");
   }
-  else // IR_OP_FCMP
+  else
   {
     VERIFY_ASSERT(ir_type_is_floating(op1->type), vctx, op1, "'fcmp' operands must be floating point type.");
   }
@@ -467,8 +467,8 @@ verify_op_memory(VerifierContext *vctx, IRInstruction *inst)
   }
   case IR_OP_STORE: {
     VERIFY_ASSERT(op_count == 2, vctx, value, "'store' must have exactly 2 operands (value, pointer).");
-    op1 = get_operand(inst, 0); // val_to_store
-    op2 = get_operand(inst, 1); // ptr
+    op1 = get_operand(inst, 0);
+    op2 = get_operand(inst, 1);
     VERIFY_ASSERT(op2->type->kind == IR_TYPE_PTR, vctx, op2, "'store' second operand must be a pointer type.");
     IRType *pointee_type = op2->type->as.pointee_type;
     VERIFY_ASSERT(op1->type == pointee_type, vctx, value, "'store' value type must match the pointer's pointee type.");
@@ -510,7 +510,7 @@ verify_op_memory(VerifierContext *vctx, IRInstruction *inst)
     VERIFY_ASSERT(result_type == expected_result_type, vctx, &inst->result, "GEP result type is incorrect.");
     break;
   }
-  default: // 应永不被击中
+  default:
     VERIFY_ERROR(vctx, value, "Internal verifier error: Non-memory op in verify_op_memory.");
   }
   return true;
@@ -538,7 +538,7 @@ verify_op_cast(VerifierContext *vctx, IRInstruction *inst)
   case IR_OP_SEXT:
     VERIFY_ASSERT(ir_type_is_integer(src_type) && ir_type_is_integer(dest_type), vctx, value,
                   "Cast must be integer to integer.");
-    // [TODO] 以后可以添加类型大小(size)检查
+
     break;
   case IR_OP_FPTRUNC:
   case IR_OP_FPEXT:
@@ -567,7 +567,7 @@ verify_op_cast(VerifierContext *vctx, IRInstruction *inst)
     VERIFY_ASSERT(src_type->kind < IR_TYPE_ARRAY && dest_type->kind < IR_TYPE_ARRAY, vctx, value,
                   "bitcast does not support aggregate types (array/struct).");
     break;
-  default: // 应永不被击中
+  default:
     VERIFY_ERROR(vctx, value, "Internal verifier error: Non-cast op in verify_op_cast.");
   }
   return true;
@@ -640,7 +640,7 @@ verify_op_call(VerifierContext *vctx, IRInstruction *inst)
   int op_count = get_operand_count(inst);
 
   VERIFY_ASSERT(op_count >= 1, vctx, value, "'call' must have at least 1 operand (the callee).");
-  IRValueNode *op1 = get_operand(inst, 0); // callee_val
+  IRValueNode *op1 = get_operand(inst, 0);
   VERIFY_ASSERT(op1->type->kind == IR_TYPE_PTR, vctx, op1, "'call' callee must be a pointer type.");
 
   IRType *callee_pointee_type = op1->type->as.pointee_type;
@@ -747,14 +747,14 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
   /// --- 3. 特定指令 (Opcode) 的规则检查 (分发) ---
   switch (inst->opcode)
   {
-  // --- 终止指令 ---
+
   case IR_OP_RET:
   case IR_OP_BR:
   case IR_OP_COND_BR:
   case IR_OP_SWITCH:
     return verify_op_terminator(vctx, inst);
 
-  // --- 整数/位运算 ---
+
   case IR_OP_ADD:
   case IR_OP_SUB:
   case IR_OP_MUL:
@@ -770,26 +770,26 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
   case IR_OP_XOR:
     return verify_op_int_binary(vctx, inst);
 
-  // --- 浮点运算 ---
+
   case IR_OP_FADD:
   case IR_OP_FSUB:
   case IR_OP_FMUL:
   case IR_OP_FDIV:
     return verify_op_float_binary(vctx, inst);
 
-  // --- 比较 ---
+
   case IR_OP_ICMP:
   case IR_OP_FCMP:
     return verify_op_compare(vctx, inst);
 
-  // --- 内存 ---
+
   case IR_OP_ALLOCA:
   case IR_OP_LOAD:
   case IR_OP_STORE:
   case IR_OP_GEP:
     return verify_op_memory(vctx, inst);
 
-  // --- 类型转换 ---
+
   case IR_OP_TRUNC:
   case IR_OP_ZEXT:
   case IR_OP_SEXT:
@@ -834,7 +834,7 @@ verify_basic_block(VerifierContext *vctx, IRBasicBlock *bb)
   IDList *last_inst_node = bb->instructions.prev;
   IRInstruction *last_inst = list_entry(last_inst_node, IRInstruction, list_node);
 
-  // [!!] 使用新的辅助函数
+
   VERIFY_ASSERT(ir_is_terminator(last_inst->opcode), vctx, &last_inst->result,
                 "BasicBlock must end with a terminator instruction (ret, br, cond_br, switch).");
 
@@ -857,7 +857,7 @@ verify_basic_block(VerifierContext *vctx, IRBasicBlock *bb)
 
     if (inst != last_inst)
     {
-      // [!!] 使用新的辅助函数
+
       VERIFY_ASSERT(!ir_is_terminator(inst->opcode), vctx, &inst->result,
                     "Terminator instruction found in the middle of a BasicBlock.");
     }

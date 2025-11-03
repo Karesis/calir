@@ -16,21 +16,21 @@
 
 /*
  * =================================================================
- * --- [!!] 新的测试套件：指令覆盖率 [!!] ---
+ * --- 指令覆盖率 ---
  * =================================================================
  *
- * 这个文件测试我们所有的 IR 指令是否能被 Lexer, Parser,
+ * 这个文件测试所有的 IR 指令是否能被 Lexer, Parser,
  * Builder 和 Verifier 正确地端到端处理。
  */
 
 #include "ir/context.h"
 #include "ir/module.h"
-#include "ir/parser.h" // 我们将测试 ir_parse_module
+#include "ir/parser.h"
 #include "utils/bump.h"
 #include <stdio.h>
 #include <string.h>
 
-// 包含你的测试框架
+
 #include "test_utils.h"
 
 /**
@@ -50,13 +50,13 @@ run_test(const char *name, const char *ir_string)
 
   IRModule *mod = ir_parse_module(ctx, ir_string);
 
-  // 这是核心断言：
-  // ir_parse_module() 内部调用了 ir_verify_module()
-  // 所以 mod != NULL 意味着 Lexer, Parser, Builder, Verifier 全部通过。
+
+
+
   SUITE_ASSERT(mod != NULL, "Failed to parse/verify snippet for: %s", name);
 
-  // 清理
-  // (模块是在 ctx->ir_arena 中分配的，所以我们只需要销毁 context)
+
+
   ir_context_destroy(ctx);
 }
 
@@ -68,7 +68,7 @@ test_integer_binary_ops()
 {
   SUITE_START("Parser: Integer/Bitwise Ops");
 
-  // --- 整数 ---
+  /// --- 整数 ---
   run_test("mul", "define i32 @test(%a: i32, %b: i32) {\n"
                   "$entry:\n"
                   "  %r: i32 = mul %a: i32, %b: i32\n"
@@ -99,7 +99,7 @@ test_integer_binary_ops()
                    "  ret %r: i32\n"
                    "}\n");
 
-  // --- 位运算 ---
+  /// --- 位运算 ---
   run_test("shl", "define i32 @test(%a: i32, %b: i32) {\n"
                   "$entry:\n"
                   "  %r: i32 = shl %a: i32, %b: i32\n"
@@ -265,7 +265,7 @@ test_compare_and_terminator_ops()
 {
   SUITE_START("Parser: FCmp / Switch");
 
-  // --- FCmp ---
+  /// --- FCmp ---
   run_test("fcmp oeq", "define i1 @test(%a: f32, %b: f32) {\n"
                        "$entry:\n"
                        "  %r: i1 = fcmp oeq %a: f32, %b: f32\n"
@@ -284,7 +284,7 @@ test_compare_and_terminator_ops()
                        "  ret %r: i1\n"
                        "}\n");
 
-  // --- Switch ---
+  /// --- Switch ---
   run_test("switch", "define void @test(%a: i32) {\n"
                      "$entry:\n"
                      "  switch %a: i32, default $l_end [\n"
@@ -309,7 +309,7 @@ test_compare_and_terminator_ops()
 int
 main()
 {
-  __calir_current_suite_name = "Parser: New Instructions"; // (用于 TEST_SUMMARY)
+  __calir_current_suite_name = "Parser: New Instructions";
 
   __calir_total_suites_run++;
   if (test_integer_binary_ops() != 0)

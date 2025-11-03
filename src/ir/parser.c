@@ -1163,7 +1163,7 @@ parse_basic_block(Parser *p)
       return;
 
     const Token *tok = current_token(p);
-    // 检查是否到达函数末尾或文件末尾
+
     if (tok->type == TK_RBRACE || tok->type == TK_EOF)
       return;
 
@@ -1311,7 +1311,7 @@ static IRFCmpPredicate
 parse_fcmp_predicate(Parser *p)
 {
   const Token tok = *current_token(p);
-  advance(p); // 消耗谓词
+  advance(p);
 
   switch (tok.type)
   {
@@ -1388,7 +1388,7 @@ parse_operation(Parser *p, Token *result_token, IRType *result_type, bool *out_i
   *out_is_terminator = false;
 
   Token opcode_tok = *current_token(p);
-  advance(p); // 消耗指令关键字
+  advance(p);
 
   const char *name_hint = result_token ? result_token->as.ident_val : NULL;
 
@@ -1397,28 +1397,28 @@ parse_operation(Parser *p, Token *result_token, IRType *result_type, bool *out_i
   /// --- 终结者 ---
   case TK_KW_RET:
     *out_is_terminator = true;
-    return parse_instr_ret(p); // (复用你现有的)
+    return parse_instr_ret(p);
   case TK_KW_BR:
     *out_is_terminator = true;
-    return parse_instr_br(p); // (复用你现有的)
+    return parse_instr_br(p);
   case TK_KW_SWITCH:
     *out_is_terminator = true;
     return parse_instr_switch(p);
 
   /// --- 内存 ---
   case TK_KW_ALLOCA:
-    return parse_instr_alloca(p, name_hint, result_type); // (复用你现有的)
+    return parse_instr_alloca(p, name_hint, result_type);
   case TK_KW_LOAD:
-    return parse_instr_load(p, name_hint, result_type); // (复用你现有的)
+    return parse_instr_load(p, name_hint, result_type);
   case TK_KW_STORE:
-    return parse_instr_store(p); // (复用你现有的)
+    return parse_instr_store(p);
   case TK_KW_GEP:
-    return parse_instr_gep(p, name_hint, result_type); // (已更新)
+    return parse_instr_gep(p, name_hint, result_type);
 
   /// --- 比较 ---
   case TK_KW_ICMP:
-    return parse_instr_icmp(p, name_hint, result_type); // (已更新)
-  case TK_KW_FCMP:                                      // [!!] 新增
+    return parse_instr_icmp(p, name_hint, result_type);
+  case TK_KW_FCMP:
     return parse_instr_fcmp(p, name_hint, result_type);
 
   /// --- 整数/位运算 ---
@@ -1487,9 +1487,9 @@ parse_operation(Parser *p, Token *result_token, IRType *result_type, bool *out_i
 
   /// --- 其他 ---
   case TK_KW_PHI:
-    return parse_instr_phi(p, result_token, result_type); // (复用你现有的)
+    return parse_instr_phi(p, result_token, result_type);
   case TK_KW_CALL:
-    return parse_instr_call(p, name_hint, result_type); // (复用你现有的)
+    return parse_instr_call(p, name_hint, result_type);
 
   default:
     parser_error_at(p, &opcode_tok, "Unknown instruction opcode '%s'", token_type_to_string(opcode_tok.type));
@@ -1514,7 +1514,7 @@ parse_instr_ret(Parser *p)
     return ir_builder_create_ret(p->builder, NULL);
   }
 
-  // 如果不是 'void', 把它当作一个普通的操作数解析
+
   IRValueNode *ret_val = parse_operand(p);
   if (!ret_val)
     return NULL;
@@ -1600,10 +1600,10 @@ parse_instr_binary_op(Parser *p, IROpcode op, const char *name_hint, IRType *res
     return NULL;
   }
 
-  // 使用我们的 builder API
+
   switch (op)
   {
-  // Int
+
   case IR_OP_ADD:
     return ir_builder_create_add(p->builder, lhs, rhs, name_hint);
   case IR_OP_SUB:
@@ -1618,7 +1618,7 @@ parse_instr_binary_op(Parser *p, IROpcode op, const char *name_hint, IRType *res
     return ir_builder_create_urem(p->builder, lhs, rhs, name_hint);
   case IR_OP_SREM:
     return ir_builder_create_srem(p->builder, lhs, rhs, name_hint);
-  // Float
+
   case IR_OP_FADD:
     return ir_builder_create_fadd(p->builder, lhs, rhs, name_hint);
   case IR_OP_FSUB:
@@ -1627,7 +1627,7 @@ parse_instr_binary_op(Parser *p, IROpcode op, const char *name_hint, IRType *res
     return ir_builder_create_fmul(p->builder, lhs, rhs, name_hint);
   case IR_OP_FDIV:
     return ir_builder_create_fdiv(p->builder, lhs, rhs, name_hint);
-  // Bitwise
+
   case IR_OP_SHL:
     return ir_builder_create_shl(p->builder, lhs, rhs, name_hint);
   case IR_OP_LSHR:
@@ -1673,7 +1673,7 @@ parse_instr_cast_op(Parser *p, IROpcode op, const char *name_hint, IRType *resul
     return NULL;
   }
 
-  // 使用我们的 builder API
+
   switch (op)
   {
   case IR_OP_TRUNC:
@@ -1714,7 +1714,7 @@ parse_instr_icmp(Parser *p, const char *name_hint, IRType *result_type)
     parser_error(p, "'icmp' must produce an 'i1' result");
     return NULL;
   }
-  // [!!] (已更新)
+
   IRICmpPredicate pred = parse_icmp_predicate(p);
 
   IRValueNode *lhs = parse_operand(p);
@@ -1733,7 +1733,7 @@ parse_instr_icmp(Parser *p, const char *name_hint, IRType *result_type)
   return ir_builder_create_icmp(p->builder, pred, lhs, rhs, name_hint);
 }
 
-// --- [!!] (新增) `parse_instr_fcmp` ---
+
 static IRValueNode *
 parse_instr_fcmp(Parser *p, const char *name_hint, IRType *result_type)
 {
@@ -1743,7 +1743,7 @@ parse_instr_fcmp(Parser *p, const char *name_hint, IRType *result_type)
     return NULL;
   }
 
-  IRFCmpPredicate pred = parse_fcmp_predicate(p); // [!!] (新增)
+  IRFCmpPredicate pred = parse_fcmp_predicate(p);
 
   IRValueNode *lhs = parse_operand(p);
   if (!lhs)
@@ -2268,7 +2268,7 @@ parse_type(Parser *p)
     break;
   }
   case TK_KW_VOID: {
-    advance(p); // 消耗 'void'
+    advance(p);
     base_type = ir_type_get_void(p->context);
     break;
   }

@@ -288,7 +288,7 @@ ir_builder_create_srem(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, c
   return builder_create_binary_op(builder, IR_OP_SREM, lhs, rhs, name_hint);
 }
 
-// --- [!!] 新增：浮点二元运算 ---
+
 
 IRValueNode *
 ir_builder_create_fadd(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
@@ -314,7 +314,7 @@ ir_builder_create_fdiv(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, c
   return builder_create_binary_op(builder, IR_OP_FDIV, lhs, rhs, name_hint);
 }
 
-// --- [!!] 新增：位运算 ---
+
 
 IRValueNode *
 ir_builder_create_shl(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
@@ -391,7 +391,7 @@ ir_builder_create_fcmp(IRBuilder *builder, IRFCmpPredicate pred, IRValueNode *lh
   if (!inst)
     return NULL;
 
-  inst->as.fcmp.predicate = pred; // [!!] 注意：使用 fcmp 联合成员
+  inst->as.fcmp.predicate = pred;
 
   ir_use_create(builder->context, inst, lhs);
   ir_use_create(builder->context, inst, rhs);
@@ -712,9 +712,9 @@ ir_builder_create_switch(IRBuilder *builder, IRValueNode *cond, IRValueNode *def
   if (!inst)
     return NULL;
 
-  // [!!] 遵循我们的"选项1"
-  // 操作数 0: cond
-  // 操作数 1: default_bb
+
+
+
   ir_use_create(builder->context, inst, cond);
   ir_use_create(builder->context, inst, default_bb);
 
@@ -731,12 +731,12 @@ ir_switch_add_case(IRValueNode *switch_inst_val, IRValueNode *const_val, IRValue
   IRInstruction *inst = (IRInstruction *)switch_inst_val;
   assert(inst->opcode == IR_OP_SWITCH && "Value is not a Switch instruction");
 
-  // 从指令反向获取 Context (复用 phi_add_incoming 的逻辑)
+
   assert(inst->parent != NULL && inst->parent->parent != NULL && inst->parent->parent->parent != NULL);
   IRContext *ctx = inst->parent->parent->parent->context;
 
-  // [!!] 遵循我们的"选项1"
-  // 将 [val, bb] 对追加到 operands 列表的末尾
+
+
   ir_use_create(ctx, inst, const_val);
   ir_use_create(ctx, inst, target_bb);
 }

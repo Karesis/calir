@@ -24,13 +24,13 @@
 
 typedef enum
 {
-  // --- 终止指令 (Terminators) ---
+
   IR_OP_RET,
   IR_OP_BR,
   IR_OP_COND_BR,
   IR_OP_SWITCH,
 
-  // --- 整数二元运算 ---
+
   IR_OP_ADD,
   IR_OP_SUB,
   IR_OP_MUL,
@@ -39,13 +39,13 @@ typedef enum
   IR_OP_UREM,
   IR_OP_SREM,
 
-  // --- 浮点二元运算 ---
+
   IR_OP_FADD,
   IR_OP_FSUB,
   IR_OP_FMUL,
   IR_OP_FDIV,
 
-  // --- 位运算 ---
+
   IR_OP_SHL,
   IR_OP_LSHR, /// 逻辑右移
   IR_OP_ASHR, /// 算术右移
@@ -53,17 +53,17 @@ typedef enum
   IR_OP_OR,
   IR_OP_XOR,
 
-  // --- 内存操作 ---
+
   IR_OP_ALLOCA,
   IR_OP_LOAD,
   IR_OP_STORE,
   IR_OP_GEP,
 
-  // --- 比较操作 ---
-  IR_OP_ICMP,
-  IR_OP_FCMP, // 浮点比较
 
-  // --- 类型转换 (Casting) ---
+  IR_OP_ICMP,
+  IR_OP_FCMP,
+
+
   IR_OP_TRUNC,    /// 截断 (i64 -> i32)
   IR_OP_ZEXT,     /// 零扩展 (i32 -> i64)
   IR_OP_SEXT,     /// 符号扩展 (i32 -> i64)
@@ -77,7 +77,7 @@ typedef enum
   IR_OP_INTTOPTR, /// 整数 -> 指针
   IR_OP_BITCAST,  /// 位转换 (e.g., i32 -> f32)
 
-  // --- 其他 ---
+
   IR_OP_PHI,
   IR_OP_CALL
 
@@ -104,7 +104,7 @@ typedef enum
  */
 typedef enum
 {
-  // --- Ordered (O) ---
+
   /// (如果任一操作数为 NaN, 结果为 false)
   IR_FCMP_OEQ, /// Ordered and Equal (有序且等于)
   IR_FCMP_OGT, /// Ordered and Greater Than (有序且大于)
@@ -113,7 +113,7 @@ typedef enum
   IR_FCMP_OLE, /// Ordered and Less Than or Equal (有序且小于等于)
   IR_FCMP_ONE, /// Ordered and Not Equal (有序且不等于)
 
-  // --- Unorde/red (U) ---
+
   /// (如果任一/操作数为 NaN, 结果为 true)
   IR_FCMP_UEQ, /// Unordered or Equal (无序或等于)
   IR_FCMP_UGT, /// Unordered or Greater Than (无序或大于)
@@ -122,7 +122,7 @@ typedef enum
   IR_FCMP_ULE, /// Unordered or Less Than or Equal (无序或小于等于)
   IR_FCMP_UNE, /// Unordered or Not Equal (无序或不等于)
 
-  // --- 特殊谓词 ---
+
   IR_FCMP_ORD, /// Ordered (有序, 检查两个操作数都不是 NaN)
   IR_FCMP_UNO, /// Unordered (无序, 检查至少一个操作数是 NaN)
 
@@ -147,7 +147,7 @@ typedef struct
       IRICmpPredicate predicate;
     } icmp;
 
-    // 新增
+
     struct
     {
       IRFCmpPredicate predicate;

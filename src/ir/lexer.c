@@ -107,8 +107,8 @@ skip_whitespace(Lexer *l)
 static TokenType
 lookup_keyword(const char *ident)
 {
-  // 这是一个简单的优化，用于减少 strcmp 的调用次数
-  // (我们也可以用一个真正的 hashmap，但这需要更多依赖)
+
+
   switch (ident[0])
   {
   case 'a':
@@ -130,7 +130,7 @@ lookup_keyword(const char *ident)
   case 'c':
     if (strcmp(ident, "call") == 0)
       return TK_KW_CALL;
-    // 'cond_br' 只是 'br'，由 parser 区分
+
     break;
   case 'd':
     if (strcmp(ident, "define") == 0)
@@ -286,7 +286,7 @@ lookup_keyword(const char *ident)
     if (strcmp(ident, "undef") == 0)
       return TK_KW_UNDEF;
     break;
-  case 'v': // [!!] 新增 [!!]
+  case 'v':
     if (strcmp(ident, "void") == 0)
       return TK_KW_VOID;
     break;
@@ -302,7 +302,7 @@ lookup_keyword(const char *ident)
     break;
   }
 
-  // 如果没有匹配，它就是
+
   return TK_IDENT;
 }
 
@@ -324,25 +324,25 @@ parse_ident(Lexer *l, Token *out_token)
   }
   size_t len = l->ptr - start;
 
-  // [!!] 修复:
-  // 1. 立即将 (start, len) 切片“驻留” (intern) 到上下文中。
-  //    这会返回一个唯一的、以 '\0' 结尾的、可比较的 const char*。
+
+
+
   const char *interned_ident = ir_context_intern_str_slice(l->context, start, len);
 
-  // 2. 使用这个唯一的指针进行关键字查找。
-  //    这比在临时缓冲区上操作更干净、更安全。
+
+
   out_token->type = lookup_keyword(interned_ident);
 
-  // 3. 只有当它 *不是* 关键字时，我们才需要存储这个值。
+
   if (out_token->type == TK_IDENT)
   {
     out_token->as.ident_val = interned_ident;
   }
   else
   {
-    // 它是关键字 (e.g., TK_KW_ADD), 我们不需要存储值。
-    // (我们刚才 interned 的字符串在 context 中是“孤儿”，
-    //  但这没关系，interner 会在下次遇到 "add" 时重用它)
+
+
+
     out_token->as.ident_val = NULL;
   }
 }

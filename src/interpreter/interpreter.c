@@ -434,7 +434,7 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
         set_value(frame, &inst->result, rt_res);
         break;
 
-        // --- 整数/位运算 (Integer/Bitwise Ops) ---
+
       case IR_OP_MUL:
       case IR_OP_UDIV:
       case IR_OP_SDIV:
@@ -447,12 +447,12 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
       case IR_OP_OR:
       case IR_OP_XOR:
         fprintf(stderr, "Interpreter Error: Unimplemented Integer/Bitwise Opcode.\n");
-        // 假设 inst->opcode 可以被转换为字符串，或者：
-        // fprintf(stderr, "Opcode: %d\n", inst->opcode);
+
+
         assert(false && "Unimplemented Integer/Bitwise Opcode in interpreter");
         break;
 
-      // --- 浮点运算 (Float Ops) ---
+
       case IR_OP_FADD:
       case IR_OP_FSUB:
       case IR_OP_FMUL:
@@ -461,19 +461,19 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
         assert(false && "Unimplemented Float Opcode in interpreter");
         break;
 
-      // --- 比较 (Compare Ops) ---
+
       case IR_OP_FCMP:
         fprintf(stderr, "Interpreter Error: Unimplemented Opcode: FCMP\n");
         assert(false && "Unimplemented IR_OP_FCMP in interpreter");
         break;
 
-      // --- 终结者 (Terminators) ---
+
       case IR_OP_SWITCH:
         fprintf(stderr, "Interpreter Error: Unimplemented Opcode: SWITCH\n");
         assert(false && "Unimplemented IR_OP_SWITCH in interpreter");
         break;
 
-      // --- 类型转换 (Cast Ops) ---
+
       case IR_OP_TRUNC:
       case IR_OP_ZEXT:
       case IR_OP_SEXT:
