@@ -114,7 +114,7 @@ lookup_keyword(const char *ident)
   case 'a':
     if (strcmp(ident, "add") == 0)
       return TK_KW_ADD;
-    if (strcmp(ident, "alloca") == 0)
+    if (strcmp(ident, "alloc") == 0)
       return TK_KW_ALLOCA;
     if (strcmp(ident, "and") == 0)
       return TK_KW_AND;
@@ -137,6 +137,8 @@ lookup_keyword(const char *ident)
       return TK_KW_DEFINE;
     if (strcmp(ident, "default") == 0)
       return TK_KW_DEFAULT;
+    if (strcmp(ident, "declare") == 0)
+      return TK_KW_DECLARE;
     break;
   case 'e':
     if (strcmp(ident, "eq") == 0)
@@ -193,6 +195,8 @@ lookup_keyword(const char *ident)
   case 'n':
     if (strcmp(ident, "ne") == 0)
       return TK_KW_NE;
+    if (strcmp(ident, "null") == 0)
+      return TK_KW_NULL;
     break;
   case 'o':
     if (strcmp(ident, "or") == 0)
@@ -279,6 +283,8 @@ lookup_keyword(const char *ident)
       return TK_KW_UNE;
     if (strcmp(ident, "uno") == 0)
       return TK_KW_UNO;
+    if (strcmp(ident, "undef") == 0)
+      return TK_KW_UNDEF;
     break;
   case 'x':
     if (strcmp(ident, "xor") == 0)
@@ -287,6 +293,8 @@ lookup_keyword(const char *ident)
   case 'z':
     if (strcmp(ident, "zext") == 0)
       return TK_KW_ZEXT;
+    if (strcmp(ident, "zeroinitializer") == 0)
+      return TK_KW_ZEROINITIALIZER;
     break;
   }
 
