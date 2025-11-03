@@ -434,6 +434,62 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
         set_value(frame, &inst->result, rt_res);
         break;
 
+        // --- 整数/位运算 (Integer/Bitwise Ops) ---
+      case IR_OP_MUL:
+      case IR_OP_UDIV:
+      case IR_OP_SDIV:
+      case IR_OP_UREM:
+      case IR_OP_SREM:
+      case IR_OP_SHL:
+      case IR_OP_LSHR:
+      case IR_OP_ASHR:
+      case IR_OP_AND:
+      case IR_OP_OR:
+      case IR_OP_XOR:
+        fprintf(stderr, "Interpreter Error: Unimplemented Integer/Bitwise Opcode.\n");
+        // 假设 inst->opcode 可以被转换为字符串，或者：
+        // fprintf(stderr, "Opcode: %d\n", inst->opcode);
+        assert(false && "Unimplemented Integer/Bitwise Opcode in interpreter");
+        break;
+
+      // --- 浮点运算 (Float Ops) ---
+      case IR_OP_FADD:
+      case IR_OP_FSUB:
+      case IR_OP_FMUL:
+      case IR_OP_FDIV:
+        fprintf(stderr, "Interpreter Error: Unimplemented Float Opcode.\n");
+        assert(false && "Unimplemented Float Opcode in interpreter");
+        break;
+
+      // --- 比较 (Compare Ops) ---
+      case IR_OP_FCMP:
+        fprintf(stderr, "Interpreter Error: Unimplemented Opcode: FCMP\n");
+        assert(false && "Unimplemented IR_OP_FCMP in interpreter");
+        break;
+
+      // --- 终结者 (Terminators) ---
+      case IR_OP_SWITCH:
+        fprintf(stderr, "Interpreter Error: Unimplemented Opcode: SWITCH\n");
+        assert(false && "Unimplemented IR_OP_SWITCH in interpreter");
+        break;
+
+      // --- 类型转换 (Cast Ops) ---
+      case IR_OP_TRUNC:
+      case IR_OP_ZEXT:
+      case IR_OP_SEXT:
+      case IR_OP_FPTRUNC:
+      case IR_OP_FPEXT:
+      case IR_OP_FPTOUI:
+      case IR_OP_FPTOSI:
+      case IR_OP_UITOFP:
+      case IR_OP_SITOFP:
+      case IR_OP_PTRTOINT:
+      case IR_OP_INTTOPTR:
+      case IR_OP_BITCAST:
+        fprintf(stderr, "Interpreter Error: Unimplemented Cast Opcode.\n");
+        assert(false && "Unimplemented Cast Opcode in interpreter");
+        break;
+
       case IR_OP_GEP:
 
         assert(false && "GEP not implemented in interpreter yet");
