@@ -434,7 +434,6 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
         set_value(frame, &inst->result, rt_res);
         break;
 
-
       case IR_OP_MUL:
       case IR_OP_UDIV:
       case IR_OP_SDIV:
@@ -448,10 +447,8 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
       case IR_OP_XOR:
         fprintf(stderr, "Interpreter Error: Unimplemented Integer/Bitwise Opcode.\n");
 
-
         assert(false && "Unimplemented Integer/Bitwise Opcode in interpreter");
         break;
-
 
       case IR_OP_FADD:
       case IR_OP_FSUB:
@@ -461,18 +458,15 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
         assert(false && "Unimplemented Float Opcode in interpreter");
         break;
 
-
       case IR_OP_FCMP:
         fprintf(stderr, "Interpreter Error: Unimplemented Opcode: FCMP\n");
         assert(false && "Unimplemented IR_OP_FCMP in interpreter");
         break;
 
-
       case IR_OP_SWITCH:
         fprintf(stderr, "Interpreter Error: Unimplemented Opcode: SWITCH\n");
         assert(false && "Unimplemented IR_OP_SWITCH in interpreter");
         break;
-
 
       case IR_OP_TRUNC:
       case IR_OP_ZEXT:

@@ -754,7 +754,6 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
   case IR_OP_SWITCH:
     return verify_op_terminator(vctx, inst);
 
-
   case IR_OP_ADD:
   case IR_OP_SUB:
   case IR_OP_MUL:
@@ -770,25 +769,21 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
   case IR_OP_XOR:
     return verify_op_int_binary(vctx, inst);
 
-
   case IR_OP_FADD:
   case IR_OP_FSUB:
   case IR_OP_FMUL:
   case IR_OP_FDIV:
     return verify_op_float_binary(vctx, inst);
 
-
   case IR_OP_ICMP:
   case IR_OP_FCMP:
     return verify_op_compare(vctx, inst);
-
 
   case IR_OP_ALLOCA:
   case IR_OP_LOAD:
   case IR_OP_STORE:
   case IR_OP_GEP:
     return verify_op_memory(vctx, inst);
-
 
   case IR_OP_TRUNC:
   case IR_OP_ZEXT:
@@ -833,7 +828,6 @@ verify_basic_block(VerifierContext *vctx, IRBasicBlock *bb)
 
   IDList *last_inst_node = bb->instructions.prev;
   IRInstruction *last_inst = list_entry(last_inst_node, IRInstruction, list_node);
-
 
   VERIFY_ASSERT(ir_is_terminator(last_inst->opcode), vctx, &last_inst->result,
                 "BasicBlock must end with a terminator instruction (ret, br, cond_br, switch).");

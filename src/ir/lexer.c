@@ -108,7 +108,6 @@ static TokenType
 lookup_keyword(const char *ident)
 {
 
-
   switch (ident[0])
   {
   case 'a':
@@ -302,7 +301,6 @@ lookup_keyword(const char *ident)
     break;
   }
 
-
   return TK_IDENT;
 }
 
@@ -324,15 +322,9 @@ parse_ident(Lexer *l, Token *out_token)
   }
   size_t len = l->ptr - start;
 
-
-
-
   const char *interned_ident = ir_context_intern_str_slice(l->context, start, len);
 
-
-
   out_token->type = lookup_keyword(interned_ident);
-
 
   if (out_token->type == TK_IDENT)
   {
@@ -340,8 +332,6 @@ parse_ident(Lexer *l, Token *out_token)
   }
   else
   {
-
-
 
     out_token->as.ident_val = NULL;
   }

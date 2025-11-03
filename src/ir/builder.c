@@ -288,8 +288,6 @@ ir_builder_create_srem(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, c
   return builder_create_binary_op(builder, IR_OP_SREM, lhs, rhs, name_hint);
 }
 
-
-
 IRValueNode *
 ir_builder_create_fadd(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
 {
@@ -313,8 +311,6 @@ ir_builder_create_fdiv(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, c
 {
   return builder_create_binary_op(builder, IR_OP_FDIV, lhs, rhs, name_hint);
 }
-
-
 
 IRValueNode *
 ir_builder_create_shl(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
@@ -712,9 +708,6 @@ ir_builder_create_switch(IRBuilder *builder, IRValueNode *cond, IRValueNode *def
   if (!inst)
     return NULL;
 
-
-
-
   ir_use_create(builder->context, inst, cond);
   ir_use_create(builder->context, inst, default_bb);
 
@@ -731,11 +724,8 @@ ir_switch_add_case(IRValueNode *switch_inst_val, IRValueNode *const_val, IRValue
   IRInstruction *inst = (IRInstruction *)switch_inst_val;
   assert(inst->opcode == IR_OP_SWITCH && "Value is not a Switch instruction");
 
-
   assert(inst->parent != NULL && inst->parent->parent != NULL && inst->parent->parent->parent != NULL);
   IRContext *ctx = inst->parent->parent->parent->context;
-
-
 
   ir_use_create(ctx, inst, const_val);
   ir_use_create(ctx, inst, target_bb);

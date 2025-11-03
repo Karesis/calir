@@ -30,7 +30,6 @@
 #include <stdio.h>
 #include <string.h>
 
-
 #include "test_utils.h"
 
 /**
@@ -50,12 +49,7 @@ run_test(const char *name, const char *ir_string)
 
   IRModule *mod = ir_parse_module(ctx, ir_string);
 
-
-
-
   SUITE_ASSERT(mod != NULL, "Failed to parse/verify snippet for: %s", name);
-
-
 
   ir_context_destroy(ctx);
 }

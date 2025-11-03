@@ -59,7 +59,6 @@ ir_icmp_predicate_to_string(IRICmpPredicate pred)
   }
 }
 
-
 static const char *
 ir_fcmp_predicate_to_string(IRFCmpPredicate pred)
 {
@@ -202,7 +201,6 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
     return;
   }
 
-
   int has_result = (inst->result.type && inst->result.type->kind != IR_TYPE_VOID);
   if (has_result)
   {
@@ -211,7 +209,6 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
   }
 
   IRValueNode *op1, *op2, *op3;
-
 
   switch (inst->opcode)
   {
@@ -261,7 +258,6 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
     ir_value_dump_with_type(op2, p); /// $default_bb
 
     ir_print_str(p, " [");
-
 
     int i = 2;
     IRValueNode *case_val = get_operand(inst, i);
@@ -373,7 +369,6 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
     assert(op1 && "gep must have at least one operand");
     ir_value_dump_with_type(op1, p);
 
-
     int gep_idx = 1;
     IRValueNode *idx = get_operand(inst, gep_idx);
     while (idx)
@@ -473,15 +468,11 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
     IRValueNode *callee = get_operand(inst, 0);
     assert(callee != NULL && "call must have a callee");
 
-
-
-
     ir_type_dump(callee->type, p);
 
     ir_print_str(p, " ");
     ir_value_dump_name(callee, p);
     ir_print_str(p, "(");
-
 
     int arg_idx = 1;
     IRValueNode *arg = get_operand(inst, arg_idx);

@@ -44,19 +44,16 @@ IRValueNode *ir_builder_create_br(IRBuilder *builder, IRValueNode *target_bb);
 IRValueNode *ir_builder_create_cond_br(IRBuilder *builder, IRValueNode *cond, IRValueNode *true_bb,
                                        IRValueNode *false_bb);
 
-
 IRValueNode *ir_builder_create_mul(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint);
 IRValueNode *ir_builder_create_udiv(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint);
 IRValueNode *ir_builder_create_sdiv(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint);
 IRValueNode *ir_builder_create_urem(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint);
 IRValueNode *ir_builder_create_srem(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint);
 
-
 IRValueNode *ir_builder_create_fadd(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint);
 IRValueNode *ir_builder_create_fsub(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint);
 IRValueNode *ir_builder_create_fmul(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint);
 IRValueNode *ir_builder_create_fdiv(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint);
-
 
 IRValueNode *ir_builder_create_shl(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint);
 IRValueNode *ir_builder_create_lshr(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint);

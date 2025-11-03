@@ -1514,7 +1514,6 @@ parse_instr_ret(Parser *p)
     return ir_builder_create_ret(p->builder, NULL);
   }
 
-
   IRValueNode *ret_val = parse_operand(p);
   if (!ret_val)
     return NULL;
@@ -1600,7 +1599,6 @@ parse_instr_binary_op(Parser *p, IROpcode op, const char *name_hint, IRType *res
     return NULL;
   }
 
-
   switch (op)
   {
 
@@ -1673,7 +1671,6 @@ parse_instr_cast_op(Parser *p, IROpcode op, const char *name_hint, IRType *resul
     return NULL;
   }
 
-
   switch (op)
   {
   case IR_OP_TRUNC:
@@ -1732,7 +1729,6 @@ parse_instr_icmp(Parser *p, const char *name_hint, IRType *result_type)
   }
   return ir_builder_create_icmp(p->builder, pred, lhs, rhs, name_hint);
 }
-
 
 static IRValueNode *
 parse_instr_fcmp(Parser *p, const char *name_hint, IRType *result_type)
