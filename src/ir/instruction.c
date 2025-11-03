@@ -124,6 +124,41 @@ get_operand(IRInstruction *inst, int index)
 }
 
 /**
+ * @brief (内部) 打印二元运算 (e.g., "add %a: i32, %b: i32")
+ */
+static void
+ir_dump_binary_op(IRInstruction *inst, IRPrinter *p, const char *opname)
+{
+  IRValueNode *op1 = get_operand(inst, 0);
+  IRValueNode *op2 = get_operand(inst, 1);
+  assert(op1 && op2 && "Binary operator needs two operands");
+
+  ir_print_str(p, opname);
+  ir_print_str(p, " ");
+  ir_value_dump_with_type(op1, p);
+  ir_print_str(p, ", ");
+  ir_value_dump_with_type(op2, p);
+}
+
+/**
+ * @brief (内部) 打印类型转换 (e.g., "zext %a: i32 to i64")
+ */
+static void
+ir_dump_cast_op(IRInstruction *inst, IRPrinter *p, const char *opname)
+{
+  IRValueNode *op1 = get_operand(inst, 0);
+  assert(op1 && "Cast operator needs an operand");
+
+  ir_print_str(p, opname);
+  ir_print_str(p, " ");
+  ir_value_dump_with_type(op1, p);
+
+  /// 语法: "zext %op: <type> to <result_type>"
+  ir_print_str(p, " to ");
+  ir_type_dump(inst->result.type, p);
+}
+
+/**
  * @brief 从其父基本块中安全地擦除一条指令
  */
 void
@@ -435,16 +470,16 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
 
   case IR_OP_CALL: {
     ir_print_str(p, "call ");
-    op1 = get_operand(inst, 0); // callee
-    assert(op1 != NULL && "call must have a callee");
+    IRValueNode *callee = get_operand(inst, 0); // callee
+    assert(callee != NULL && "call must have a callee");
 
-    // 打印函数签名 (callee 的类型)
-    assert(op1->type->kind == IR_TYPE_PTR);
-    assert(op1->type->as.pointee_type->kind == IR_TYPE_FUNCTION);
-    ir_type_dump(op1->type->as.pointee_type, p);
+    // [!!] 修复：
+    // 恢复到打印 callee 的 *完整指针类型*
+    // 而不是它的 pointee_type
+    ir_type_dump(callee->type, p);
 
     ir_print_str(p, " ");
-    ir_value_dump_name(op1, p); // @func_name
+    ir_value_dump_name(callee, p); // @func_name
     ir_print_str(p, "(");
 
     // 打印参数 (从索引 1 开始)
@@ -467,39 +502,4 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
     ir_printf(p, "<?? UNIMPLEMENTED OPCODE %d>", inst->opcode);
     break;
   }
-}
-
-/**
- * @brief (内部) 打印二元运算 (e.g., "add %a: i32, %b: i32")
- */
-static void
-ir_dump_binary_op(IRInstruction *inst, IRPrinter *p, const char *opname)
-{
-  IRValueNode *op1 = get_operand(inst, 0);
-  IRValueNode *op2 = get_operand(inst, 1);
-  assert(op1 && op2 && "Binary operator needs two operands");
-
-  ir_print_str(p, opname);
-  ir_print_str(p, " ");
-  ir_value_dump_with_type(op1, p);
-  ir_print_str(p, ", ");
-  ir_value_dump_with_type(op2, p);
-}
-
-/**
- * @brief (内部) 打印类型转换 (e.g., "zext %a: i32 to i64")
- */
-static void
-ir_dump_cast_op(IRInstruction *inst, IRPrinter *p, const char *opname)
-{
-  IRValueNode *op1 = get_operand(inst, 0);
-  assert(op1 && "Cast operator needs an operand");
-
-  ir_print_str(p, opname);
-  ir_print_str(p, " ");
-  ir_value_dump_with_type(op1, p);
-
-  /// 语法: "zext %op: <type> to <result_type>"
-  ir_print_str(p, " to ");
-  ir_type_dump(inst->result.type, p);
 }
