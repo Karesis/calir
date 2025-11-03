@@ -28,31 +28,123 @@ typedef struct IRContext IRContext;
  */
 typedef enum
 {
-  TK_ILLEGAL,
-  TK_EOF,
+  TK_ILLEGAL, // 非法
+  TK_EOF,     // 文件结束
 
-  TK_IDENT,
-  TK_GLOBAL_IDENT,
-  TK_LOCAL_IDENT,
-  TK_LABEL_IDENT,
+  /// --- 标识符和字面量 ---
+  TK_IDENT,        // 普通标识符 (e.g., "i32", "my_struct")
+  TK_GLOBAL_IDENT, // @name
+  TK_LOCAL_IDENT,  // %name
+  TK_LABEL_IDENT,  // $name
 
   TK_INTEGER_LITERAL,
   TK_FLOAT_LITERAL,
   TK_STRING_LITERAL,
 
-  TK_EQ,
-  TK_COMMA,
-  TK_COLON,
-  TK_LBRACE,
-  TK_RBRACE,
-  TK_LBRACKET,
-  TK_RBRACKET,
-  TK_LPAREN,
-  TK_RPAREN,
-  TK_LT,
-  TK_GT,
-  TK_ELLIPSIS,
-  TK_SEMICOLON,
+  /// --- 标点符号 ---
+  TK_EQ,        // =
+  TK_COMMA,     // ,
+  TK_COLON,     // :
+  TK_LBRACE,    // {
+  TK_RBRACE,    // }
+  TK_LBRACKET,  // [
+  TK_RBRACKET,  // ]
+  TK_LPAREN,    // (
+  TK_RPAREN,    // )
+  TK_LT,        // <
+  TK_GT,        // >
+  TK_ELLIPSIS,  // ... (用于可变参数)
+  TK_SEMICOLON, // ; (用于注释)
+
+  /// --- 顶级关键字 ---
+  TK_KW_MODULE,
+  TK_KW_DEFINE,
+  TK_KW_GLOBAL,
+  TK_KW_TYPE,
+
+  /// --- 终结者指令 ---
+  TK_KW_RET,
+  TK_KW_BR,
+  TK_KW_COND_BR, // [注意] 你的 parser 可能会决定只用 'br'
+  TK_KW_SWITCH,
+  TK_KW_DEFAULT, // 用于 switch
+
+  /// --- 二元运算 ---
+  TK_KW_ADD,
+  TK_KW_SUB,
+  TK_KW_MUL,
+  TK_KW_UDIV,
+  TK_KW_SDIV,
+  TK_KW_UREM,
+  TK_KW_SREM,
+  TK_KW_FADD,
+  TK_KW_FSUB,
+  TK_KW_FMUL,
+  TK_KW_FDIV,
+  TK_KW_SHL,
+  TK_KW_LSHR,
+  TK_KW_ASHR,
+  TK_KW_AND,
+  TK_KW_OR,
+  TK_KW_XOR,
+
+  /// --- 内存和比较 ---
+  TK_KW_ALLOCA,
+  TK_KW_LOAD,
+  TK_KW_STORE,
+  TK_KW_GEP,
+  TK_KW_INBOUNDS, // 用于 GEP
+  TK_KW_ICMP,
+  TK_KW_FCMP,
+
+  /// --- 类型转换 ---
+  TK_KW_TRUNC,
+  TK_KW_ZEXT,
+  TK_KW_SEXT,
+  TK_KW_FPTRUNC,
+  TK_KW_FPEXT,
+  TK_KW_FPTOUI,
+  TK_KW_FPTOSI,
+  TK_KW_UITOFP,
+  TK_KW_SITOFP,
+  TK_KW_PTRTOINT,
+  TK_KW_INTTOPTR,
+  TK_KW_BITCAST,
+  TK_KW_TO, // 用于转换指令
+
+  /// --- 其他 ---
+  TK_KW_PHI,
+  TK_KW_CALL,
+
+  /// --- ICMP 谓词 ---
+  TK_KW_EQ,
+  TK_KW_NE,
+  TK_KW_UGT,
+  TK_KW_UGE,
+  TK_KW_ULT,
+  TK_KW_ULE,
+  TK_KW_SGT,
+  TK_KW_SGE,
+  TK_KW_SLT,
+  TK_KW_SLE,
+
+  /// --- FCMP 谓词 ---
+  TK_KW_OEQ,
+  TK_KW_OGT,
+  TK_KW_OGE,
+  TK_KW_OLT,
+  TK_KW_OLE,
+  TK_KW_ONE,
+  TK_KW_UEQ,
+  TK_KW_UGT,
+  TK_KW_UGE,
+  TK_KW_ULT,
+  TK_KW_ULE,
+  TK_KW_UNE,
+  TK_KW_ORD,
+  TK_KW_UNO,
+  TK_KW_TRUE,
+  TK_KW_FALSE,
 
 } TokenType;
 

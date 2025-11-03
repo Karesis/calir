@@ -100,6 +100,201 @@ skip_whitespace(Lexer *l)
 }
 
 /**
+ * @brief 检查一个标识符是否为关键字
+ *
+ * (这是一个简单的实现；更快的实现会使用 gperf)
+ */
+static TokenType
+lookup_keyword(const char *ident)
+{
+  // 这是一个简单的优化，用于减少 strcmp 的调用次数
+  // (我们也可以用一个真正的 hashmap，但这需要更多依赖)
+  switch (ident[0])
+  {
+  case 'a':
+    if (strcmp(ident, "add") == 0)
+      return TK_KW_ADD;
+    if (strcmp(ident, "alloca") == 0)
+      return TK_KW_ALLOCA;
+    if (strcmp(ident, "and") == 0)
+      return TK_KW_AND;
+    if (strcmp(ident, "ashr") == 0)
+      return TK_KW_ASHR;
+    break;
+  case 'b':
+    if (strcmp(ident, "br") == 0)
+      return TK_KW_BR;
+    if (strcmp(ident, "bitcast") == 0)
+      return TK_KW_BITCAST;
+    break;
+  case 'c':
+    if (strcmp(ident, "call") == 0)
+      return TK_KW_CALL;
+    // 'cond_br' 只是 'br'，由 parser 区分
+    break;
+  case 'd':
+    if (strcmp(ident, "define") == 0)
+      return TK_KW_DEFINE;
+    if (strcmp(ident, "default") == 0)
+      return TK_KW_DEFAULT;
+    break;
+  case 'e':
+    if (strcmp(ident, "eq") == 0)
+      return TK_KW_EQ;
+    break;
+  case 'f':
+    if (strcmp(ident, "fadd") == 0)
+      return TK_KW_FADD;
+    if (strcmp(ident, "fsub") == 0)
+      return TK_KW_FSUB;
+    if (strcmp(ident, "fmul") == 0)
+      return TK_KW_FMUL;
+    if (strcmp(ident, "fdiv") == 0)
+      return TK_KW_FDIV;
+    if (strcmp(ident, "fcmp") == 0)
+      return TK_KW_FCMP;
+    if (strcmp(ident, "false") == 0)
+      return TK_KW_FALSE;
+    if (strcmp(ident, "fptrunc") == 0)
+      return TK_KW_FPTRUNC;
+    if (strcmp(ident, "fpext") == 0)
+      return TK_KW_FPEXT;
+    if (strcmp(ident, "fptoui") == 0)
+      return TK_KW_FPTOUI;
+    if (strcmp(ident, "fptosi") == 0)
+      return TK_KW_FPTOSI;
+    break;
+  case 'g':
+    if (strcmp(ident, "global") == 0)
+      return TK_KW_GLOBAL;
+    if (strcmp(ident, "gep") == 0)
+      return TK_KW_GEP;
+    break;
+  case 'i':
+    if (strcmp(ident, "icmp") == 0)
+      return TK_KW_ICMP;
+    if (strcmp(ident, "inbounds") == 0)
+      return TK_KW_INBOUNDS;
+    if (strcmp(ident, "inttoptr") == 0)
+      return TK_KW_INTTOPTR;
+    break;
+  case 'l':
+    if (strcmp(ident, "load") == 0)
+      return TK_KW_LOAD;
+    if (strcmp(ident, "lshr") == 0)
+      return TK_KW_LSHR;
+    break;
+  case 'm':
+    if (strcmp(ident, "module") == 0)
+      return TK_KW_MODULE;
+    if (strcmp(ident, "mul") == 0)
+      return TK_KW_MUL;
+    break;
+  case 'n':
+    if (strcmp(ident, "ne") == 0)
+      return TK_KW_NE;
+    break;
+  case 'o':
+    if (strcmp(ident, "or") == 0)
+      return TK_KW_OR;
+    if (strcmp(ident, "oeq") == 0)
+      return TK_KW_OEQ;
+    if (strcmp(ident, "ogt") == 0)
+      return TK_KW_OGT;
+    if (strcmp(ident, "oge") == 0)
+      return TK_KW_OGE;
+    if (strcmp(ident, "olt") == 0)
+      return TK_KW_OLT;
+    if (strcmp(ident, "ole") == 0)
+      return TK_KW_OLE;
+    if (strcmp(ident, "one") == 0)
+      return TK_KW_ONE;
+    if (strcmp(ident, "ord") == 0)
+      return TK_KW_ORD;
+    break;
+  case 'p':
+    if (strcmp(ident, "phi") == 0)
+      return TK_KW_PHI;
+    if (strcmp(ident, "ptrtoint") == 0)
+      return TK_KW_PTRTOINT;
+    break;
+  case 'r':
+    if (strcmp(ident, "ret") == 0)
+      return TK_KW_RET;
+    break;
+  case 's':
+    if (strcmp(ident, "sub") == 0)
+      return TK_KW_SUB;
+    if (strcmp(ident, "sdiv") == 0)
+      return TK_KW_SDIV;
+    if (strcmp(ident, "srem") == 0)
+      return TK_KW_SREM;
+    if (strcmp(ident, "shl") == 0)
+      return TK_KW_SHL;
+    if (strcmp(ident, "store") == 0)
+      return TK_KW_STORE;
+    if (strcmp(ident, "switch") == 0)
+      return TK_KW_SWITCH;
+    if (strcmp(ident, "sext") == 0)
+      return TK_KW_SEXT;
+    if (strcmp(ident, "sitofp") == 0)
+      return TK_KW_SITOFP;
+    if (strcmp(ident, "sgt") == 0)
+      return TK_KW_SGT;
+    if (strcmp(ident, "sge") == 0)
+      return TK_KW_SGE;
+    if (strcmp(ident, "slt") == 0)
+      return TK_KW_SLT;
+    if (strcmp(ident, "sle") == 0)
+      return TK_KW_SLE;
+    break;
+  case 't':
+    if (strcmp(ident, "type") == 0)
+      return TK_KW_TYPE;
+    if (strcmp(ident, "trunc") == 0)
+      return TK_KW_TRUNC;
+    if (strcmp(ident, "to") == 0)
+      return TK_KW_TO;
+    if (strcmp(ident, "true") == 0)
+      return TK_KW_TRUE;
+    break;
+  case 'u':
+    if (strcmp(ident, "udiv") == 0)
+      return TK_KW_UDIV;
+    if (strcmp(ident, "urem") == 0)
+      return TK_KW_UREM;
+    if (strcmp(ident, "uitofp") == 0)
+      return TK_KW_UITOFP;
+    if (strcmp(ident, "ugt") == 0)
+      return TK_KW_UGT;
+    if (strcmp(ident, "uge") == 0)
+      return TK_KW_UGE;
+    if (strcmp(ident, "ult") == 0)
+      return TK_KW_ULT;
+    if (strcmp(ident, "ule") == 0)
+      return TK_KW_ULE;
+    if (strcmp(ident, "ueq") == 0)
+      return TK_KW_UEQ;
+    if (strcmp(ident, "une") == 0)
+      return TK_KW_UNE;
+    if (strcmp(ident, "uno") == 0)
+      return TK_KW_UNO;
+    break;
+  case 'x':
+    if (strcmp(ident, "xor") == 0)
+      return TK_KW_XOR;
+    break;
+  case 'z':
+    if (strcmp(ident, "zext") == 0)
+      return TK_KW_ZEXT;
+    break;
+  }
+
+  // 如果没有匹配，它就是
+  return TK_IDENT;
+}
+
+/**
  * @brief [内部] 解析一个 TK_IDENT
  * @param l Lexer
  * @param out_token [输出] 存储结果的 Token
@@ -117,8 +312,33 @@ parse_ident(Lexer *l, Token *out_token)
   }
   size_t len = l->ptr - start;
 
-  out_token->type = TK_IDENT;
-  out_token->as.ident_val = ir_context_intern_str_slice(l->context, start, len);
+  // [!!] (新增) 检查是否为关键字
+  // 我们需要一个非-interned的C字符串来进行strcmp
+  // (我们假设关键字不会太长)
+  char ident_buffer[64];
+  if (len >= sizeof(ident_buffer))
+  {
+    // 关键字不应该这么长
+    len = sizeof(ident_buffer) - 1;
+  }
+  memcpy(ident_buffer, start, len);
+  ident_buffer[len] = '\0';
+
+  // 查找关键字
+  out_token->type = lookup_keyword(ident_buffer);
+
+  // 如果它 *不是* 关键字, 那么它就是一个普通的 TK_IDENT
+  if (out_token->type == TK_IDENT)
+  {
+    // 只有在它是 TK_IDENT 时才需要 intern 字符串并存储它
+    out_token->as.ident_val = ir_context_intern_str_slice(l->context, start, len);
+  }
+  else
+  {
+    // 如果是关键字 (e.g., TK_KW_ADD), 我们不需要存储 'as.ident_val'
+    // 因为类型本身就代表了值。
+    out_token->as.ident_val = NULL;
+  }
 }
 
 /**
