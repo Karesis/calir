@@ -1103,7 +1103,7 @@ parse_global_variable(Parser *p)
 }
 
 /**
- * @brief [已重构] 解析一个基本块
+ * @brief 解析一个基本块
  *
  * 语法: `$label: instruction*`
  */
@@ -1163,7 +1163,8 @@ parse_basic_block(Parser *p)
       return;
 
     const Token *tok = current_token(p);
-    if (tok->type == TK_RBRACE)
+    // 检查是否到达函数末尾或文件末尾
+    if (tok->type == TK_RBRACE || tok->type == TK_EOF)
       return;
 
     if (tok->type == TK_LABEL_IDENT && ir_lexer_peek_token(p->lexer)->type == TK_COLON)
@@ -1174,9 +1175,13 @@ parse_basic_block(Parser *p)
     bool is_terminator = false;
     parse_instruction(p, &is_terminator);
 
+    if (p->has_error)
+      return;
+
     if (is_terminator)
     {
-      if (current_token(p)->type != TK_RBRACE && current_token(p)->type != TK_LABEL_IDENT)
+      const Token *next_tok = current_token(p);
+      if (next_tok->type != TK_RBRACE && next_tok->type != TK_LABEL_IDENT && next_tok->type != TK_EOF)
       {
         parser_error(p, "Instructions are not allowed after a terminator");
       }
@@ -1396,7 +1401,7 @@ parse_operation(Parser *p, Token *result_token, IRType *result_type, bool *out_i
   case TK_KW_BR:
     *out_is_terminator = true;
     return parse_instr_br(p); // (复用你现有的)
-  case TK_KW_SWITCH:          // [!!] 新增
+  case TK_KW_SWITCH:
     *out_is_terminator = true;
     return parse_instr_switch(p);
 
@@ -1499,10 +1504,14 @@ parse_operation(Parser *p, Token *result_token, IRType *result_type, bool *out_i
 static IRValueNode *
 parse_instr_ret(Parser *p)
 {
+  const Token *tok = current_token(p);
 
-  if (match(p, TK_IDENT) && strcmp(current_token(p)->as.ident_val, "void") == 0) /// TODO: 'void' 应为 TK_KW_VOID
+  // [FIX] 检查 *当前* Token (不消耗)
+  // (你的 TODO 是对的，'void' 应该是一个关键字 TK_KW_VOID)
+  if (tok->type == TK_IDENT && strcmp(tok->as.ident_val, "void") == 0)
   {
-    advance(p);
+    advance(p); // [FIX] 只在这里消耗 'void' 一次
+
     if (p->current_function->return_type->kind != IR_TYPE_VOID)
     {
       parser_error(p, "Return type mismatch: expected 'void'");
@@ -1511,6 +1520,7 @@ parse_instr_ret(Parser *p)
     return ir_builder_create_ret(p->builder, NULL);
   }
 
+  // 如果不是 'void', 把它当作一个普通的操作数解析
   IRValueNode *ret_val = parse_operand(p);
   if (!ret_val)
     return NULL;
