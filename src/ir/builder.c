@@ -209,6 +209,25 @@ builder_create_binary_op(IRBuilder *builder, IROpcode op, IRValueNode *lhs, IRVa
   return &inst->result;
 }
 
+/**
+ * @brief (内部) 构建单操作数的类型转换指令
+ */
+static IRValueNode *
+builder_create_cast_op(IRBuilder *builder, IROpcode op, IRValueNode *val, IRType *dest_type, const char *name_hint)
+{
+  assert(builder != NULL);
+  assert(val != NULL);
+  assert(dest_type != NULL && "Cast destination type cannot be NULL");
+
+  IRInstruction *inst = ir_instruction_create_internal(builder, op, dest_type, name_hint);
+  if (!inst)
+    return NULL;
+
+  ir_use_create(builder->context, inst, val);
+
+  return &inst->result;
+}
+
 IRValueNode *
 ir_builder_create_add(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
 {
@@ -219,6 +238,100 @@ IRValueNode *
 ir_builder_create_sub(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
 {
   return builder_create_binary_op(builder, IR_OP_SUB, lhs, rhs, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_mul(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
+{
+  return builder_create_binary_op(builder, IR_OP_MUL, lhs, rhs, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_udiv(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
+{
+  return builder_create_binary_op(builder, IR_OP_UDIV, lhs, rhs, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_sdiv(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
+{
+  return builder_create_binary_op(builder, IR_OP_SDIV, lhs, rhs, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_urem(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
+{
+  return builder_create_binary_op(builder, IR_OP_UREM, lhs, rhs, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_srem(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
+{
+  return builder_create_binary_op(builder, IR_OP_SREM, lhs, rhs, name_hint);
+}
+
+// --- [!!] 新增：浮点二元运算 ---
+
+IRValueNode *
+ir_builder_create_fadd(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
+{
+  return builder_create_binary_op(builder, IR_OP_FADD, lhs, rhs, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_fsub(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
+{
+  return builder_create_binary_op(builder, IR_OP_FSUB, lhs, rhs, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_fmul(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
+{
+  return builder_create_binary_op(builder, IR_OP_FMUL, lhs, rhs, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_fdiv(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
+{
+  return builder_create_binary_op(builder, IR_OP_FDIV, lhs, rhs, name_hint);
+}
+
+// --- [!!] 新增：位运算 ---
+
+IRValueNode *
+ir_builder_create_shl(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
+{
+  return builder_create_binary_op(builder, IR_OP_SHL, lhs, rhs, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_lshr(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
+{
+  return builder_create_binary_op(builder, IR_OP_LSHR, lhs, rhs, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_ashr(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
+{
+  return builder_create_binary_op(builder, IR_OP_ASHR, lhs, rhs, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_and(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
+{
+  return builder_create_binary_op(builder, IR_OP_AND, lhs, rhs, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_or(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
+{
+  return builder_create_binary_op(builder, IR_OP_OR, lhs, rhs, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_xor(IRBuilder *builder, IRValueNode *lhs, IRValueNode *rhs, const char *name_hint)
+{
+  return builder_create_binary_op(builder, IR_OP_XOR, lhs, rhs, name_hint);
 }
 
 IRValueNode *
@@ -237,6 +350,30 @@ ir_builder_create_icmp(IRBuilder *builder, IRICmpPredicate pred, IRValueNode *lh
     return NULL;
 
   inst->as.icmp.predicate = pred;
+
+  ir_use_create(builder->context, inst, lhs);
+  ir_use_create(builder->context, inst, rhs);
+
+  return &inst->result;
+}
+
+IRValueNode *
+ir_builder_create_fcmp(IRBuilder *builder, IRFCmpPredicate pred, IRValueNode *lhs, IRValueNode *rhs,
+                       const char *name_hint)
+{
+  assert(builder != NULL);
+  assert(lhs != NULL && rhs != NULL);
+  assert(lhs->type == rhs->type && "FCMP operands must have the same type");
+  assert(ir_type_is_floating(lhs->type) && "FCMP operands must be floating point");
+
+  IRType *result_type = ir_type_get_i1(builder->context);
+
+  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_FCMP, result_type, name_hint);
+
+  if (!inst)
+    return NULL;
+
+  inst->as.fcmp.predicate = pred; // [!!] 注意：使用 fcmp 联合成员
 
   ir_use_create(builder->context, inst, lhs);
   ir_use_create(builder->context, inst, rhs);
@@ -470,4 +607,118 @@ ir_builder_create_call(IRBuilder *builder, IRValueNode *callee_func, IRValueNode
   }
 
   return &inst->result;
+}
+
+IRValueNode *
+ir_builder_create_trunc(IRBuilder *builder, IRValueNode *val, IRType *dest_type, const char *name_hint)
+{
+  return builder_create_cast_op(builder, IR_OP_TRUNC, val, dest_type, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_zext(IRBuilder *builder, IRValueNode *val, IRType *dest_type, const char *name_hint)
+{
+  return builder_create_cast_op(builder, IR_OP_ZEXT, val, dest_type, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_sext(IRBuilder *builder, IRValueNode *val, IRType *dest_type, const char *name_hint)
+{
+  return builder_create_cast_op(builder, IR_OP_SEXT, val, dest_type, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_fptrunc(IRBuilder *builder, IRValueNode *val, IRType *dest_type, const char *name_hint)
+{
+  return builder_create_cast_op(builder, IR_OP_FPTRUNC, val, dest_type, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_fpext(IRBuilder *builder, IRValueNode *val, IRType *dest_type, const char *name_hint)
+{
+  return builder_create_cast_op(builder, IR_OP_FPEXT, val, dest_type, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_fptoui(IRBuilder *builder, IRValueNode *val, IRType *dest_type, const char *name_hint)
+{
+  return builder_create_cast_op(builder, IR_OP_FPTOUI, val, dest_type, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_fptosi(IRBuilder *builder, IRValueNode *val, IRType *dest_type, const char *name_hint)
+{
+  return builder_create_cast_op(builder, IR_OP_FPTOSI, val, dest_type, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_uitofp(IRBuilder *builder, IRValueNode *val, IRType *dest_type, const char *name_hint)
+{
+  return builder_create_cast_op(builder, IR_OP_UITOFP, val, dest_type, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_sitofp(IRBuilder *builder, IRValueNode *val, IRType *dest_type, const char *name_hint)
+{
+  return builder_create_cast_op(builder, IR_OP_SITOFP, val, dest_type, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_ptrtoint(IRBuilder *builder, IRValueNode *val, IRType *dest_type, const char *name_hint)
+{
+  return builder_create_cast_op(builder, IR_OP_PTRTOINT, val, dest_type, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_inttoptr(IRBuilder *builder, IRValueNode *val, IRType *dest_type, const char *name_hint)
+{
+  return builder_create_cast_op(builder, IR_OP_INTTOPTR, val, dest_type, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_bitcast(IRBuilder *builder, IRValueNode *val, IRType *dest_type, const char *name_hint)
+{
+  return builder_create_cast_op(builder, IR_OP_BITCAST, val, dest_type, name_hint);
+}
+
+IRValueNode *
+ir_builder_create_switch(IRBuilder *builder, IRValueNode *cond, IRValueNode *default_bb)
+{
+  assert(builder != NULL);
+  assert(cond != NULL);
+  assert(default_bb != NULL && default_bb->kind == IR_KIND_BASIC_BLOCK);
+  assert(ir_type_is_integer(cond->type) && "Switch condition must be an integer");
+
+  IRType *void_type = builder->context->type_void;
+  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_SWITCH, void_type, NULL);
+  if (!inst)
+    return NULL;
+
+  // [!!] 遵循我们的"选项1"
+  // 操作数 0: cond
+  // 操作数 1: default_bb
+  ir_use_create(builder->context, inst, cond);
+  ir_use_create(builder->context, inst, default_bb);
+
+  return &inst->result;
+}
+
+void
+ir_switch_add_case(IRValueNode *switch_inst_val, IRValueNode *const_val, IRValueNode *target_bb)
+{
+  assert(switch_inst_val != NULL && switch_inst_val->kind == IR_KIND_INSTRUCTION);
+  assert(const_val != NULL && const_val->kind == IR_KIND_CONSTANT);
+  assert(target_bb != NULL && target_bb->kind == IR_KIND_BASIC_BLOCK);
+
+  IRInstruction *inst = (IRInstruction *)switch_inst_val;
+  assert(inst->opcode == IR_OP_SWITCH && "Value is not a Switch instruction");
+
+  // 从指令反向获取 Context (复用 phi_add_incoming 的逻辑)
+  assert(inst->parent != NULL && inst->parent->parent != NULL && inst->parent->parent->parent != NULL);
+  IRContext *ctx = inst->parent->parent->parent->context;
+
+  // [!!] 遵循我们的"选项1"
+  // 将 [val, bb] 对追加到 operands 列表的末尾
+  ir_use_create(ctx, inst, const_val);
+  ir_use_create(ctx, inst, target_bb);
 }
