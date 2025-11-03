@@ -136,6 +136,24 @@ ir_instruction_create_internal(IRBuilder *builder, IROpcode opcode, IRType *type
   return inst;
 }
 
+/**
+ * @brief [!!] (新增) 检查是否为整数类型
+ */
+static inline bool
+ir_type_is_integer(IRType *ty)
+{
+  return (ty->kind >= IR_TYPE_I1 && ty->kind <= IR_TYPE_I64);
+}
+
+/**
+ * @brief [!!] (新增) 检查是否为浮点类型
+ */
+static inline bool
+ir_type_is_floating(IRType *ty)
+{
+  return (ty->kind == IR_TYPE_F32 || ty->kind == IR_TYPE_F64);
+}
+
 /*
  * =================================================================
  * --- 公共 API 实现 ---
