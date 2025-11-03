@@ -117,6 +117,7 @@ typedef enum
   TK_KW_UNDEF,
   TK_KW_NULL,
   TK_KW_ZEROINITIALIZER,
+  TK_KW_VOID,
 
   /// --- 其他 ---
   TK_KW_PHI,

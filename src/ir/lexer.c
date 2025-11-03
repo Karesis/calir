@@ -286,6 +286,10 @@ lookup_keyword(const char *ident)
     if (strcmp(ident, "undef") == 0)
       return TK_KW_UNDEF;
     break;
+  case 'v': // [!!] 新增 [!!]
+    if (strcmp(ident, "void") == 0)
+      return TK_KW_VOID;
+    break;
   case 'x':
     if (strcmp(ident, "xor") == 0)
       return TK_KW_XOR;

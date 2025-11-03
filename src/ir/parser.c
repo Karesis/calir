@@ -1504,14 +1504,8 @@ parse_operation(Parser *p, Token *result_token, IRType *result_type, bool *out_i
 static IRValueNode *
 parse_instr_ret(Parser *p)
 {
-  const Token *tok = current_token(p);
-
-  // [FIX] 检查 *当前* Token (不消耗)
-  // (你的 TODO 是对的，'void' 应该是一个关键字 TK_KW_VOID)
-  if (tok->type == TK_IDENT && strcmp(tok->as.ident_val, "void") == 0)
+  if (match(p, TK_KW_VOID))
   {
-    advance(p); // [FIX] 只在这里消耗 'void' 一次
-
     if (p->current_function->return_type->kind != IR_TYPE_VOID)
     {
       parser_error(p, "Return type mismatch: expected 'void'");
@@ -2273,14 +2267,15 @@ parse_type(Parser *p)
     base_type = ir_type_get_ptr(p->context, pointee_type);
     break;
   }
+  case TK_KW_VOID: {
+    advance(p); // 消耗 'void'
+    base_type = ir_type_get_void(p->context);
+    break;
+  }
   case TK_IDENT: {
     const char *name = tok->as.ident_val;
 
-    if (strcmp(name, "void") == 0)
-    {
-      base_type = ir_type_get_void(p->context);
-    }
-    else if (strcmp(name, "i1") == 0)
+    if (strcmp(name, "i1") == 0)
     {
       base_type = ir_type_get_i1(p->context);
     }
