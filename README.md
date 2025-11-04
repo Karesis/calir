@@ -116,9 +116,6 @@ $entry:
 
 This C code (found in `tests/test_readme_example.c`) generates the IR above.
 
-\<details\>
-\<summary\>\<b\>Click to expand\</b\> the C code for \<code\>test\_readme\_example.c\</code\>\</summary\>
-
 ```c
 /*
  * (This is a verified test case)
@@ -219,8 +216,6 @@ main()
   return 0;
 }
 ```
-
-\</details\>
 
 -----
 
