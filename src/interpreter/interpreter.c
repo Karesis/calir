@@ -879,7 +879,7 @@ execute_op_compare(ExecutionContext *ctx, IRInstruction *inst)
 }
 
 /**
- * @brief [!!] (已实现) 执行类型转换
+ * @brief 执行类型转换
  */
 static ExecutionResultKind
 execute_op_cast(ExecutionContext *ctx, IRInstruction *inst)
@@ -940,29 +940,42 @@ execute_op_cast(ExecutionContext *ctx, IRInstruction *inst)
 
   case IR_OP_TRUNC:
   case IR_OP_ZEXT:
-  case IR_OP_SEXT:
+  case IR_OP_SEXT: {
+    /// 先决定使用哪个 64 位的位模式
+    /// 用 uint64_t 来存储这个“纯粹的位模式”
+    uint64_t bits_to_truncate;
+    if (inst->opcode == IR_OP_SEXT)
+    {
+      bits_to_truncate = (uint64_t)src_i64; /// 保留 src_i64 的位模式
+    }
+    else
+    {
+      bits_to_truncate = src_u64; /// 保留 src_u64 的位模式
+    }
 
+    // 然后根据目标类型进行截断
     switch (rt_res->kind)
     {
     case RUNTIME_VAL_I1:
-      rt_res->as.val_i1 = (bool)(src_u64 & 1);
+      rt_res->as.val_i1 = (bool)(bits_to_truncate & 1);
       break;
     case RUNTIME_VAL_I8:
-      rt_res->as.val_i8 = (int8_t)((inst->opcode == IR_OP_SEXT) ? src_i64 : src_u64);
+      rt_res->as.val_i8 = (int8_t)bits_to_truncate;
       break;
     case RUNTIME_VAL_I16:
-      rt_res->as.val_i16 = (int16_t)((inst->opcode == IR_OP_SEXT) ? src_i64 : src_u64);
+      rt_res->as.val_i16 = (int16_t)bits_to_truncate;
       break;
     case RUNTIME_VAL_I32:
-      rt_res->as.val_i32 = (int32_t)((inst->opcode == IR_OP_SEXT) ? src_i64 : src_u64);
+      rt_res->as.val_i32 = (int32_t)bits_to_truncate;
       break;
     case RUNTIME_VAL_I64:
-      rt_res->as.val_i64 = (int64_t)((inst->opcode == IR_OP_SEXT) ? src_i64 : src_u64);
+      rt_res->as.val_i64 = (int64_t)bits_to_truncate; // 只是一个位重解释
       break;
     default:
       assert(false && "Invalid integer cast target");
     }
     break;
+  } // 注意这里添加了 { } 作用域
 
   case IR_OP_FPTRUNC:
     rt_res->as.val_f32 = (float)src_f64;
