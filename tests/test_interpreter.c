@@ -108,7 +108,7 @@ test_int_binary_ops()
   ASSERT_I32_RESULT(result, 15); // 10 + 5 = 15
 
   // [!!] 您可以在这里添加更多测试 (e.g., test_sub, test_mul, test_sdiv)
-  // ...
+  /// more ...
 
   teardown_test_env(env);
   SUITE_END();
@@ -129,7 +129,7 @@ test_branch_phi_ops()
   IRValueNode *const_200 = ir_constant_get_i32(env->ctx, 200);
 
   // --- 1. 构建 IR: define i32 @test_if(i32 %a) ---
-  // if (%a > 10) { ret 100 } else { ret 200 }
+  /// if (%a > 10) { ret 100 } else { ret 200 }
   IRFunction *func = ir_function_create(env->mod, "test_if", ty_i32);
   IRValueNode *arg_a = &ir_argument_create(func, ty_i32, "a")->value;
   ir_function_finalize_signature(func, false);
@@ -166,7 +166,7 @@ test_branch_phi_ops()
   RuntimeValue result_15;
   bool success_15 = interpreter_run_function(env->interp, func, args_15, 1, &result_15);
   SUITE_ASSERT(success_15, "Interpreter failed (Then path)");
-  ASSERT_I32_RESULT(result_15, 100); // 15 > 10, 应该返回 100
+  ASSERT_I32_RESULT(result_15, 100); /// 15 > 10, 应该返回 100
 
   // --- 3. 运行测试 2 (Else path, a=5) ---
   RuntimeValue rt_a_5;
@@ -176,7 +176,7 @@ test_branch_phi_ops()
   RuntimeValue result_5;
   bool success_5 = interpreter_run_function(env->interp, func, args_5, 1, &result_5);
   SUITE_ASSERT(success_5, "Interpreter failed (Else path)");
-  ASSERT_I32_RESULT(result_5, 200); // 5 is not > 10, 应该返回 200
+  ASSERT_I32_RESULT(result_5, 200); /// 5 is not > 10, 应该返回 200
 
   teardown_test_env(env);
   SUITE_END();
@@ -248,7 +248,7 @@ test_ffi_and_errors()
   RuntimeValue ffi_result;
   bool ffi_success = interpreter_run_function(env->interp, func_ffi, ffi_args, 2, &ffi_result);
   SUITE_ASSERT(ffi_success, "Interpreter failed to run @test_ffi");
-  ASSERT_I32_RESULT(ffi_result, 77); // 70 + 7 = 77
+  ASSERT_I32_RESULT(ffi_result, 77); /// 70 + 7 = 77
 
   // --- 4. 构建并运行“未链接” FFI 测试 ---
   IRFunction *func_unlinked_decl = ir_function_create(env->mod, "unlinked_fn", ty_i32);
@@ -299,10 +299,10 @@ test_golden_ir_execution()
   }
   SUITE_ASSERT(kitchen_sink_func != NULL, "Failed to find @kitchen_sink in golden IR");
 
-  // 3. 运行测试 1 (Then path: a=15, b=5)
-  // %cmp = icmp sgt 15, 5 (true)
-  // %call_res = call @external_add(15, 10) -> 25
-  // %phi_val = 25
+  /// 3. 运行测试 1 (Then path: a=15, b=5)
+  /// %cmp = icmp sgt 15, 5 (true)
+  /// %call_res = call @external_add(15, 10) -> 25
+  /// %phi_val = 25
   RuntimeValue rt_a_15;
   rt_a_15.kind = RUNTIME_VAL_I32;
   rt_a_15.as.val_i32 = 15;
@@ -315,10 +315,10 @@ test_golden_ir_execution()
   SUITE_ASSERT(success_15_5, "Golden IR failed (Then path)");
   ASSERT_I32_RESULT(result_15_5, 25);
 
-  // 4. 运行测试 2 (Else path: a=5, b=30)
-  // %cmp = icmp sgt 5, 30 (false)
-  // %sub_res = sub 30, 20 -> 10
-  // %phi_val = 10
+  /// 4. 运行测试 2 (Else path: a=5, b=30)
+  /// %cmp = icmp sgt 5, 30 (false)
+  /// %sub_res = sub 30, 20 -> 10
+  /// %phi_val = 10
   RuntimeValue rt_a_5;
   rt_a_5.kind = RUNTIME_VAL_I32;
   rt_a_5.as.val_i32 = 5;
