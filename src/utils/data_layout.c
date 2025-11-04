@@ -15,18 +15,18 @@
  */
 
 #include "utils/data_layout.h"
-#include "ir/type.h" // 包含 IRType 的完整定义
+#include "ir/type.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h> // for malloc/free
+#include <stdlib.h>
 
 /// 辅助宏，用于将 value 向上对齐到 align 的倍数
 /// align 必须是 2 的幂
 #define ALIGN_UP(value, align) (((value) + (align) - 1) & ~((align) - 1))
 
-// 内部辅助函数，用于获取原始类型的布局
+
 static TypeLayoutInfo
 get_primitive_layout(const DataLayout *dl, IRType *type)
 {
@@ -84,12 +84,12 @@ datalayout_create_host(void)
   if (!dl)
     return NULL;
 
-  // 1. 确定 Endianness
+
   uint32_t i = 1;
   char *c = (char *)&i;
   dl->is_little_endian = (*c == 1);
 
-  // 2. 填充基本类型 (这是唯一允许使用 sizeof/_Alignof 的地方)
+
   dl->i1_layout = (TypeLayoutInfo){.size_in_bytes = sizeof(bool), .abi_align_in_bytes = _Alignof(bool)};
   dl->i8_layout = (TypeLayoutInfo){.size_in_bytes = sizeof(int8_t), .abi_align_in_bytes = _Alignof(int8_t)};
   dl->i16_layout = (TypeLayoutInfo){.size_in_bytes = sizeof(int16_t), .abi_align_in_bytes = _Alignof(int16_t)};
@@ -99,7 +99,7 @@ datalayout_create_host(void)
   dl->f64_layout = (TypeLayoutInfo){.size_in_bytes = sizeof(double), .abi_align_in_bytes = _Alignof(double)};
   dl->ptr_layout = (TypeLayoutInfo){.size_in_bytes = sizeof(void *), .abi_align_in_bytes = _Alignof(void *)};
 
-  // 3. 聚合对齐规则 (使用C规则)
+
   dl->aggregate_preferred_align_in_bytes = 0;
 
   return dl;
@@ -118,18 +118,18 @@ datalayout_destroy(DataLayout *dl)
 BumpLayout
 datalayout_get_type_layout(const DataLayout *dl, IRType *type)
 {
-  // 基本类型：直接查询 DataLayout 结构
+
   if (is_primitive_type(type->kind))
   {
     TypeLayoutInfo info = get_primitive_layout(dl, type);
     return (BumpLayout){.size = info.size_in_bytes, .align = info.abi_align_in_bytes};
   }
 
-  // 复杂类型：递归计算
+
   switch (type->kind)
   {
   case IR_TYPE_ARRAY: {
-    // 数组的对齐等于其元素的对齐
+
     BumpLayout elem_layout = datalayout_get_type_layout(dl, type->as.array.element_type);
 
     return (BumpLayout){.size = elem_layout.size * type->as.array.element_count, .align = elem_layout.align};
@@ -143,20 +143,20 @@ datalayout_get_type_layout(const DataLayout *dl, IRType *type)
     {
       BumpLayout member_layout = datalayout_get_type_layout(dl, type->as.aggregate.member_types[i]);
 
-      // 1. 将当前偏移量 (total_size) 向上对齐到成员的对齐要求
+
       total_size = ALIGN_UP(total_size, member_layout.align);
 
-      // 2. 累加成员的大小
+
       total_size += member_layout.size;
 
-      // 3. 更新结构体的最大对齐
+
       if (member_layout.align > max_align)
       {
         max_align = member_layout.align;
       }
     }
 
-    // 4. 应用聚合对齐规则
+
     if (dl->aggregate_preferred_align_in_bytes > 0)
     {
       if (dl->aggregate_preferred_align_in_bytes > max_align)
@@ -165,14 +165,14 @@ datalayout_get_type_layout(const DataLayout *dl, IRType *type)
       }
     }
 
-    // 5. 将结构体的总大小向上对齐到其最终的对齐
+
     total_size = ALIGN_UP(total_size, max_align);
 
     return (BumpLayout){.size = total_size, .align = max_align};
   }
 
   default:
-    // IR_TYPE_VOID, IR_TYPE_FUNCTION, etc.
+
     assert(false && "Cannot get layout for complex or void type");
     return (BumpLayout){0, 1};
   }
@@ -202,17 +202,17 @@ datalayout_get_struct_member_offset(const DataLayout *dl, IRType *struct_type, s
 
   size_t current_offset = 0;
 
-  // 1. 累加 0 到 (member_index - 1) 的所有成员
+
   for (size_t i = 0; i < member_index; i++)
   {
     BumpLayout member_layout = datalayout_get_type_layout(dl, struct_type->as.aggregate.member_types[i]);
-    // 1a. 对齐当前偏移量
+
     current_offset = ALIGN_UP(current_offset, member_layout.align);
-    // 1b. 加上大小
+
     current_offset += member_layout.size;
   }
 
-  // 2. 计算并返回第 *member_index* 个成员的最终对齐偏移量
+
   BumpLayout final_member_layout = datalayout_get_type_layout(dl, struct_type->as.aggregate.member_types[member_index]);
   current_offset = ALIGN_UP(current_offset, final_member_layout.align);
 

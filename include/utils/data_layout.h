@@ -17,8 +17,8 @@
 #ifndef CALIR_DATALAYOUT_H
 #define CALIR_DATALAYOUT_H
 
-#include "ir/type.h"    // Needs IRType definition
-#include "utils/bump.h" // For BumpLayout
+#include "ir/type.h"
+#include "utils/bump.h"
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -133,4 +133,4 @@ size_t datalayout_get_pointer_size(const DataLayout *dl);
  */
 size_t datalayout_get_pointer_align(const DataLayout *dl);
 
-#endif // CALIR_DATALAYOUT_H
+#endif

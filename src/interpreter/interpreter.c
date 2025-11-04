@@ -212,17 +212,17 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
 
   rt_res->kind = rt_lhs->kind;
 
-  // [!!] (已重构) 按类型分别处理，以确保正确的溢出/环绕
+
   switch (rt_lhs->kind)
   {
   case RUNTIME_VAL_I1: {
-    // 将 i1 视为 i8 进行计算
+
     int8_t lhs = (int8_t)rt_lhs->as.val_i1;
     int8_t rhs = (int8_t)rt_rhs->as.val_i1;
     int8_t res = 0;
     const uint8_t bit_width = 1;
-    // (i1 移位是特殊的)
-    uint8_t safe_amt = (uint8_t)rhs & (bit_width - 1); // 掩码到 0
+
+    uint8_t safe_amt = (uint8_t)rhs & (bit_width - 1);
 
     switch (inst->opcode)
     {
@@ -241,16 +241,16 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
     case IR_OP_UREM:
       ctx->error_message = "Runtime Error: Division/Remainder on i1 type is invalid.";
       return EXEC_ERR_INVALID_PTR;
-    // 位运算
+
     case IR_OP_SHL:
       res = (int8_t)((uint8_t)lhs << safe_amt);
-      break; // 总是 0
+      break;
     case IR_OP_LSHR:
       res = (int8_t)((uint8_t)lhs >> safe_amt);
-      break; // 总是 0
+      break;
     case IR_OP_ASHR:
       res = lhs >> safe_amt;
-      break; // 总是 0
+      break;
     case IR_OP_AND:
       res = lhs & rhs;
       break;
@@ -263,7 +263,7 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
     default:
       assert(false && "unreachable");
     }
-    rt_res->as.val_i1 = (bool)(res & 1); // 写回 i1
+    rt_res->as.val_i1 = (bool)(res & 1);
     break;
   }
 
@@ -272,10 +272,10 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
     int8_t rhs = rt_rhs->as.val_i8;
     int8_t res = 0;
 
-    // [!!] (修复 UB) 清理移位量
+
     const uint8_t bit_width = 8;
-    // 1. 将 rhs (int8_t) 视为无符号 (uint8_t)
-    // 2. 掩码到 [0, 7]
+
+
     uint8_t safe_amt = (uint8_t)rhs & (bit_width - 1);
 
     switch (inst->opcode)
@@ -335,7 +335,7 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
       }
       res = (int8_t)((uint8_t)lhs % (uint8_t)rhs);
       break;
-    // [!!] (修复 UB)
+
     case IR_OP_SHL:
       res = (int8_t)((uint8_t)lhs << safe_amt);
       break;
@@ -344,7 +344,7 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
       break;
     case IR_OP_ASHR:
       res = lhs >> safe_amt;
-      break; // safe_amt 保证了 C 的 `>>` 是安全的
+      break;
 
     case IR_OP_AND:
       res = lhs & rhs;
@@ -367,7 +367,7 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
     int16_t rhs = rt_rhs->as.val_i16;
     int16_t res = 0;
 
-    // [!!] (修复 UB) 清理移位量
+
     const uint16_t bit_width = 16;
     uint16_t safe_amt = (uint16_t)rhs & (bit_width - 1);
 
@@ -428,7 +428,7 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
       }
       res = (int16_t)((uint16_t)lhs % (uint16_t)rhs);
       break;
-    // [!!] (修复 UB)
+
     case IR_OP_SHL:
       res = (int16_t)((uint16_t)lhs << safe_amt);
       break;
@@ -460,7 +460,7 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
     int32_t rhs = rt_rhs->as.val_i32;
     int32_t res = 0;
 
-    // [!!] (修复 UB) 清理移位量
+
     const uint32_t bit_width = 32;
     uint32_t safe_amt = (uint32_t)rhs & (bit_width - 1);
 
@@ -521,7 +521,7 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
       }
       res = (int32_t)((uint32_t)lhs % (uint32_t)rhs);
       break;
-    // [!!] (修复 UB)
+
     case IR_OP_SHL:
       res = (int32_t)((uint32_t)lhs << safe_amt);
       break;
@@ -553,7 +553,7 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
     int64_t rhs = rt_rhs->as.val_i64;
     int64_t res = 0;
 
-    // [!!] (修复 UB) 清理移位量
+
     const uint64_t bit_width = 64;
     uint64_t safe_amt = (uint64_t)rhs & (bit_width - 1);
 
@@ -614,7 +614,7 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
       }
       res = (int64_t)((uint64_t)lhs % (uint64_t)rhs);
       break;
-    // [!!] (修复 UB)
+
     case IR_OP_SHL:
       res = (int64_t)((uint64_t)lhs << safe_amt);
       break;
@@ -953,7 +953,7 @@ execute_op_cast(ExecutionContext *ctx, IRInstruction *inst)
       bits_to_truncate = src_u64; /// 保留 src_u64 的位模式
     }
 
-    // 然后根据目标类型进行截断
+
     switch (rt_res->kind)
     {
     case RUNTIME_VAL_I1:
@@ -969,13 +969,13 @@ execute_op_cast(ExecutionContext *ctx, IRInstruction *inst)
       rt_res->as.val_i32 = (int32_t)bits_to_truncate;
       break;
     case RUNTIME_VAL_I64:
-      rt_res->as.val_i64 = (int64_t)bits_to_truncate; // 只是一个位重解释
+      rt_res->as.val_i64 = (int64_t)bits_to_truncate;
       break;
     default:
       assert(false && "Invalid integer cast target");
     }
     break;
-  } // 注意这里添加了 { } 作用域
+  }
 
   case IR_OP_FPTRUNC:
     rt_res->as.val_f32 = (float)src_f64;
