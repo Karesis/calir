@@ -226,6 +226,8 @@ lookup_keyword(const char *ident)
       return TK_KW_RET;
     break;
   case 's':
+    if (strcmp(ident, "select") == 0)
+      return TK_KW_SELECT;
     if (strcmp(ident, "sub") == 0)
       return TK_KW_SUB;
     if (strcmp(ident, "sdiv") == 0)

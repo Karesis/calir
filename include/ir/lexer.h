@@ -122,6 +122,7 @@ typedef enum
   /// --- 其他 ---
   TK_KW_PHI,
   TK_KW_CALL,
+  TK_KW_SELECT,
 
   /// ICMP, FCMP 共有谓词
   TK_KW_EQ,  /// eq (ICMP)

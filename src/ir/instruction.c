@@ -439,6 +439,19 @@ ir_instruction_dump(IRInstruction *inst, IRPrinter *p)
     break;
 
   /// --- 其他 ---
+  case IR_OP_SELECT:
+    ir_print_str(p, "select ");
+    op1 = get_operand(inst, 0); /// cond
+    op2 = get_operand(inst, 1); /// true_val
+    op3 = get_operand(inst, 2); /// false_val
+    assert(op1 && op2 && op3 && "select needs 3 operands");
+
+    ir_value_dump_with_type(op1, p);
+    ir_print_str(p, ", ");
+    ir_value_dump_with_type(op2, p);
+    ir_print_str(p, ", ");
+    ir_value_dump_with_type(op3, p);
+    break;
   case IR_OP_PHI:
     ir_print_str(p, "phi ");
     int phi_i = 0;

@@ -100,6 +100,16 @@ IRValueNode *ir_builder_create_icmp(IRBuilder *builder, IRICmpPredicate pred, IR
 IRValueNode *ir_builder_create_fcmp(IRBuilder *builder, IRFCmpPredicate pred, IRValueNode *lhs, IRValueNode *rhs,
                                     const char *name_hint);
 
+/**
+ * @brief 构建 'select <cond>, <true_val>, <false_val>'
+ * @param cond 条件 (必须是 i1)
+ * @param true_val i1 为 true 时的值
+ * @param false_val i1 为 false 时的值
+ * @param name_hint (可选)
+ */
+IRValueNode *ir_builder_create_select(IRBuilder *builder, IRValueNode *cond, IRValueNode *true_val,
+                                      IRValueNode *false_val, const char *name_hint);
+
 /** * @brief 构建 'alloca <type>'
  * @param name_hint [!!] (可选) (e.g., "ptr_x")
  */

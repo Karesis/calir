@@ -205,6 +205,8 @@ token_type_to_string(TokenType type)
     return "keyword 'phi'";
   case TK_KW_CALL:
     return "keyword 'call'";
+  case TK_KW_SELECT:
+    return "keyword 'select'";
   case TK_KW_UNDEF:
     return "keyword 'undef'";
   case TK_KW_NULL:
@@ -1370,6 +1372,7 @@ static IRValueNode *parse_instr_binary_op(Parser *p, IROpcode op, const char *na
 static IRValueNode *parse_instr_cast_op(Parser *p, IROpcode op, const char *name_hint, IRType *result_type);
 static IRValueNode *parse_instr_fcmp(Parser *p, const char *name_hint, IRType *result_type);
 static IRValueNode *parse_instr_switch(Parser *p);
+static IRValueNode *parse_instr_select(Parser *p, const char *name_hint, IRType *result_type);
 
 /**
  * @brief 解析一个操作 (指令的核心)
@@ -1490,6 +1493,8 @@ parse_operation(Parser *p, Token *result_token, IRType *result_type, bool *out_i
     return parse_instr_phi(p, result_token, result_type);
   case TK_KW_CALL:
     return parse_instr_call(p, name_hint, result_type);
+  case TK_KW_SELECT:
+    return parse_instr_select(p, name_hint, result_type);
 
   default:
     parser_error_at(p, &opcode_tok, "Unknown instruction opcode '%s'", token_type_to_string(opcode_tok.type));
@@ -2130,6 +2135,61 @@ parse_instr_call(Parser *p, const char *name_hint, IRType *result_type)
   return ir_builder_create_call(p->builder, callee_val, (IRValueNode **)temp_vec_data(&arg_values),
                                 temp_vec_len(&arg_values), name_hint);
 }
+
+/**
+ * @brief [!!] (新增) 解析 'select'
+ *
+ * 语法: %res: type = select %cond: i1, %true_val: type, %false_val: type
+ */
+static IRValueNode *
+parse_instr_select(Parser *p, const char *name_hint, IRType *result_type)
+{
+  if (!result_type)
+  {
+    parser_error(p, "'select' instruction must produce a result");
+    return NULL;
+  }
+
+  // 1. 解析 %cond: i1
+  IRValueNode *cond = parse_operand(p);
+  if (!cond)
+    return NULL;
+  if (cond->type->kind != IR_TYPE_I1)
+  {
+    parser_error(p, "'select' condition (operand 1) must be 'i1' type");
+    return NULL;
+  }
+
+  // 2. 解析 , %true_val: type
+  if (!expect(p, TK_COMMA))
+    return NULL;
+  IRValueNode *true_val = parse_operand(p);
+  if (!true_val)
+    return NULL;
+
+  // 3. 解析 , %false_val: type
+  if (!expect(p, TK_COMMA))
+    return NULL;
+  IRValueNode *false_val = parse_operand(p);
+  if (!false_val)
+    return NULL;
+
+  // 4. 校验类型
+  if (true_val->type != false_val->type)
+  {
+    parser_error(p, "'select' true_val (operand 2) and false_val (operand 3) must have the same type");
+    return NULL;
+  }
+  if (true_val->type != result_type)
+  {
+    parser_error(p, "'select' result type annotation does not match operand types");
+    return NULL;
+  }
+
+  // 5. 构建
+  return ir_builder_create_select(p->builder, cond, true_val, false_val, name_hint);
+}
+
 /*
  * -----------------------------------------------------------------
  * --- 类型解析 (Type Parsing) ---

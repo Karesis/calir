@@ -677,6 +677,34 @@ verify_op_call(VerifierContext *vctx, IRInstruction *inst)
   return true;
 }
 
+static bool
+verify_op_select(VerifierContext *vctx, IRInstruction *inst)
+{
+  IRValueNode *value = &inst->result;
+  IRType *result_type = value->type;
+  int op_count = get_operand_count(inst);
+  IRContext *ctx = vctx->current_function->parent->context;
+
+  VERIFY_ASSERT(op_count == 3, vctx, value, "'select' instruction must have exactly 3 operands.");
+
+  IRValueNode *op_cond = get_operand(inst, 0);
+  IRValueNode *op_true = get_operand(inst, 1);
+  IRValueNode *op_false = get_operand(inst, 2);
+
+  // 1. Cond 必须是 i1
+  VERIFY_ASSERT(op_cond->type == ir_type_get_i1(ctx), vctx, op_cond, "'select' condition (operand 0) must be i1 type.");
+
+  // 2. true_val 和 false_val 必须类型相同
+  VERIFY_ASSERT(op_true->type == op_false->type, vctx, value,
+                "'select' true_val (operand 1) and false_val (operand 2) must have the same type.");
+
+  // 3. 结果类型必须匹配
+  VERIFY_ASSERT(result_type == op_true->type, vctx, value,
+                "'select' result type must match the type of its true_val/false_val operands.");
+
+  return true;
+}
+
 /**
  * @brief 验证单条指令
  */
@@ -804,6 +832,8 @@ verify_instruction(VerifierContext *vctx, IRInstruction *inst)
     return verify_op_phi(vctx, inst);
   case IR_OP_CALL:
     return verify_op_call(vctx, inst);
+  case IR_OP_SELECT:
+    return verify_op_select(vctx, inst);
 
   default:
     VERIFY_ERROR(vctx, value, "Unknown or unimplemented instruction opcode in verifier: %d", inst->opcode);

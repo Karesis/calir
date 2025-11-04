@@ -396,6 +396,37 @@ ir_builder_create_fcmp(IRBuilder *builder, IRFCmpPredicate pred, IRValueNode *lh
 }
 
 IRValueNode *
+ir_builder_create_select(IRBuilder *builder, IRValueNode *cond, IRValueNode *true_val, IRValueNode *false_val,
+                         const char *name_hint)
+{
+  assert(builder != NULL);
+  assert(cond != NULL && true_val != NULL && false_val != NULL);
+
+  // 校验:
+  // 1. Cond 必须是 i1
+  assert(cond->type == ir_type_get_i1(builder->context) && "select condition must be i1");
+  // 2. true_val 和 false_val 必须类型相同
+  assert(true_val->type == false_val->type && "select true_val and false_val must have the same type");
+  // 3. 结果类型不能是 void
+  assert(true_val->type->kind != IR_TYPE_VOID && "select result type cannot be void");
+
+  // 结果类型就是 true_val/false_val 的类型
+  IRType *result_type = true_val->type;
+
+  // 创建指令
+  IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_SELECT, result_type, name_hint);
+  if (!inst)
+    return NULL;
+
+  // 添加三个操作数 (Uses)
+  ir_use_create(builder->context, inst, cond);
+  ir_use_create(builder->context, inst, true_val);
+  ir_use_create(builder->context, inst, false_val);
+
+  return &inst->result;
+}
+
+IRValueNode *
 ir_builder_create_alloca(IRBuilder *builder, IRType *allocated_type, const char *name_hint)
 {
   assert(allocated_type != NULL);
