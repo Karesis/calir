@@ -15,13 +15,13 @@
  */
 
 
-// tests/test_interpreter.c
 
-#include "interpreter/interpreter.h" // [!!] 核心
-#include "ir_test_helpers.h"         // (用于 build_golden_ir)
-#include "test_utils.h"              // (用于 SUITE_START/ASSERT/END)
 
-// IR 组件
+#include "interpreter/interpreter.h"
+#include "ir_test_helpers.h"
+#include "test_utils.h"
+
+
 #include "ir/basicblock.h"
 #include "ir/builder.h"
 #include "ir/constant.h"
@@ -32,7 +32,7 @@
 #include "ir/type.h"
 #include "ir/value.h"
 
-// C 标准库
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -98,7 +98,7 @@ test_int_binary_ops()
   TestEnv *env = setup_test_env();
   IRType *ty_i32 = ir_type_get_i32(env->ctx);
 
-  // --- 1. 构建 IR: define i32 @test_add(i32 %a, i32 %b) ---
+
   IRFunction *func_add = ir_function_create(env->mod, "test_add", ty_i32);
   IRValueNode *arg_a = &ir_argument_create(func_add, ty_i32, "a")->value;
   IRValueNode *arg_b = &ir_argument_create(func_add, ty_i32, "b")->value;
@@ -109,7 +109,7 @@ test_int_binary_ops()
   IRValueNode *res = ir_builder_create_add(env->b, arg_a, arg_b, "res");
   ir_builder_create_ret(env->b, res);
 
-  // --- 2. 准备参数 (10 + 5) ---
+
   RuntimeValue rt_a;
   rt_a.kind = RUNTIME_VAL_I32;
   rt_a.as.val_i32 = 10;
@@ -118,13 +118,13 @@ test_int_binary_ops()
   rt_b.as.val_i32 = 5;
   RuntimeValue *args[] = {&rt_a, &rt_b};
 
-  // --- 3. 运行并断言 ---
+
   RuntimeValue result;
   bool success = interpreter_run_function(env->interp, func_add, args, 2, &result);
   SUITE_ASSERT(success, "Interpreter failed to run @test_add");
-  ASSERT_I32_RESULT(result, 15); // 10 + 5 = 15
+  ASSERT_I32_RESULT(result, 15);
 
-  // [!!] 您可以在这里添加更多测试 (e.g., test_sub, test_mul, test_sdiv)
+
   /// more ...
 
   teardown_test_env(env);
@@ -145,7 +145,7 @@ test_branch_phi_ops()
   IRValueNode *const_100 = ir_constant_get_i32(env->ctx, 100);
   IRValueNode *const_200 = ir_constant_get_i32(env->ctx, 200);
 
-  // --- 1. 构建 IR: define i32 @test_if(i32 %a) ---
+
   /// if (%a > 10) { ret 100 } else { ret 200 }
   IRFunction *func = ir_function_create(env->mod, "test_if", ty_i32);
   IRValueNode *arg_a = &ir_argument_create(func, ty_i32, "a")->value;
@@ -175,7 +175,7 @@ test_branch_phi_ops()
   ir_phi_add_incoming(phi, const_200, bb_else);
   ir_builder_create_ret(env->b, phi);
 
-  // --- 2. 运行测试 1 (Then path, a=15) ---
+
   RuntimeValue rt_a_15;
   rt_a_15.kind = RUNTIME_VAL_I32;
   rt_a_15.as.val_i32 = 15;
@@ -185,7 +185,7 @@ test_branch_phi_ops()
   SUITE_ASSERT(success_15, "Interpreter failed (Then path)");
   ASSERT_I32_RESULT(result_15, 100); /// 15 > 10, 应该返回 100
 
-  // --- 3. 运行测试 2 (Else path, a=5) ---
+
   RuntimeValue rt_a_5;
   rt_a_5.kind = RUNTIME_VAL_I32;
   rt_a_5.as.val_i32 = 5;
@@ -199,23 +199,23 @@ test_branch_phi_ops()
   SUITE_END();
 }
 
-// --- FFI 包装器 (我们的 C ABI 合约) ---
+
 static ExecutionResultKind
 my_c_add_wrapper(ExecutionContext *ctx, RuntimeValue **args, size_t num_args, RuntimeValue *result_out)
 {
-  // 校验
+
   if (num_args != 2 || args[0]->kind != RUNTIME_VAL_I32 || args[1]->kind != RUNTIME_VAL_I32)
   {
     if (ctx)
       ctx->error_message = "FFI Error: my_c_add expects 2 i32 args";
-    return EXEC_ERR_INVALID_PTR; // (用一个通用错误代替)
+    return EXEC_ERR_INVALID_PTR;
   }
 
-  // 执行
+
   int32_t a = args[0]->as.val_i32;
   int32_t b = args[1]->as.val_i32;
 
-  // 返回
+
   result_out->kind = RUNTIME_VAL_I32;
   result_out->as.val_i32 = a + b;
   return EXEC_OK;
@@ -231,18 +231,18 @@ test_ffi_and_errors()
   TestEnv *env = setup_test_env();
   IRType *ty_i32 = ir_type_get_i32(env->ctx);
 
-  // --- 1. 注册 FFI 函数 ---
+
   interpreter_register_external_function(env->interp, "my_c_add", my_c_add_wrapper);
 
-  // --- 2. 构建 IR (declare 和 define) ---
-  // declare i32 @my_c_add(i32, i32)
+
+
   IRFunction *func_decl = ir_function_create(env->mod, "my_c_add", ty_i32);
   ir_argument_create(func_decl, ty_i32, "a");
   ir_argument_create(func_decl, ty_i32, "b");
   ir_function_finalize_signature(func_decl, false);
-  func_decl->is_declaration = true; // [!] 标记为 FFI
+  func_decl->is_declaration = true;
 
-  // define i32 @test_ffi(i32 %x, i32 %y)
+
   IRFunction *func_ffi = ir_function_create(env->mod, "test_ffi", ty_i32);
   IRValueNode *arg_x = &ir_argument_create(func_ffi, ty_i32, "x")->value;
   IRValueNode *arg_y = &ir_argument_create(func_ffi, ty_i32, "y")->value;
@@ -254,7 +254,7 @@ test_ffi_and_errors()
   IRValueNode *call_res = ir_builder_create_call(env->b, &func_decl->entry_address, call_args, 2, "res");
   ir_builder_create_ret(env->b, call_res);
 
-  // --- 3. 运行 FFI 测试 (70 + 7) ---
+
   RuntimeValue rt_x;
   rt_x.kind = RUNTIME_VAL_I32;
   rt_x.as.val_i32 = 70;
@@ -267,7 +267,7 @@ test_ffi_and_errors()
   SUITE_ASSERT(ffi_success, "Interpreter failed to run @test_ffi");
   ASSERT_I32_RESULT(ffi_result, 77); /// 70 + 7 = 77
 
-  // --- 4. 构建并运行“未链接” FFI 测试 ---
+
   IRFunction *func_unlinked_decl = ir_function_create(env->mod, "unlinked_fn", ty_i32);
   ir_function_finalize_signature(func_unlinked_decl, false);
   func_unlinked_decl->is_declaration = true;
@@ -278,7 +278,7 @@ test_ffi_and_errors()
   ir_function_append_basic_block(func_unlinked, bb_unlinked);
   ir_builder_set_insertion_point(env->b, bb_unlinked);
   ir_builder_create_call(env->b, &func_unlinked_decl->entry_address, NULL, 0, "res");
-  ir_builder_create_ret(env->b, NULL); // (假设 ret void)
+  ir_builder_create_ret(env->b, NULL);
 
   RuntimeValue err_result;
   bool err_success = interpreter_run_function(env->interp, func_unlinked, NULL, 0, &err_result);
@@ -297,12 +297,12 @@ test_golden_ir_execution()
   SUITE_START("Interpreter: Golden IR Execution");
   TestEnv *env = setup_test_env();
 
-  // 1. [!!] 链接 'golden IR' 需要的 FFI 函数
+
   interpreter_register_external_function(env->interp, "external_add", my_c_add_wrapper);
 
-  // 2. 构建黄金 IR (来自 ir_test_helpers.h)
+
   IRModule *golden_mod = build_golden_ir(env->ctx, env->b);
-  // (我们必须找到 kitchen_sink 函数)
+
   IRFunction *kitchen_sink_func = NULL;
   IDList *func_it;
   list_for_each(&golden_mod->functions, func_it)
@@ -358,7 +358,7 @@ test_golden_ir_execution()
 int
 main()
 {
-  __calir_current_suite_name = "Interpreter"; // (用于 TEST_SUMMARY)
+  __calir_current_suite_name = "Interpreter";
 
   __calir_total_suites_run++;
   if (test_int_binary_ops() != 0)

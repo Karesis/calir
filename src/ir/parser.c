@@ -2153,7 +2153,7 @@ parse_instr_select(Parser *p, const char *name_hint, IRType *result_type)
     return NULL;
   }
 
-  // 1. 解析 %cond: i1
+
   IRValueNode *cond = parse_operand(p);
   if (!cond)
     return NULL;
@@ -2163,21 +2163,21 @@ parse_instr_select(Parser *p, const char *name_hint, IRType *result_type)
     return NULL;
   }
 
-  // 2. 解析 , %true_val: type
+
   if (!expect(p, TK_COMMA))
     return NULL;
   IRValueNode *true_val = parse_operand(p);
   if (!true_val)
     return NULL;
 
-  // 3. 解析 , %false_val: type
+
   if (!expect(p, TK_COMMA))
     return NULL;
   IRValueNode *false_val = parse_operand(p);
   if (!false_val)
     return NULL;
 
-  // 4. 校验类型
+
   if (true_val->type != false_val->type)
   {
     parser_error(p, "'select' true_val (operand 2) and false_val (operand 3) must have the same type");
@@ -2189,7 +2189,7 @@ parse_instr_select(Parser *p, const char *name_hint, IRType *result_type)
     return NULL;
   }
 
-  // 5. 构建
+
   return ir_builder_create_select(p->builder, cond, true_val, false_val, name_hint);
 }
 

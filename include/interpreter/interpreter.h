@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// include/interpreter/interpreter.h
+
 #ifndef CALIR_INTERPRETER_INTERPRETER_H
 #define CALIR_INTERPRETER_INTERPRETER_H
 
@@ -32,7 +32,7 @@
  */
 typedef enum RuntimeValueKind
 {
-  RUNTIME_VAL_UNDEF, // 代表 'undef' 或 'void'
+  RUNTIME_VAL_UNDEF,
   RUNTIME_VAL_I1,
   RUNTIME_VAL_I8,
   RUNTIME_VAL_I16,
@@ -40,7 +40,7 @@ typedef enum RuntimeValueKind
   RUNTIME_VAL_I64,
   RUNTIME_VAL_F32,
   RUNTIME_VAL_F64,
-  RUNTIME_VAL_PTR // 指向“模拟内存” (e.g., alloca 的结果)
+  RUNTIME_VAL_PTR
 } RuntimeValueKind;
 
 /**
@@ -73,12 +73,12 @@ typedef struct RuntimeValue
 typedef enum ExecutionResultKind
 {
   EXEC_OK,
-  EXEC_RUNNING, // 仅用于标记
+  EXEC_RUNNING,
   EXEC_ERR_STACK_OVERFLOW,
   EXEC_ERR_DIV_BY_ZERO_S,
   EXEC_ERR_DIV_BY_ZERO_U,
   EXEC_ERR_DIV_BY_ZERO_F,
-  EXEC_ERR_INVALID_PTR, // (未来用于空指针解引用)
+  EXEC_ERR_INVALID_PTR,
 } ExecutionResultKind;
 
 /**
