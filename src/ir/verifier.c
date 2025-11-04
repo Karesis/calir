@@ -920,28 +920,8 @@ ir_verify_function(IRFunction *func)
   FunctionCFG *cfg = NULL;
   DominatorTree *doms = NULL;
 
-  if (list_empty(&func->basic_blocks))
-  {
-
-    IDList *arg_it;
-    list_for_each(&func->arguments, arg_it)
-    {
-      IRArgument *arg = list_entry(arg_it, IRArgument, list_node);
-
-      VERIFY_ASSERT(arg->value.type != NULL, &vctx, &arg->value, "Argument has NULL type.");
-      VERIFY_ASSERT(arg->value.type->kind != IR_TYPE_VOID, &vctx, &arg->value,
-                    "Function argument cannot have void type.");
-    }
-    bump_destroy(&vctx.analysis_arena);
-    return !vctx.has_error;
-  }
-
-  cfg = cfg_build(func, &vctx.analysis_arena);
-
-  doms = dom_tree_build(cfg, &vctx.analysis_arena);
-
-  vctx.dom_tree = doms;
-
+  // --- 1. 验证所有参数 ---
+  // (无论 define 还是 declare 都要做)
   IDList *arg_it;
   list_for_each(&func->arguments, arg_it)
   {
@@ -951,7 +931,37 @@ ir_verify_function(IRFunction *func)
     VERIFY_ASSERT(arg->value.type->kind != IR_TYPE_VOID, &vctx, &arg->value,
                   "Function argument cannot have void type.");
 
-    VERIFY_ASSERT(arg->value.name != NULL, &vctx, &arg->value, "Argument in a function *definition* must have a name.");
+    // [!!] (修复) 'define' 才需要参数名, 'declare' 可以不需要
+    if (!func->is_declaration)
+    {
+      VERIFY_ASSERT(arg->value.name != NULL, &vctx, &arg->value,
+                    "Argument in a function *definition* must have a name.");
+    }
+  }
+
+  // --- 2. [!!] (新增) 验证声明 (declare) vs 定义 (define) ---
+  bool has_blocks = !list_empty(&func->basic_blocks);
+
+  if (func->is_declaration)
+  {
+    // --- 路径 A: 这是 'declare' ---
+    VERIFY_ASSERT(!has_blocks, &vctx, &func->entry_address, "'declare' function '@%s' cannot have basic blocks.",
+                  func->entry_address.name);
+
+    // 声明不需要 CFG/DomTree，也不需要进一步检查基本块
+    bump_destroy(&vctx.analysis_arena);
+    return !vctx.has_error;
+  }
+  else
+  {
+    // --- 路径 B: 这是 'define' ---
+    VERIFY_ASSERT(has_blocks, &vctx, &func->entry_address,
+                  "'define' function '@%s' must have at least one basic block.", func->entry_address.name);
+
+    // 定义必须构建分析工具
+    cfg = cfg_build(func, &vctx.analysis_arena);
+    doms = dom_tree_build(cfg, &vctx.analysis_arena);
+    vctx.dom_tree = doms;
   }
 
   IDList *bb_it;

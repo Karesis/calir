@@ -776,6 +776,7 @@ parse_function_definition(Parser *p)
   }
 
   ir_function_finalize_signature(func, is_variadic);
+  func->is_declaration = false;
 
   if (!expect(p, TK_LBRACE))
     return;
@@ -946,6 +947,8 @@ parse_function_declaration(Parser *p)
   }
 
   ir_function_finalize_signature(func, is_variadic);
+  func->is_declaration = true;
+
   bump_reset(&p->temp_arena);
 }
 /*

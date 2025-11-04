@@ -37,6 +37,12 @@ typedef struct IRFunction
   IDList list_node;
   IDList arguments;
   IDList basic_blocks;
+  bool is_declaration;
+
+  /// 如果 is_declaration = true,
+  /// 这将指向已链接的 CalicoHostFunction 包装器。
+  /// 我们使用 void* 来避免 #include "interpreter.h" 造成的循环依赖。
+  void *c_host_func_ptr;
 } IRFunction;
 
 /**

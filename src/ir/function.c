@@ -89,6 +89,8 @@ ir_function_create(IRModule *mod, const char *name, IRType *ret_type)
   list_init(&func->entry_address.uses);
 
   func->entry_address.type = NULL;
+  func->is_declaration = false;
+  func->c_host_func_ptr = NULL;
 
   list_add_tail(&mod->functions, &func->list_node);
   return func;
@@ -144,9 +146,7 @@ ir_function_dump(IRFunction *func, IRPrinter *p)
     return;
   }
 
-  bool is_declaration = list_empty(&func->basic_blocks);
-
-  ir_print_str(p, is_declaration ? "declare " : "define ");
+  ir_print_str(p, func->is_declaration ? "declare " : "define ");
 
   ir_type_dump(func->return_type, p);
 
@@ -169,7 +169,7 @@ ir_function_dump(IRFunction *func, IRPrinter *p)
     first_arg = 0;
   }
 
-  if (is_declaration)
+  if (func->is_declaration)
   {
     ir_print_str(p, ")\n");
   }
