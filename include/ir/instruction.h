@@ -22,7 +22,7 @@
 #include "ir/value.h"
 #include "utils/id_list.h"
 
-typedef enum
+typedef enum IROpcode
 {
 
   IR_OP_RET,
@@ -70,13 +70,14 @@ typedef enum
   IR_OP_PTRTOINT, /// 指针 -> 整数
   IR_OP_INTTOPTR, /// 整数 -> 指针
   IR_OP_BITCAST,  /// 位转换 (e.g., i32 -> f32)
+  IR_OP_SELECT,
 
   IR_OP_PHI,
   IR_OP_CALL
 
 } IROpcode;
 
-typedef enum
+typedef enum IRICmpPredicate
 {
   IR_ICMP_EQ,  /// 等于
   IR_ICMP_NE,  /// 不等于
@@ -95,7 +96,7 @@ typedef enum
  * 'O' = Ordered (有序, 操作数非 NaN)
  * 'U' = Unordered (无序, 操作数至少有一个是 NaN)
  */
-typedef enum
+typedef enum IRFCmpPredicate
 {
 
   /// (如果任一操作数为 NaN, 结果为 false)
@@ -123,7 +124,7 @@ typedef enum
 
 } IRFCmpPredicate;
 
-typedef struct
+typedef struct IRInstruction
 {
   IRValueNode result;
   IDList list_node;
