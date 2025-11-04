@@ -27,9 +27,11 @@
 #include "ir/module.h"
 #include "ir/type.h"
 #include "ir/value.h"
+#include "utils/data_layout.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /**
  * @brief 封装测试所需的所有核心对象
@@ -40,6 +42,7 @@ typedef struct TestEnv
   IRBuilder *b;
   IRModule *mod;
   Interpreter *interp;
+  DataLayout *dl;
 } TestEnv;
 
 /**
@@ -51,7 +54,8 @@ setup_test_env()
   TestEnv *env = (TestEnv *)malloc(sizeof(TestEnv));
   env->ctx = ir_context_create();
   env->b = ir_builder_create(env->ctx);
-  env->interp = interpreter_create();
+  env->dl = datalayout_create_host();
+  env->interp = interpreter_create(env->dl);
   env->mod = ir_module_create(env->ctx, "test_module");
   return env;
 }
@@ -65,6 +69,7 @@ teardown_test_env(TestEnv *env)
   interpreter_destroy(env->interp);
   ir_builder_destroy(env->b);
   ir_context_destroy(env->ctx);
+  datalayout_destroy(env->dl);
   free(env);
 }
 
@@ -131,7 +136,6 @@ test_branch_phi_ops()
   SUITE_START("Interpreter: Branching & PHI");
   TestEnv *env = setup_test_env();
   IRType *ty_i32 = ir_type_get_i32(env->ctx);
-  IRType *ty_i1 = ir_type_get_i1(env->ctx);
   IRValueNode *const_10 = ir_constant_get_i32(env->ctx, 10);
   IRValueNode *const_100 = ir_constant_get_i32(env->ctx, 100);
   IRValueNode *const_200 = ir_constant_get_i32(env->ctx, 200);
