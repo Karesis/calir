@@ -23,7 +23,7 @@
 #include <stdio.h>
 #include <string.h>
 
-// (From Quick Start 1)
+/// (From Quick Start 1)
 const char *CIR_SOURCE = "module = \"parsed_module\"\n"
                          "\n"
                          "define i32 @add(%a: i32, %b: i32) {\n"
@@ -39,7 +39,7 @@ main()
   DataLayout *dl = datalayout_create_host();
   Interpreter *interp = interpreter_create(dl);
 
-  // 1. Parse the module
+  /// 1. Parse the module
   IRModule *mod = ir_parse_module(ctx, CIR_SOURCE);
   if (mod == NULL)
   {
@@ -47,7 +47,7 @@ main()
     goto cleanup;
   }
 
-  // 2. Find the "@add" function
+  /// 2. Find the "@add" function
   IRFunction *add_func = NULL;
   IDList *it;
   list_for_each(&mod->functions, it)
@@ -66,7 +66,7 @@ main()
     goto cleanup;
   }
 
-  // 3. Prepare arguments: 10 and 20
+  /// 3. Prepare arguments: 10 and 20
   RuntimeValue rt_a;
   rt_a.kind = RUNTIME_VAL_I32;
   rt_a.as.val_i32 = 10;
@@ -77,11 +77,11 @@ main()
 
   RuntimeValue *args[] = {&rt_a, &rt_b};
 
-  // 4. Run the function
+  /// 4. Run the function
   RuntimeValue result;
   bool success = interpreter_run_function(interp, add_func, args, 2, &result);
 
-  // 5. Print the result
+  /// 5. Print the result
   if (success && result.kind == RUNTIME_VAL_I32)
   {
     printf("Result of @add(10, 20): %d\n", result.as.val_i32);
