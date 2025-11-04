@@ -1012,11 +1012,13 @@ execute_basic_block(ExecutionContext *ctx, IRBasicBlock *bb, IRBasicBlock *prev_
       break;
     }
     case IR_OP_GEP: {
-      // [!!] (已实现)
       RuntimeValue *rt_base_ptr = get_value(ctx, get_operand_node(inst, 0));
       assert(rt_base_ptr->kind == RUNTIME_VAL_PTR);
 
       char *current_ptr = (char *)rt_base_ptr->as.val_ptr;
+
+      // [!!] (修复) current_type 是 GEP 指令的 "source_type"，
+      // 即它指向的第一个元素的类型。
       IRType *current_type = inst->as.gep.source_type;
 
       int op_count = get_operand_count(inst);
@@ -1025,34 +1027,35 @@ execute_basic_block(ExecutionContext *ctx, IRBasicBlock *bb, IRBasicBlock *prev_
         RuntimeValue *rt_idx = get_value(ctx, get_operand_node(inst, i));
         int64_t idx_val = get_int_value_as_i64(rt_idx);
 
-        if (i == 1 && current_type->kind != IR_TYPE_ARRAY && current_type->kind != IR_TYPE_STRUCT)
+        if (i == 1)
         {
-          // 索引到指针 (e.g., gep %ptr, %idx)
-          // Verifier 应该保证 current_type == pointee_type
+          // [!!] (修复) 第一个索引 (i == 1) 总是索引“指针”。
+          // 它使用 current_type 的 *大小* 来计算偏移量。
           size_t elem_size = get_type_size(current_type);
           current_ptr += (idx_val * elem_size);
-          // (类型保持不变)
+
+          // 第一个索引计算完偏移量后，current_type 保持不变，
+          // 因为我们现在指向了该类型的 *内部* (为 i=2 做准备)。
         }
         else if (current_type->kind == IR_TYPE_ARRAY)
         {
-          // 索引到数组
+          // [!!] (修复) 后续索引 (i > 1) 索引 *到* 聚合体。
           current_type = current_type->as.array.element_type;
           size_t elem_size = get_type_size(current_type);
           current_ptr += (idx_val * elem_size);
         }
         else if (current_type->kind == IR_TYPE_STRUCT)
         {
-          // 索引到结构体
+          // [!!] (修复) 后续索引 (i > 1) 索引 *到* 聚合体。
           assert(idx_val >= 0 && (size_t)idx_val < current_type->as.aggregate.member_count);
 
-          // [!!] (已修复) 使用新的辅助函数计算对齐后的偏移量
           size_t offset = get_struct_member_offset(current_type, (size_t)idx_val);
-
           current_ptr += offset;
           current_type = current_type->as.aggregate.member_types[idx_val];
         }
         else
         {
+          // Verifier 应该捕获这个 (e.g., "gep %ptr_to_i32, 5, 1")
           assert(false && "GEP is trying to index into a non-aggregate type");
         }
       }
