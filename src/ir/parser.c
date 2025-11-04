@@ -2153,7 +2153,6 @@ parse_instr_select(Parser *p, const char *name_hint, IRType *result_type)
     return NULL;
   }
 
-
   IRValueNode *cond = parse_operand(p);
   if (!cond)
     return NULL;
@@ -2163,20 +2162,17 @@ parse_instr_select(Parser *p, const char *name_hint, IRType *result_type)
     return NULL;
   }
 
-
   if (!expect(p, TK_COMMA))
     return NULL;
   IRValueNode *true_val = parse_operand(p);
   if (!true_val)
     return NULL;
 
-
   if (!expect(p, TK_COMMA))
     return NULL;
   IRValueNode *false_val = parse_operand(p);
   if (!false_val)
     return NULL;
-
 
   if (true_val->type != false_val->type)
   {
@@ -2188,7 +2184,6 @@ parse_instr_select(Parser *p, const char *name_hint, IRType *result_type)
     parser_error(p, "'select' result type annotation does not match operand types");
     return NULL;
   }
-
 
   return ir_builder_create_select(p->builder, cond, true_val, false_val, name_hint);
 }

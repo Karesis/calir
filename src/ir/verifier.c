@@ -691,13 +691,10 @@ verify_op_select(VerifierContext *vctx, IRInstruction *inst)
   IRValueNode *op_true = get_operand(inst, 1);
   IRValueNode *op_false = get_operand(inst, 2);
 
-
   VERIFY_ASSERT(op_cond->type == ir_type_get_i1(ctx), vctx, op_cond, "'select' condition (operand 0) must be i1 type.");
-
 
   VERIFY_ASSERT(op_true->type == op_false->type, vctx, value,
                 "'select' true_val (operand 1) and false_val (operand 2) must have the same type.");
-
 
   VERIFY_ASSERT(result_type == op_true->type, vctx, value,
                 "'select' result type must match the type of its true_val/false_val operands.");
@@ -920,8 +917,6 @@ ir_verify_function(IRFunction *func)
   FunctionCFG *cfg = NULL;
   DominatorTree *doms = NULL;
 
-
-
   IDList *arg_it;
   list_for_each(&func->arguments, arg_it)
   {
@@ -931,14 +926,12 @@ ir_verify_function(IRFunction *func)
     VERIFY_ASSERT(arg->value.type->kind != IR_TYPE_VOID, &vctx, &arg->value,
                   "Function argument cannot have void type.");
 
-
     if (!func->is_declaration)
     {
       VERIFY_ASSERT(arg->value.name != NULL, &vctx, &arg->value,
                     "Argument in a function *definition* must have a name.");
     }
   }
-
 
   bool has_blocks = !list_empty(&func->basic_blocks);
 
@@ -948,7 +941,6 @@ ir_verify_function(IRFunction *func)
     VERIFY_ASSERT(!has_blocks, &vctx, &func->entry_address, "'declare' function '@%s' cannot have basic blocks.",
                   func->entry_address.name);
 
-
     bump_destroy(&vctx.analysis_arena);
     return !vctx.has_error;
   }
@@ -957,7 +949,6 @@ ir_verify_function(IRFunction *func)
 
     VERIFY_ASSERT(has_blocks, &vctx, &func->entry_address,
                   "'define' function '@%s' must have at least one basic block.", func->entry_address.name);
-
 
     cfg = cfg_build(func, &vctx.analysis_arena);
     doms = dom_tree_build(cfg, &vctx.analysis_arena);

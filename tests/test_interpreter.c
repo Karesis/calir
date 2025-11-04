@@ -14,13 +14,9 @@
  * limitations under the License.
  */
 
-
-
-
 #include "interpreter/interpreter.h"
 #include "ir_test_helpers.h"
 #include "test_utils.h"
-
 
 #include "ir/basicblock.h"
 #include "ir/builder.h"
@@ -31,7 +27,6 @@
 #include "ir/module.h"
 #include "ir/type.h"
 #include "ir/value.h"
-
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -98,7 +93,6 @@ test_int_binary_ops()
   TestEnv *env = setup_test_env();
   IRType *ty_i32 = ir_type_get_i32(env->ctx);
 
-
   IRFunction *func_add = ir_function_create(env->mod, "test_add", ty_i32);
   IRValueNode *arg_a = &ir_argument_create(func_add, ty_i32, "a")->value;
   IRValueNode *arg_b = &ir_argument_create(func_add, ty_i32, "b")->value;
@@ -109,7 +103,6 @@ test_int_binary_ops()
   IRValueNode *res = ir_builder_create_add(env->b, arg_a, arg_b, "res");
   ir_builder_create_ret(env->b, res);
 
-
   RuntimeValue rt_a;
   rt_a.kind = RUNTIME_VAL_I32;
   rt_a.as.val_i32 = 10;
@@ -118,12 +111,10 @@ test_int_binary_ops()
   rt_b.as.val_i32 = 5;
   RuntimeValue *args[] = {&rt_a, &rt_b};
 
-
   RuntimeValue result;
   bool success = interpreter_run_function(env->interp, func_add, args, 2, &result);
   SUITE_ASSERT(success, "Interpreter failed to run @test_add");
   ASSERT_I32_RESULT(result, 15);
-
 
   /// more ...
 
@@ -144,7 +135,6 @@ test_branch_phi_ops()
   IRValueNode *const_10 = ir_constant_get_i32(env->ctx, 10);
   IRValueNode *const_100 = ir_constant_get_i32(env->ctx, 100);
   IRValueNode *const_200 = ir_constant_get_i32(env->ctx, 200);
-
 
   /// if (%a > 10) { ret 100 } else { ret 200 }
   IRFunction *func = ir_function_create(env->mod, "test_if", ty_i32);
@@ -175,7 +165,6 @@ test_branch_phi_ops()
   ir_phi_add_incoming(phi, const_200, bb_else);
   ir_builder_create_ret(env->b, phi);
 
-
   RuntimeValue rt_a_15;
   rt_a_15.kind = RUNTIME_VAL_I32;
   rt_a_15.as.val_i32 = 15;
@@ -184,7 +173,6 @@ test_branch_phi_ops()
   bool success_15 = interpreter_run_function(env->interp, func, args_15, 1, &result_15);
   SUITE_ASSERT(success_15, "Interpreter failed (Then path)");
   ASSERT_I32_RESULT(result_15, 100); /// 15 > 10, 应该返回 100
-
 
   RuntimeValue rt_a_5;
   rt_a_5.kind = RUNTIME_VAL_I32;
@@ -199,7 +187,6 @@ test_branch_phi_ops()
   SUITE_END();
 }
 
-
 static ExecutionResultKind
 my_c_add_wrapper(ExecutionContext *ctx, RuntimeValue **args, size_t num_args, RuntimeValue *result_out)
 {
@@ -211,10 +198,8 @@ my_c_add_wrapper(ExecutionContext *ctx, RuntimeValue **args, size_t num_args, Ru
     return EXEC_ERR_INVALID_PTR;
   }
 
-
   int32_t a = args[0]->as.val_i32;
   int32_t b = args[1]->as.val_i32;
-
 
   result_out->kind = RUNTIME_VAL_I32;
   result_out->as.val_i32 = a + b;
@@ -231,17 +216,13 @@ test_ffi_and_errors()
   TestEnv *env = setup_test_env();
   IRType *ty_i32 = ir_type_get_i32(env->ctx);
 
-
   interpreter_register_external_function(env->interp, "my_c_add", my_c_add_wrapper);
-
-
 
   IRFunction *func_decl = ir_function_create(env->mod, "my_c_add", ty_i32);
   ir_argument_create(func_decl, ty_i32, "a");
   ir_argument_create(func_decl, ty_i32, "b");
   ir_function_finalize_signature(func_decl, false);
   func_decl->is_declaration = true;
-
 
   IRFunction *func_ffi = ir_function_create(env->mod, "test_ffi", ty_i32);
   IRValueNode *arg_x = &ir_argument_create(func_ffi, ty_i32, "x")->value;
@@ -254,7 +235,6 @@ test_ffi_and_errors()
   IRValueNode *call_res = ir_builder_create_call(env->b, &func_decl->entry_address, call_args, 2, "res");
   ir_builder_create_ret(env->b, call_res);
 
-
   RuntimeValue rt_x;
   rt_x.kind = RUNTIME_VAL_I32;
   rt_x.as.val_i32 = 70;
@@ -266,7 +246,6 @@ test_ffi_and_errors()
   bool ffi_success = interpreter_run_function(env->interp, func_ffi, ffi_args, 2, &ffi_result);
   SUITE_ASSERT(ffi_success, "Interpreter failed to run @test_ffi");
   ASSERT_I32_RESULT(ffi_result, 77); /// 70 + 7 = 77
-
 
   IRFunction *func_unlinked_decl = ir_function_create(env->mod, "unlinked_fn", ty_i32);
   ir_function_finalize_signature(func_unlinked_decl, false);
@@ -297,9 +276,7 @@ test_golden_ir_execution()
   SUITE_START("Interpreter: Golden IR Execution");
   TestEnv *env = setup_test_env();
 
-
   interpreter_register_external_function(env->interp, "external_add", my_c_add_wrapper);
-
 
   IRModule *golden_mod = build_golden_ir(env->ctx, env->b);
 

@@ -402,22 +402,17 @@ ir_builder_create_select(IRBuilder *builder, IRValueNode *cond, IRValueNode *tru
   assert(builder != NULL);
   assert(cond != NULL && true_val != NULL && false_val != NULL);
 
-
-
   assert(cond->type == ir_type_get_i1(builder->context) && "select condition must be i1");
 
   assert(true_val->type == false_val->type && "select true_val and false_val must have the same type");
 
   assert(true_val->type->kind != IR_TYPE_VOID && "select result type cannot be void");
 
-
   IRType *result_type = true_val->type;
-
 
   IRInstruction *inst = ir_instruction_create_internal(builder, IR_OP_SELECT, result_type, name_hint);
   if (!inst)
     return NULL;
-
 
   ir_use_create(builder->context, inst, cond);
   ir_use_create(builder->context, inst, true_val);
