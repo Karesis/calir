@@ -44,7 +44,7 @@
  * @brief [来源 1] 黄金 IR 字符串
  * (从 test_parser.c 复制而来)
  */
-static const char *
+static __attribute__((unused)) const char *
 get_golden_ir_text()
 {
 
