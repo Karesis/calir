@@ -212,7 +212,6 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
 
   rt_res->kind = rt_lhs->kind;
 
-
   switch (rt_lhs->kind)
   {
   case RUNTIME_VAL_I1: {
@@ -272,9 +271,7 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
     int8_t rhs = rt_rhs->as.val_i8;
     int8_t res = 0;
 
-
     const uint8_t bit_width = 8;
-
 
     uint8_t safe_amt = (uint8_t)rhs & (bit_width - 1);
 
@@ -366,7 +363,6 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
     int16_t lhs = rt_lhs->as.val_i16;
     int16_t rhs = rt_rhs->as.val_i16;
     int16_t res = 0;
-
 
     const uint16_t bit_width = 16;
     uint16_t safe_amt = (uint16_t)rhs & (bit_width - 1);
@@ -460,7 +456,6 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
     int32_t rhs = rt_rhs->as.val_i32;
     int32_t res = 0;
 
-
     const uint32_t bit_width = 32;
     uint32_t safe_amt = (uint32_t)rhs & (bit_width - 1);
 
@@ -552,7 +547,6 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
     int64_t lhs = rt_lhs->as.val_i64;
     int64_t rhs = rt_rhs->as.val_i64;
     int64_t res = 0;
-
 
     const uint64_t bit_width = 64;
     uint64_t safe_amt = (uint64_t)rhs & (bit_width - 1);
@@ -952,7 +946,6 @@ execute_op_cast(ExecutionContext *ctx, IRInstruction *inst)
     {
       bits_to_truncate = src_u64; /// 保留 src_u64 的位模式
     }
-
 
     switch (rt_res->kind)
     {

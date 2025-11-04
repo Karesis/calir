@@ -26,7 +26,6 @@
 /// align 必须是 2 的幂
 #define ALIGN_UP(value, align) (((value) + (align) - 1) & ~((align) - 1))
 
-
 static TypeLayoutInfo
 get_primitive_layout(const DataLayout *dl, IRType *type)
 {
@@ -84,11 +83,9 @@ datalayout_create_host(void)
   if (!dl)
     return NULL;
 
-
   uint32_t i = 1;
   char *c = (char *)&i;
   dl->is_little_endian = (*c == 1);
-
 
   dl->i1_layout = (TypeLayoutInfo){.size_in_bytes = sizeof(bool), .abi_align_in_bytes = _Alignof(bool)};
   dl->i8_layout = (TypeLayoutInfo){.size_in_bytes = sizeof(int8_t), .abi_align_in_bytes = _Alignof(int8_t)};
@@ -98,7 +95,6 @@ datalayout_create_host(void)
   dl->f32_layout = (TypeLayoutInfo){.size_in_bytes = sizeof(float), .abi_align_in_bytes = _Alignof(float)};
   dl->f64_layout = (TypeLayoutInfo){.size_in_bytes = sizeof(double), .abi_align_in_bytes = _Alignof(double)};
   dl->ptr_layout = (TypeLayoutInfo){.size_in_bytes = sizeof(void *), .abi_align_in_bytes = _Alignof(void *)};
-
 
   dl->aggregate_preferred_align_in_bytes = 0;
 
@@ -125,7 +121,6 @@ datalayout_get_type_layout(const DataLayout *dl, IRType *type)
     return (BumpLayout){.size = info.size_in_bytes, .align = info.abi_align_in_bytes};
   }
 
-
   switch (type->kind)
   {
   case IR_TYPE_ARRAY: {
@@ -143,19 +138,15 @@ datalayout_get_type_layout(const DataLayout *dl, IRType *type)
     {
       BumpLayout member_layout = datalayout_get_type_layout(dl, type->as.aggregate.member_types[i]);
 
-
       total_size = ALIGN_UP(total_size, member_layout.align);
 
-
       total_size += member_layout.size;
-
 
       if (member_layout.align > max_align)
       {
         max_align = member_layout.align;
       }
     }
-
 
     if (dl->aggregate_preferred_align_in_bytes > 0)
     {
@@ -164,7 +155,6 @@ datalayout_get_type_layout(const DataLayout *dl, IRType *type)
         max_align = dl->aggregate_preferred_align_in_bytes;
       }
     }
-
 
     total_size = ALIGN_UP(total_size, max_align);
 
@@ -202,7 +192,6 @@ datalayout_get_struct_member_offset(const DataLayout *dl, IRType *struct_type, s
 
   size_t current_offset = 0;
 
-
   for (size_t i = 0; i < member_index; i++)
   {
     BumpLayout member_layout = datalayout_get_type_layout(dl, struct_type->as.aggregate.member_types[i]);
@@ -211,7 +200,6 @@ datalayout_get_struct_member_offset(const DataLayout *dl, IRType *struct_type, s
 
     current_offset += member_layout.size;
   }
-
 
   BumpLayout final_member_layout = datalayout_get_type_layout(dl, struct_type->as.aggregate.member_types[member_index]);
   current_offset = ALIGN_UP(current_offset, final_member_layout.align);
