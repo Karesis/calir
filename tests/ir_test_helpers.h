@@ -95,6 +95,8 @@ build_golden_ir(IRContext *ctx, IRBuilder *builder)
   ir_argument_create(callee, ty_i32, "x");
   ir_argument_create(callee, ty_i32, "y");
   ir_function_finalize_signature(callee, false);
+  callee->is_declaration = true;
+  callee->c_host_func_ptr = NULL;
   IRValueNode *callee_val = &callee->entry_address;
 
   IRValueNode *const_0 = ir_constant_get_i32(ctx, 0);
