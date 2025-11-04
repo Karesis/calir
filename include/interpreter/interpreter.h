@@ -26,37 +26,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef enum ExecutionResultKind
-{
-  EXEC_OK,
-  EXEC_RUNNING, // 仅用于标记
-  EXEC_ERR_STACK_OVERFLOW,
-  EXEC_ERR_DIV_BY_ZERO_S,
-  EXEC_ERR_DIV_BY_ZERO_U,
-  EXEC_ERR_DIV_BY_ZERO_F,
-  EXEC_ERR_INVALID_PTR, // (未来用于空指针解引用)
-} ExecutionResultKind;
-
-typedef struct ExecutionContext
-{
-  /** @brief 指向父解释器，用于访问持久竞技场 (e.g., 用于常量) */
-  Interpreter *interp;
-
-  /** @brief 寄存器堆 (Register File). 映射: IRValueNode* -> RuntimeValue* */
-  PtrHashMap *frame;
-
-  /** @brief 临时值竞技场 (Temporary Value Arena)。*/
-  Bump value_arena;
-
-  /** @brief 模拟栈 (Stack Arena)。*/
-  Bump stack_arena;
-
-  /** * @brief [!!] (重构) 存储运行时错误信息
-   * 当辅助函数返回 ERR 时，它们会顺便设置这个。
-   */
-  const char *error_message;
-} ExecutionContext;
-
 /**
  * @brief 运行时值的类型标签
  * (这与 IRTypeKind 相似，但用于运行时)
@@ -101,17 +70,16 @@ typedef struct RuntimeValue
   } as;
 } RuntimeValue;
 
-/**
- * @brief 所有宿主 FFI 函数必须匹配的 C 函数签名
- *
- * @param ctx (可选) 指向当前执行上下文 (用于在 FFI 中报告错误)
- * @param args (输入) 运行时参数数组
- * @param num_args (输入) 参数数量
- * @param result_out (输出) FFI 函数必须将结果写入这里
- * @return 执行状态 (EXEC_OK 或错误)
- */
-typedef ExecutionResultKind (*CalicoHostFunction)(ExecutionContext *ctx, RuntimeValue **args, size_t num_args,
-                                                  RuntimeValue *result_out);
+typedef enum ExecutionResultKind
+{
+  EXEC_OK,
+  EXEC_RUNNING, // 仅用于标记
+  EXEC_ERR_STACK_OVERFLOW,
+  EXEC_ERR_DIV_BY_ZERO_S,
+  EXEC_ERR_DIV_BY_ZERO_U,
+  EXEC_ERR_DIV_BY_ZERO_F,
+  EXEC_ERR_INVALID_PTR, // (未来用于空指针解引用)
+} ExecutionResultKind;
 
 /**
  * @brief 解释器主上下文 (Interpreter Main Context)
@@ -150,6 +118,38 @@ typedef struct Interpreter
   StrHashMap *external_function_map;
 
 } Interpreter;
+
+typedef struct ExecutionContext
+{
+  /** @brief 指向父解释器，用于访问持久竞技场 (e.g., 用于常量) */
+  Interpreter *interp;
+
+  /** @brief 寄存器堆 (Register File). 映射: IRValueNode* -> RuntimeValue* */
+  PtrHashMap *frame;
+
+  /** @brief 临时值竞技场 (Temporary Value Arena)。*/
+  Bump value_arena;
+
+  /** @brief 模拟栈 (Stack Arena)。*/
+  Bump stack_arena;
+
+  /** * @brief [!!] (重构) 存储运行时错误信息
+   * 当辅助函数返回 ERR 时，它们会顺便设置这个。
+   */
+  const char *error_message;
+} ExecutionContext;
+
+/**
+ * @brief 所有宿主 FFI 函数必须匹配的 C 函数签名
+ *
+ * @param ctx (可选) 指向当前执行上下文 (用于在 FFI 中报告错误)
+ * @param args (输入) 运行时参数数组
+ * @param num_args (输入) 参数数量
+ * @param result_out (输出) FFI 函数必须将结果写入这里
+ * @return 执行状态 (EXEC_OK 或错误)
+ */
+typedef ExecutionResultKind (*CalicoHostFunction)(ExecutionContext *ctx, RuntimeValue **args, size_t num_args,
+                                                  RuntimeValue *result_out);
 
 /**
  * @brief 创建一个新的解释器实例。
