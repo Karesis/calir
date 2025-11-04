@@ -26,6 +26,7 @@
 #include "ir/value.h"
 
 #include "utils/bump.h"
+#include "utils/data_layout.h"
 #include "utils/hashmap.h"
 #include "utils/id_list.h"
 
@@ -98,102 +99,6 @@ ir_to_runtime_kind(IRTypeKind kind)
   default:
     return RUNTIME_VAL_UNDEF;
   }
-}
-
-/**
- * @brief 获取 IRType 在宿主上的大小和*对齐*
- *
- * (这对 GEP 至关重要)
- */
-static BumpLayout
-get_type_layout(IRType *type)
-{
-  /// [TODO] 这是一个*极其*简化的布局计算。
-  /// 它假定宿主 (Host) 架构的对齐方式，并且结构体是紧密打包 (packed) 的。
-  /// 一个真正的解释器需要一个完整的数据布局 (DataLayout) 字符串。
-  /// 但对于我们的目的，这足够了。
-
-  switch (type->kind)
-  {
-  case IR_TYPE_I1:
-    return (BumpLayout){.size = sizeof(bool), .align = _Alignof(bool)};
-  case IR_TYPE_I8:
-    return (BumpLayout){.size = sizeof(int8_t), .align = _Alignof(int8_t)};
-  case IR_TYPE_I16:
-    return (BumpLayout){.size = sizeof(int16_t), .align = _Alignof(int16_t)};
-  case IR_TYPE_I32:
-    return (BumpLayout){.size = sizeof(int32_t), .align = _Alignof(int32_t)};
-  case IR_TYPE_I64:
-    return (BumpLayout){.size = sizeof(int64_t), .align = _Alignof(int64_t)};
-  case IR_TYPE_F32:
-    return (BumpLayout){.size = sizeof(float), .align = _Alignof(float)};
-  case IR_TYPE_F64:
-    return (BumpLayout){.size = sizeof(double), .align = _Alignof(double)};
-  case IR_TYPE_PTR:
-    return (BumpLayout){.size = sizeof(void *), .align = _Alignof(void *)};
-
-  case IR_TYPE_ARRAY: {
-    BumpLayout elem_layout = get_type_layout(type->as.array.element_type);
-
-    return (BumpLayout){.size = elem_layout.size * type->as.array.element_count, .align = elem_layout.align};
-  }
-
-  case IR_TYPE_STRUCT: {
-
-    size_t total_size = 0;
-    size_t max_align = 1;
-    for (size_t i = 0; i < type->as.aggregate.member_count; i++)
-    {
-      BumpLayout member_layout = get_type_layout(type->as.aggregate.member_types[i]);
-
-      total_size = (total_size + member_layout.align - 1) & ~(member_layout.align - 1);
-      total_size += member_layout.size;
-
-      if (member_layout.align > max_align)
-      {
-        max_align = member_layout.align;
-      }
-    }
-
-    total_size = (total_size + max_align - 1) & ~(max_align - 1);
-    return (BumpLayout){.size = total_size, .align = max_align};
-  }
-
-  default:
-    assert(false && "Cannot get layout for complex or void type");
-    return (BumpLayout){0, 1};
-  }
-}
-
-static size_t
-get_type_size(IRType *type)
-{
-  return get_type_layout(type).size;
-}
-
-/**
- * @brief [!!] (新增) 辅助函数：计算结构体中成员的对齐后偏移量
- *
- * (这与 get_type_layout 中的逻辑相匹配)
- */
-static size_t
-get_struct_member_offset(IRType *struct_type, size_t member_idx)
-{
-  assert(struct_type->kind == IR_TYPE_STRUCT);
-  size_t offset = 0;
-  for (size_t i = 0; i < member_idx; i++)
-  {
-    BumpLayout member_layout = get_type_layout(struct_type->as.aggregate.member_types[i]);
-
-    offset = (offset + member_layout.align - 1) & ~(member_layout.align - 1);
-
-    offset += member_layout.size;
-  }
-
-  BumpLayout final_member_layout = get_type_layout(struct_type->as.aggregate.member_types[member_idx]);
-  offset = (offset + final_member_layout.align - 1) & ~(final_member_layout.align - 1);
-
-  return offset;
 }
 
 static RuntimeValue *
@@ -831,8 +736,10 @@ execute_op_cast(ExecutionContext *ctx, IRInstruction *inst)
 
   case IR_OP_BITCAST:
 
-    assert(get_type_size(get_operand_node(inst, 0)->type) == get_type_size(dest_type) && "Bitcast size mismatch");
-    memcpy(&rt_res->as, &rt_in->as, get_type_size(dest_type));
+    assert(datalayout_get_type_size(ctx->interp->data_layout, get_operand_node(inst, 0)->type) ==
+             datalayout_get_type_size(ctx->interp->data_layout, dest_type) &&
+           "Bitcast size mismatch");
+    memcpy(&rt_res->as, &rt_in->as, datalayout_get_type_size(ctx->interp->data_layout, dest_type));
     break;
 
   default:
@@ -945,7 +852,7 @@ execute_basic_block(ExecutionContext *ctx, IRBasicBlock *bb, IRBasicBlock *prev_
 
     case IR_OP_ALLOCA: {
       IRType *pointee_type = inst->result.type->as.pointee_type;
-      BumpLayout layout = get_type_layout(pointee_type);
+      BumpLayout layout = datalayout_get_type_layout(ctx->interp->data_layout, pointee_type);
 
       void *host_ptr = bump_alloc(&ctx->stack_arena, layout.size, layout.align);
 
@@ -968,7 +875,8 @@ execute_basic_block(ExecutionContext *ctx, IRBasicBlock *bb, IRBasicBlock *prev_
       RuntimeValue *rt_ptr = get_value(ctx, get_operand_node(inst, 1));
       assert(rt_ptr->kind == RUNTIME_VAL_PTR);
 
-      memcpy(rt_ptr->as.val_ptr, &rt_val->as, get_type_size(get_operand_node(inst, 0)->type));
+      memcpy(rt_ptr->as.val_ptr, &rt_val->as,
+             datalayout_get_type_size(ctx->interp->data_layout, get_operand_node(inst, 0)->type));
       break;
     }
     case IR_OP_LOAD: {
@@ -977,7 +885,7 @@ execute_basic_block(ExecutionContext *ctx, IRBasicBlock *bb, IRBasicBlock *prev_
       RuntimeValue *rt_res = BUMP_ALLOC_ZEROED(&ctx->value_arena, RuntimeValue);
       rt_res->kind = ir_to_runtime_kind(inst->result.type->kind);
 
-      memcpy(&rt_res->as, rt_ptr->as.val_ptr, get_type_size(inst->result.type));
+      memcpy(&rt_res->as, rt_ptr->as.val_ptr, datalayout_get_type_size(ctx->interp->data_layout, inst->result.type));
       set_value(ctx, &inst->result, rt_res);
       break;
     }
@@ -998,14 +906,14 @@ execute_basic_block(ExecutionContext *ctx, IRBasicBlock *bb, IRBasicBlock *prev_
         if (i == 1)
         {
 
-          size_t elem_size = get_type_size(current_type);
+          size_t elem_size = datalayout_get_type_size(ctx->interp->data_layout, current_type);
           current_ptr += (idx_val * elem_size);
         }
         else if (current_type->kind == IR_TYPE_ARRAY)
         {
 
           current_type = current_type->as.array.element_type;
-          size_t elem_size = get_type_size(current_type);
+          size_t elem_size = datalayout_get_type_size(ctx->interp->data_layout, current_type);
           current_ptr += (idx_val * elem_size);
         }
         else if (current_type->kind == IR_TYPE_STRUCT)
@@ -1013,7 +921,7 @@ execute_basic_block(ExecutionContext *ctx, IRBasicBlock *bb, IRBasicBlock *prev_
 
           assert(idx_val >= 0 && (size_t)idx_val < current_type->as.aggregate.member_count);
 
-          size_t offset = get_struct_member_offset(current_type, (size_t)idx_val);
+          size_t offset = datalayout_get_struct_member_offset(ctx->interp->data_layout, current_type, (size_t)idx_val);
           current_ptr += offset;
           current_type = current_type->as.aggregate.member_types[idx_val];
         }
@@ -1198,7 +1106,7 @@ execute_basic_block(ExecutionContext *ctx, IRBasicBlock *bb, IRBasicBlock *prev_
  * (来自你的 stub)
  */
 Interpreter *
-interpreter_create(void)
+interpreter_create(DataLayout *data_layout)
 {
   Interpreter *interp = (Interpreter *)malloc(sizeof(Interpreter));
   if (!interp)
@@ -1226,6 +1134,10 @@ interpreter_create(void)
     free(interp);
     return NULL;
   }
+
+  /// 存储对 DataLayout 的 *借用*
+  interp->data_layout = data_layout;
+
   return interp;
 }
 
@@ -1264,6 +1176,7 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
                          RuntimeValue *result_out)
 {
   assert(interp && func && result_out && "Invalid arguments for interpreter");
+  assert(interp->data_layout != NULL && "Interpreter is missing its DataLayout");
 
   ExecutionContext ctx;
   ctx.interp = interp;
@@ -1316,7 +1229,7 @@ interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **a
       if (rt_ptr == NULL)
       {
 
-        BumpLayout layout = get_type_layout(g->allocated_type);
+        BumpLayout layout = datalayout_get_type_layout(interp->data_layout, g->allocated_type);
 
         void *host_global_ptr = bump_alloc_layout(ctx.interp->arena, layout);
         assert(host_global_ptr && "OOM Allocating global variable");

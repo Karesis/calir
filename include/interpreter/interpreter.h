@@ -20,6 +20,7 @@
 #include "ir/function.h"
 #include "ir/module.h"
 #include "utils/bump.h"
+#include "utils/data_layout.h"
 #include "utils/hashmap.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -116,6 +117,8 @@ typedef struct Interpreter
    */
   StrHashMap *external_function_map;
 
+  DataLayout *data_layout;
+
 } Interpreter;
 
 typedef struct ExecutionContext
@@ -152,9 +155,12 @@ typedef ExecutionResultKind (*CalicoHostFunction)(ExecutionContext *ctx, Runtime
 
 /**
  * @brief 创建一个新的解释器实例。
+ * @param data_layout [!!] 解释器将 *借用* 的数据布局。
+ * @param data_layout 必须由调用者管理生命周期，并且必须
+ * @param data_layout 存活时间长于此 Interpreter 实例。
  * @return 指向新 Interpreter 的指针。
  */
-Interpreter *interpreter_create(void);
+Interpreter *interpreter_create(DataLayout *data_layout);
 
 /**
  * @brief 销毁解释器实例并释放其所有内存。
