@@ -1,33 +1,33 @@
-# Calico-IR
+# Calico
 
+**A lightweight, zero-dependency, LLVM-inspired compiler toolkit written in pure C (C23), featuring a complete IR, analysis passes, and an interpreter.**
 
-**A lightweight, zero-dependency, LLVM-inspired Intermediate Representation (IR) framework written in pure C (C23).**
-
-[![Build Status](https://img.shields.io/github/actions/workflow/status/Karesis/calir/ci.yml?style=flat-square&logo=github)](https://github.com/Karesis/calir/actions) <!-- 替换为你的 GitHub Actions 徽章 -->
+[![Build Status](https://img.shields.io/github/actions/workflow/status/Karesis/calir/ci.yml?style=flat-square&logo=github)](https://github.com/Karesis/calir/actions) 
 ![GitHub stars](https://img.shields.io/github/stars/Karesis/calir?style=flat-square&logo=github)
 [![License](https://img.shields.io/github/license/Karesis/calir?style=flat-square&color=blue)](LICENSE)
 ![Language](https://img.shields.io/badge/Language-C23-orange.svg?style=flat-square)
 
-`Calico-IR` (or `calir`) is a personal project to build a general-purpose compiler backend, rigorously developed as part of the "Compiler Principles" coursework at UCAS.
+`Calico` is a personal project to build a general-purpose compiler backend, rigorously developed as part of the "Compiler Principles" coursework at UCAS. It is built around a lightweight, LLVM-inspired Intermediate Representation named **`calir`**.
 
-It provides the core data structures, transforms, and analysis passes required to define, build, parse, analyze, transform, and verify SSA-form IR.
+It provides the core data structures, transforms, analysis passes, and an interpreter required to define, build, parse, analyze, transform, verify, and **execute** SSA-form IR.
 
-## Why Calico-IR?
+## Why Calico?
 
-Tired of the 10+ million lines of C++ in the LLVM framework? Calico-IR is designed as a direct answer for learning, prototyping, and teaching.
+Tired of the 10+ million lines of C++ in the LLVM framework? Calico is designed as a direct answer for learning, prototyping, and teaching.
 
 * **Lightweight & Understandable:** The entire framework is small, heavily commented, and self-contained. It's designed to be studied, not just used.
 * **Pure C (C23) with Zero Dependencies:** No C++, no complex build systems, no external libraries. Just `make` and a C23-compliant compiler.
-* **Feature-Complete Core:** Don't let "lightweight" fool you. Calir includes:
+* **Feature-Complete Core:** Don't let "lightweight" fool you. Calico includes:
     * A robust `IRBuilder` API
-    * A full **Text IR Parser** with detailed, line-level error reporting
+    * A full **Text IR Parser** (`.cir` files) with detailed, line-level error reporting
+    * A tree-walking **IR Interpreter** for immediate execution
     * A strict **SSA and Type Verifier**
     * Classic **Dominator Analysis** (Lengauer-Tarjan) and Dominance Frontiers
     * The complete **`mem2reg`** pass for SSA construction
 
 ## Quick Start 1: Parsing Text IR (The "Hello, World!")
 
-Calico-IR can parse, verify, and print `.calir` text files, complete with detailed error reporting.
+Calico can parse, verify, and print `.cir` text files, complete with detailed error reporting.
 
 ```c
 #include "ir/context.h"
@@ -36,8 +36,8 @@ Calico-IR can parse, verify, and print `.calir` text files, complete with detail
 #include "ir/verifier.h"
 #include <stdio.h>
 
-// Our IR source file
-const char *IR_SOURCE =
+// Our IR source (e.g., in a .cir file)
+const char *CIR_SOURCE =
     "module = \"parsed_module\"\n"
     "\n"
     "define i32 @add(%a: i32, %b: i32) {\n"
@@ -50,7 +50,7 @@ int main() {
   IRContext *ctx = ir_context_create();
   
   // 1. Parse
-  IRModule *mod = ir_parse_module(ctx, IR_SOURCE);
+  IRModule *mod = ir_parse_module(ctx, CIR_SOURCE);
 
   if (mod == NULL) {
     fprintf(stderr, "Failed to parse IR.\n");
@@ -93,7 +93,7 @@ You can also build complex IR programmatically using the `IRBuilder` API.
 
 ### Target IR
 
-This is the `.calir` text we want to build. It uses named structs, `alloca`, and the `gep` (Get Element Pointer) instruction.
+This is the `.cir` text we want to build. It uses named structs, `alloca`, and the `gep` (Get Element Pointer) instruction.
 
 ```llvm
 module = "test_module"
@@ -224,10 +224,104 @@ main()
 
 -----
 
+## Quick Start 3: Executing IR with the Interpreter
+
+Calico includes a simple tree-walking interpreter that can directly execute `calir` IR. This is perfect for testing, debugging, or even using `calir` as a scripting backend.
+
+Here is how you can parse the "Hello, World\!" example and execute the `@add` function:
+
+```c
+#include "interpreter/interpreter.h"
+#include "ir/context.h"
+#include "ir/function.h"
+#include "ir/module.h"
+#include "ir/parser.h"
+#include "utils/data_layout.h"
+#include <stdio.h>
+#include <string.h>
+
+// (From Quick Start 1)
+const char *CIR_SOURCE =
+    "module = \"parsed_module\"\n"
+    "\n"
+    "define i32 @add(%a: i32, %b: i32) {\n"
+    "$entry:\n"
+    "  %sum: i32 = add %a: i32, %b: i32\n"
+    "  ret %sum: i32\n"
+    "}\n";
+
+int main() {
+  IRContext *ctx = ir_context_create();
+  DataLayout *dl = datalayout_create_host();
+  Interpreter *interp = interpreter_create(dl);
+
+  // 1. Parse the module
+  IRModule *mod = ir_parse_module(ctx, CIR_SOURCE);
+  if (mod == NULL) {
+    fprintf(stderr, "Failed to parse IR.\n");
+    goto cleanup;
+  }
+
+  // 2. Find the "@add" function
+  IRFunction *add_func = NULL;
+  IDList *it;
+  list_for_each(&mod->functions, it) {
+    IRFunction *f = list_entry(it, IRFunction, list_node);
+    if (strcmp(f->entry_address.name, "add") == 0) {
+      add_func = f;
+      break;
+    }
+  }
+
+  if (add_func == NULL) {
+    fprintf(stderr, "Could not find function '@add' in module.\n");
+    goto cleanup;
+  }
+
+  // 3. Prepare arguments: 10 and 20
+  RuntimeValue rt_a;
+  rt_a.kind = RUNTIME_VAL_I32;
+  rt_a.as.val_i32 = 10;
+
+  RuntimeValue rt_b;
+  rt_b.kind = RUNTIME_VAL_I32;
+  rt_b.as.val_i32 = 20;
+
+  RuntimeValue *args[] = {&rt_a, &rt_b};
+
+  // 4. Run the function
+  RuntimeValue result;
+  bool success = interpreter_run_function(interp, add_func, args, 2, &result);
+
+  // 5. Print the result
+  if (success && result.kind == RUNTIME_VAL_I32) {
+    printf("Result of @add(10, 20): %d\n", result.as.val_i32);
+  } else {
+    fprintf(stderr, "Interpreter run failed!\n");
+  }
+
+cleanup:
+  interpreter_destroy(interp);
+  datalayout_destroy(dl);
+  ir_context_destroy(ctx);
+  return 0;
+}
+```
+
+**Output:**
+
+```
+$ ./my_interpreter_test
+Result of @add(10, 20): 30
+```
+
+-----
+
 ## Core Features
 
+  * **Interpreter (`interpreter/`)**: A tree-walking interpreter capable of executing `calir` IR, complete with stack and heap management, for debugging and testing.
   * **IR Core (`ir/`)**: Robust **Use-Def chain** implementation, rich type system (primitives, pointers, arrays, named/anonymous structs), central `IRContext` for **type/constant/string interning**, and a feature-complete `IRBuilder` API (`alloca`, `load`, `store`, `gep`, `phi`, etc.).
-  * **Text IR (`ir/`)**: A full **Text IR Parser** (`ir_parse_module`) and **IR Printer** (`IRPrinter`) for serializing IR to files, `stdout`, or strings.
+  * **Text IR (`ir/`)**: A full **Text IR Parser** (`ir_parse_module`) and **IR Printer** (`IRPrinter`) for serializing IR to files (`.cir`), `stdout`, or strings.
   * **Verifier (`ir/`)**: A critical **IR Verifier** (`ir_verify_module`) that checks for correctness (e.g., SSA dominance rules, type matching).
   * **Analysis (`analysis/`)**: Includes **Control Flow Graph (CFG)** generation, **Dominator Tree** calculation (Lengauer-Tarjan), and **Dominance Frontier** calculation.
   * **Transforms (`transforms/`)**: Implements the classic **"Memory to Register" (`mem2reg`)** pass to promote `alloca`/`load`/`store` to SSA-form `phi` nodes.
@@ -258,14 +352,14 @@ main()
 
 ## Roadmap
 
-The core framework is stable. Future goals are focused on implementing the interpreter and more optimization passes.
+The core framework is stable. Future goals are focused on implementing more optimization passes.
 
-  * [ ] **IR Interpreter (`ir/interpreter`)**
-      * **(Current Goal)** Implement a tree-walking interpreter for executing and debugging IR.
+  * [x] **IR Interpreter (`interpreter/`)**
+      * **(Completed)** Implement a tree-walking interpreter for executing and debugging IR.
   * [x] **IR Text Parser (`ir/parser`)**
       * **Completed.**
   * [x] **Core Instruction Set (`ir/*`)**
-      * **Completed.** Defined and implemented the full set of standard opcodes (integer, float, bitwise, casts) across the entire framework (Builder, Parser, Verifier, Printer).
+      * **Completed.** Defined and implemented the full set of standard opcodes (integer, float, bitwise, casts) across the entire framework (Builder, Parser, Verifier, Printer, and Interpreter).
   * [x] **Dominance Frontier (`analysis/dom_frontier`)**
       * **Completed.**
   * [x] **Mem2Reg Pass (`transforms/mem2reg`)**
@@ -276,8 +370,8 @@ The core framework is stable. Future goals are focused on implementing the inter
 
 ## Contributing
 
-Contributions, issues, and feedback are warmly welcome\! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions, issues, and feedback are warmly welcome\! Please see [CONTRIBUTING.md](https://www.google.com/search?q=CONTRIBUTING.md) for guidelines.
 
 ## License
 
-This project is licensed under the Apache-2.0 License. See the [LICENSE](LICENSE) and [NOTICE](NOTICE) files for details.
+This project is licensed under the Apache-2.0 License. See the [LICENSE](https://www.google.com/search?q=LICENSE) and [NOTICE](https://www.google.com/search?q=NOTICE) files for details.
