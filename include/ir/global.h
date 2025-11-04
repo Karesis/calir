@@ -27,7 +27,7 @@
 /**
  * @brief 全局变量
  *
- * 代表一个在模块级别的具名变量 (e.g., @my_global = global i32 0)
+ * 代表一个在模块级别的具名变量
  * 它的 IRValueNode (value) 代表它的 *地址*。
  */
 typedef struct IRGlobalVariable
