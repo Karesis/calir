@@ -352,18 +352,27 @@ Result of @add(10, 20): 30
 
 ## Roadmap
 
-The core framework is stable. Future goals are focused on implementing more optimization passes.
+The core IR, passes, and interpreter are stable. Future goals are focused on building a high-quality native backend targeting RISC-V.
 
   * [x] **IR Interpreter (`interpreter/`)**
-      * **(Completed)** Implement a tree-walking interpreter for executing and debugging IR.
+      * **(Completed)** A tree-walking interpreter for debugging IR.
   * [x] **IR Text Parser (`ir/parser`)**
-      * **Completed.**
+      * **(Completed)**
   * [x] **Core Instruction Set (`ir/*`)**
-      * **Completed.** Defined and implemented the full set of standard opcodes (integer, float, bitwise, casts) across the entire framework (Builder, Parser, Verifier, Printer, and Interpreter).
+      * **(Completed)**
   * [x] **Dominance Frontier (`analysis/dom_frontier`)**
-      * **Completed.**
+      * **(Completed)**
   * [x] **Mem2Reg Pass (`transforms/mem2reg`)**
-      * **Completed.**
+      * **(Completed)**
+  * [ ] **Backend: RISC-V (Current Goal)**
+      * [ ] **Instruction Selection:** Translate `calir` (IR) to `MachineInstr` (MIR) using virtual registers.
+      * [ ] **Register Allocation (Graph Coloring):**
+          * [ ] **Liveness Analysis:** Build live intervals for all virtual registers.
+          * [ ] **Interference Graph:** Build the register interference graph.
+          * [ ] **Coloring/Spilling:** Implement Chaitin-Briggs graph coloring and spill-code generation.
+      * [ ] **MC/ELF Emitter:**
+          * [ ] **Instruction Encoding:** Implement binary encoding for RISC-V `MachineInstr`s.
+          * [ ] **Object File Emitter:** Generate a relocatable ELF (`.o`) file containing `.text`, `.symtab`, `.rela.text`, etc.
   * [ ] **Simple Optimizations (`transforms/*`)**
       * [ ] Constant Folding
       * [ ] Dead Code Elimination (DCE)
