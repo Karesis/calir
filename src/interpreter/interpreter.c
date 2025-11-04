@@ -31,6 +31,7 @@
 #include "utils/id_list.h"
 
 #include <assert.h>
+#include <limits.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -182,7 +183,7 @@ set_value(ExecutionContext *ctx, IRValueNode *val_node, RuntimeValue *rt_val)
  */
 
 /**
- * @brief [!!] (新增) 执行 'select' 指令
+ * @brief 执行 'select' 指令
  */
 static ExecutionResultKind
 execute_op_select(ExecutionContext *ctx, IRInstruction *inst)
@@ -200,7 +201,7 @@ execute_op_select(ExecutionContext *ctx, IRInstruction *inst)
 }
 
 /**
- * @brief [!!] (新增) 执行整数/位运算
+ * @brief 执行整数/位运算
  */
 static ExecutionResultKind
 execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
@@ -211,44 +212,72 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
 
   rt_res->kind = rt_lhs->kind;
 
+  // [!!] (已重构) 按类型分别处理，以确保正确的溢出/环绕
   switch (rt_lhs->kind)
   {
-  /// --- (为简洁起见，我们将 i1/i8/i16/i32 提升到 i64 来计算) ---
-  /// [TODO] 一个更精确的实现会分别处理它们以确保正确的溢出/环绕
-  case RUNTIME_VAL_I1:
-  case RUNTIME_VAL_I8:
-  case RUNTIME_VAL_I16:
-  case RUNTIME_VAL_I32:
-  case RUNTIME_VAL_I64: {
+  case RUNTIME_VAL_I1: {
+    // 将 i1 视为 i8 进行计算
+    int8_t lhs = (int8_t)rt_lhs->as.val_i1;
+    int8_t rhs = (int8_t)rt_rhs->as.val_i1;
+    int8_t res = 0;
+    const uint8_t bit_width = 1;
+    // (i1 移位是特殊的)
+    uint8_t safe_amt = (uint8_t)rhs & (bit_width - 1); // 掩码到 0
 
-    int64_t lhs = 0, rhs = 0;
-    switch (rt_lhs->kind)
+    switch (inst->opcode)
     {
-    case RUNTIME_VAL_I1:
-      lhs = rt_lhs->as.val_i1;
-      rhs = rt_rhs->as.val_i1;
+    case IR_OP_ADD:
+      res = lhs + rhs;
       break;
-    case RUNTIME_VAL_I8:
-      lhs = rt_lhs->as.val_i8;
-      rhs = rt_rhs->as.val_i8;
+    case IR_OP_SUB:
+      res = lhs - rhs;
       break;
-    case RUNTIME_VAL_I16:
-      lhs = rt_lhs->as.val_i16;
-      rhs = rt_rhs->as.val_i16;
+    case IR_OP_MUL:
+      res = lhs * rhs;
       break;
-    case RUNTIME_VAL_I32:
-      lhs = rt_lhs->as.val_i32;
-      rhs = rt_rhs->as.val_i32;
+    case IR_OP_SDIV:
+    case IR_OP_SREM:
+    case IR_OP_UDIV:
+    case IR_OP_UREM:
+      ctx->error_message = "Runtime Error: Division/Remainder on i1 type is invalid.";
+      return EXEC_ERR_INVALID_PTR;
+    // 位运算
+    case IR_OP_SHL:
+      res = (int8_t)((uint8_t)lhs << safe_amt);
+      break; // 总是 0
+    case IR_OP_LSHR:
+      res = (int8_t)((uint8_t)lhs >> safe_amt);
+      break; // 总是 0
+    case IR_OP_ASHR:
+      res = lhs >> safe_amt;
+      break; // 总是 0
+    case IR_OP_AND:
+      res = lhs & rhs;
       break;
-    case RUNTIME_VAL_I64:
-      lhs = rt_lhs->as.val_i64;
-      rhs = rt_rhs->as.val_i64;
+    case IR_OP_OR:
+      res = lhs | rhs;
+      break;
+    case IR_OP_XOR:
+      res = lhs ^ rhs;
       break;
     default:
       assert(false && "unreachable");
     }
+    rt_res->as.val_i1 = (bool)(res & 1); // 写回 i1
+    break;
+  }
 
-    int64_t res = 0;
+  case RUNTIME_VAL_I8: {
+    int8_t lhs = rt_lhs->as.val_i8;
+    int8_t rhs = rt_rhs->as.val_i8;
+    int8_t res = 0;
+
+    // [!!] (修复 UB) 清理移位量
+    const uint8_t bit_width = 8;
+    // 1. 将 rhs (int8_t) 视为无符号 (uint8_t)
+    // 2. 掩码到 [0, 7]
+    uint8_t safe_amt = (uint8_t)rhs & (bit_width - 1);
+
     switch (inst->opcode)
     {
     case IR_OP_ADD:
@@ -263,46 +292,60 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
     case IR_OP_SDIV:
       if (rhs == 0)
       {
-        ctx->error_message = "Runtime Error: Signed division by zero";
+        ctx->error_message = "Runtime Error: i8 Signed division by zero";
         return EXEC_ERR_DIV_BY_ZERO_S;
       }
-      res = lhs / rhs;
+      if (lhs == INT8_MIN && rhs == -1)
+      {
+        res = INT8_MIN;
+      }
+      else
+      {
+        res = lhs / rhs;
+      }
       break;
     case IR_OP_SREM:
       if (rhs == 0)
       {
-        ctx->error_message = "Runtime Error: Signed remainder by zero";
+        ctx->error_message = "Runtime Error: i8 Signed remainder by zero";
         return EXEC_ERR_DIV_BY_ZERO_S;
       }
-      res = lhs % rhs;
+      if (lhs == INT8_MIN && rhs == -1)
+      {
+        res = 0;
+      }
+      else
+      {
+        res = lhs % rhs;
+      }
       break;
-
     case IR_OP_UDIV:
       if (rhs == 0)
       {
-        ctx->error_message = "Runtime Error: Unsigned division by zero";
+        ctx->error_message = "Runtime Error: i8 Unsigned division by zero";
         return EXEC_ERR_DIV_BY_ZERO_U;
       }
-      res = (int64_t)((uint64_t)lhs / (uint64_t)rhs);
+      res = (int8_t)((uint8_t)lhs / (uint8_t)rhs);
       break;
     case IR_OP_UREM:
       if (rhs == 0)
       {
-        ctx->error_message = "Runtime Error: Unsigned remainder by zero";
+        ctx->error_message = "Runtime Error: i8 Unsigned remainder by zero";
         return EXEC_ERR_DIV_BY_ZERO_U;
       }
-      res = (int64_t)((uint64_t)lhs % (uint64_t)rhs);
+      res = (int8_t)((uint8_t)lhs % (uint8_t)rhs);
       break;
-
+    // [!!] (修复 UB)
     case IR_OP_SHL:
-      res = lhs << rhs;
+      res = (int8_t)((uint8_t)lhs << safe_amt);
       break;
     case IR_OP_LSHR:
-      res = (int64_t)((uint64_t)lhs >> (uint64_t)rhs);
+      res = (int8_t)((uint8_t)lhs >> safe_amt);
       break;
     case IR_OP_ASHR:
-      res = lhs >> rhs;
-      break;
+      res = lhs >> safe_amt;
+      break; // safe_amt 保证了 C 的 `>>` 是安全的
+
     case IR_OP_AND:
       res = lhs & rhs;
       break;
@@ -315,27 +358,286 @@ execute_op_int_binary(ExecutionContext *ctx, IRInstruction *inst)
     default:
       assert(false && "unreachable");
     }
+    rt_res->as.val_i8 = res;
+    break;
+  }
 
-    switch (rt_res->kind)
+  case RUNTIME_VAL_I16: {
+    int16_t lhs = rt_lhs->as.val_i16;
+    int16_t rhs = rt_rhs->as.val_i16;
+    int16_t res = 0;
+
+    // [!!] (修复 UB) 清理移位量
+    const uint16_t bit_width = 16;
+    uint16_t safe_amt = (uint16_t)rhs & (bit_width - 1);
+
+    switch (inst->opcode)
     {
-    case RUNTIME_VAL_I1:
-      rt_res->as.val_i1 = (bool)(res & 1);
+    case IR_OP_ADD:
+      res = lhs + rhs;
       break;
-    case RUNTIME_VAL_I8:
-      rt_res->as.val_i8 = (int8_t)res;
+    case IR_OP_SUB:
+      res = lhs - rhs;
       break;
-    case RUNTIME_VAL_I16:
-      rt_res->as.val_i16 = (int16_t)res;
+    case IR_OP_MUL:
+      res = lhs * rhs;
       break;
-    case RUNTIME_VAL_I32:
-      rt_res->as.val_i32 = (int32_t)res;
+    case IR_OP_SDIV:
+      if (rhs == 0)
+      {
+        ctx->error_message = "Runtime Error: i16 Signed division by zero";
+        return EXEC_ERR_DIV_BY_ZERO_S;
+      }
+      if (lhs == INT16_MIN && rhs == -1)
+      {
+        res = INT16_MIN;
+      }
+      else
+      {
+        res = lhs / rhs;
+      }
       break;
-    case RUNTIME_VAL_I64:
-      rt_res->as.val_i64 = (int64_t)res;
+    case IR_OP_SREM:
+      if (rhs == 0)
+      {
+        ctx->error_message = "Runtime Error: i16 Signed remainder by zero";
+        return EXEC_ERR_DIV_BY_ZERO_S;
+      }
+      if (lhs == INT16_MIN && rhs == -1)
+      {
+        res = 0;
+      }
+      else
+      {
+        res = lhs % rhs;
+      }
+      break;
+    case IR_OP_UDIV:
+      if (rhs == 0)
+      {
+        ctx->error_message = "Runtime Error: i16 Unsigned division by zero";
+        return EXEC_ERR_DIV_BY_ZERO_U;
+      }
+      res = (int16_t)((uint16_t)lhs / (uint16_t)rhs);
+      break;
+    case IR_OP_UREM:
+      if (rhs == 0)
+      {
+        ctx->error_message = "Runtime Error: i16 Unsigned remainder by zero";
+        return EXEC_ERR_DIV_BY_ZERO_U;
+      }
+      res = (int16_t)((uint16_t)lhs % (uint16_t)rhs);
+      break;
+    // [!!] (修复 UB)
+    case IR_OP_SHL:
+      res = (int16_t)((uint16_t)lhs << safe_amt);
+      break;
+    case IR_OP_LSHR:
+      res = (int16_t)((uint16_t)lhs >> safe_amt);
+      break;
+    case IR_OP_ASHR:
+      res = lhs >> safe_amt;
+      break;
+
+    case IR_OP_AND:
+      res = lhs & rhs;
+      break;
+    case IR_OP_OR:
+      res = lhs | rhs;
+      break;
+    case IR_OP_XOR:
+      res = lhs ^ rhs;
       break;
     default:
       assert(false && "unreachable");
     }
+    rt_res->as.val_i16 = res;
+    break;
+  }
+
+  case RUNTIME_VAL_I32: {
+    int32_t lhs = rt_lhs->as.val_i32;
+    int32_t rhs = rt_rhs->as.val_i32;
+    int32_t res = 0;
+
+    // [!!] (修复 UB) 清理移位量
+    const uint32_t bit_width = 32;
+    uint32_t safe_amt = (uint32_t)rhs & (bit_width - 1);
+
+    switch (inst->opcode)
+    {
+    case IR_OP_ADD:
+      res = lhs + rhs;
+      break;
+    case IR_OP_SUB:
+      res = lhs - rhs;
+      break;
+    case IR_OP_MUL:
+      res = lhs * rhs;
+      break;
+    case IR_OP_SDIV:
+      if (rhs == 0)
+      {
+        ctx->error_message = "Runtime Error: i32 Signed division by zero";
+        return EXEC_ERR_DIV_BY_ZERO_S;
+      }
+      if (lhs == INT32_MIN && rhs == -1)
+      {
+        res = INT32_MIN;
+      }
+      else
+      {
+        res = lhs / rhs;
+      }
+      break;
+    case IR_OP_SREM:
+      if (rhs == 0)
+      {
+        ctx->error_message = "Runtime Error: i32 Signed remainder by zero";
+        return EXEC_ERR_DIV_BY_ZERO_S;
+      }
+      if (lhs == INT32_MIN && rhs == -1)
+      {
+        res = 0;
+      }
+      else
+      {
+        res = lhs % rhs;
+      }
+      break;
+    case IR_OP_UDIV:
+      if (rhs == 0)
+      {
+        ctx->error_message = "Runtime Error: i32 Unsigned division by zero";
+        return EXEC_ERR_DIV_BY_ZERO_U;
+      }
+      res = (int32_t)((uint32_t)lhs / (uint32_t)rhs);
+      break;
+    case IR_OP_UREM:
+      if (rhs == 0)
+      {
+        ctx->error_message = "Runtime Error: i32 Unsigned remainder by zero";
+        return EXEC_ERR_DIV_BY_ZERO_U;
+      }
+      res = (int32_t)((uint32_t)lhs % (uint32_t)rhs);
+      break;
+    // [!!] (修复 UB)
+    case IR_OP_SHL:
+      res = (int32_t)((uint32_t)lhs << safe_amt);
+      break;
+    case IR_OP_LSHR:
+      res = (int32_t)((uint32_t)lhs >> safe_amt);
+      break;
+    case IR_OP_ASHR:
+      res = lhs >> safe_amt;
+      break;
+
+    case IR_OP_AND:
+      res = lhs & rhs;
+      break;
+    case IR_OP_OR:
+      res = lhs | rhs;
+      break;
+    case IR_OP_XOR:
+      res = lhs ^ rhs;
+      break;
+    default:
+      assert(false && "unreachable");
+    }
+    rt_res->as.val_i32 = res;
+    break;
+  }
+
+  case RUNTIME_VAL_I64: {
+    int64_t lhs = rt_lhs->as.val_i64;
+    int64_t rhs = rt_rhs->as.val_i64;
+    int64_t res = 0;
+
+    // [!!] (修复 UB) 清理移位量
+    const uint64_t bit_width = 64;
+    uint64_t safe_amt = (uint64_t)rhs & (bit_width - 1);
+
+    switch (inst->opcode)
+    {
+    case IR_OP_ADD:
+      res = lhs + rhs;
+      break;
+    case IR_OP_SUB:
+      res = lhs - rhs;
+      break;
+    case IR_OP_MUL:
+      res = lhs * rhs;
+      break;
+    case IR_OP_SDIV:
+      if (rhs == 0)
+      {
+        ctx->error_message = "Runtime Error: i64 Signed division by zero";
+        return EXEC_ERR_DIV_BY_ZERO_S;
+      }
+      if (lhs == INT64_MIN && rhs == -1)
+      {
+        res = INT64_MIN;
+      }
+      else
+      {
+        res = lhs / rhs;
+      }
+      break;
+    case IR_OP_SREM:
+      if (rhs == 0)
+      {
+        ctx->error_message = "Runtime Error: i64 Signed remainder by zero";
+        return EXEC_ERR_DIV_BY_ZERO_S;
+      }
+      if (lhs == INT64_MIN && rhs == -1)
+      {
+        res = 0;
+      }
+      else
+      {
+        res = lhs % rhs;
+      }
+      break;
+    case IR_OP_UDIV:
+      if (rhs == 0)
+      {
+        ctx->error_message = "Runtime Error: i64 Unsigned division by zero";
+        return EXEC_ERR_DIV_BY_ZERO_U;
+      }
+      res = (int64_t)((uint64_t)lhs / (uint64_t)rhs);
+      break;
+    case IR_OP_UREM:
+      if (rhs == 0)
+      {
+        ctx->error_message = "Runtime Error: i64 Unsigned remainder by zero";
+        return EXEC_ERR_DIV_BY_ZERO_U;
+      }
+      res = (int64_t)((uint64_t)lhs % (uint64_t)rhs);
+      break;
+    // [!!] (修复 UB)
+    case IR_OP_SHL:
+      res = (int64_t)((uint64_t)lhs << safe_amt);
+      break;
+    case IR_OP_LSHR:
+      res = (int64_t)((uint64_t)lhs >> safe_amt);
+      break;
+    case IR_OP_ASHR:
+      res = lhs >> safe_amt;
+      break;
+
+    case IR_OP_AND:
+      res = lhs & rhs;
+      break;
+    case IR_OP_OR:
+      res = lhs | rhs;
+      break;
+    case IR_OP_XOR:
+      res = lhs ^ rhs;
+      break;
+    default:
+      assert(false && "unreachable");
+    }
+    rt_res->as.val_i64 = res;
     break;
   }
 
