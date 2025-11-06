@@ -15,8 +15,7 @@
  */
 
 /* include/hashmap/int.h */
-#ifndef HASHMAP_INT_H
-#define HASHMAP_INT_H
+#pragma once
 
 #include "utils/bump.h"
 #include <stdbool.h>
@@ -124,5 +123,3 @@ CHASHMAP_INT_TYPES(CHM_DECLARE_INT_FUNCS)
 #undef CHM_DECLARE_INT_FUNCS
 
 #undef CHASHMAP_INT_TYPES
-
-#endif

@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef BASIC_BLOCK_H
-#define BASIC_BLOCK_H
+#pragma once
 
 #include "ir/function.h"
 #include "ir/printer.h"
@@ -56,5 +55,3 @@ void ir_function_append_basic_block(IRFunction *func, IRBasicBlock *bb);
  * @param p 打印机 (策略)
  */
 void ir_basic_block_dump(IRBasicBlock *bb, IRPrinter *p);
-
-#endif

@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef CALIR_STRING_BUF_H
-#define CALIR_STRING_BUF_H
+#pragma once
 
 #include "utils/bump.h"
 #include <stdarg.h>
@@ -43,5 +42,3 @@ void string_buf_append_bytes(StringBuf *buf, const char *data, size_t len);
 void string_buf_vappend_fmt(StringBuf *buf, const char *fmt, va_list args);
 void string_buf_append_fmt(StringBuf *buf, const char *fmt, ...);
 const char *string_buf_get(StringBuf *buf);
-
-#endif

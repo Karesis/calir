@@ -15,8 +15,7 @@
  */
 
 /* include/hashmap/float.h */
-#ifndef HASHMAP_FLOAT_H
-#define HASHMAP_FLOAT_H
+#pragma once
 
 #include "utils/bump.h"
 #include <stdbool.h>
@@ -116,5 +115,3 @@ CHASHMAP_FLOAT_TYPES(CHM_DECLARE_FLOAT_FUNCS)
 #undef CHM_DECLARE_FLOAT_FUNCS
 
 #undef CHASHMAP_FLOAT_TYPES
-
-#endif

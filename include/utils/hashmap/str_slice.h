@@ -15,8 +15,7 @@
  */
 
 /* include/hashmap/str_slice.h */
-#ifndef HASHMAP_STR_SLICE_H
-#define HASHMAP_STR_SLICE_H
+#pragma once
 
 #include "utils/bump.h"
 #include <stdbool.h>
@@ -130,5 +129,3 @@ size_t str_hashmap_size(const StrHashMap *map);
 
 StrHashMapIter str_hashmap_iter(const StrHashMap *map);
 bool str_hashmap_iter_next(StrHashMapIter *iter, StrHashMapEntry *entry_out);
-
-#endif

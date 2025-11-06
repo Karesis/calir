@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef IR_USE_H
-#define IR_USE_H
+#pragma once
 
 #include "ir/context.h"
 #include "ir/instruction.h"
@@ -73,5 +72,3 @@ void ir_use_unlink(IRUse *use);
  * @param new_val 新的目标 Value
  */
 void ir_use_set_value(IRUse *use, IRValueNode *new_val);
-
-#endif

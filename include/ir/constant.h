@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef IR_CONSTANT_H
-#define IR_CONSTANT_H
+#pragma once
 
 #include "ir/context.h"
 #include "ir/type.h"
@@ -91,5 +90,3 @@ IRValueNode *ir_constant_create_int(IRContext *ctx, IRType *type, int64_t value)
  * @return 指向新常量的 IRValueNode*
  */
 IRValueNode *ir_constant_create_float(IRContext *ctx, IRType *type, double value);
-
-#endif

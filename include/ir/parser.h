@@ -15,8 +15,7 @@
  */
 
 /* include/ir/parser.h */
-#ifndef IR_PARSER_H
-#define IR_PARSER_H
+#pragma once
 
 #include "ir/builder.h"
 #include "ir/context.h"
@@ -105,5 +104,3 @@ typedef struct Parser
  * @return NULL 如果解析失败 (例如语法错误)。
  */
 IRModule *ir_parse_module(IRContext *ctx, const char *source_buffer);
-
-#endif

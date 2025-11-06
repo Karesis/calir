@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef FUNCTION_H
-#define FUNCTION_H
+#pragma once
 
 #include "ir/module.h"
 #include "ir/printer.h"
@@ -85,5 +84,3 @@ IRArgument *ir_argument_create(IRFunction *func, IRType *type, const char *name)
 void ir_function_finalize_signature(IRFunction *func, bool is_variadic);
 
 void ir_function_dump(IRFunction *func, IRPrinter *p);
-
-#endif

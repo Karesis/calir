@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef CALIR_TEST_HELPERS_H
-#define CALIR_TEST_HELPERS_H
+#pragma once
 
 /*
  * =================================================================
@@ -146,5 +145,3 @@ build_golden_ir(IRContext *ctx, IRBuilder *builder)
 
   return mod;
 }
-
-#endif

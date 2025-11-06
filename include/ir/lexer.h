@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef CALIR_IR_LEXER_H
-#define CALIR_IR_LEXER_H
+#pragma once
 
 #include "ir/context.h"
 #include <stddef.h>
@@ -230,5 +229,3 @@ const Token *ir_lexer_peek_token(const Lexer *lexer);
  * @return 如果 Token 匹配则返回 true，否则返回 false (并设置 TK_ILLEGAL)
  */
 bool ir_lexer_eat(Lexer *lexer, TokenType expected);
-
-#endif

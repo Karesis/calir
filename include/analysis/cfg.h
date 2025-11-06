@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef CALIR_ANALYSIS_CFG_H
-#define CALIR_ANALYSIS_CFG_H
+#pragma once
 
 #include "ir/basicblock.h"
 #include "ir/function.h"
@@ -85,5 +84,3 @@ cfg_get_node(FunctionCFG *cfg, IRBasicBlock *bb)
 {
   return (CFGNode *)ptr_hashmap_get(cfg->block_to_node_map, bb);
 }
-
-#endif

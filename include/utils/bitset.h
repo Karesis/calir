@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef CALIR_UTILS_BITSET_H
-#define CALIR_UTILS_BITSET_H
+#pragma once
 
 #include "utils/bump.h"
 #include <stdbool.h>
@@ -110,5 +109,3 @@ void bitset_difference(Bitset *dest, const Bitset *src1, const Bitset *src2);
  * @brief [调试用] 统计集合中 1 的数量 (较慢)
  */
 size_t bitset_count_slow(const Bitset *bs);
-
-#endif

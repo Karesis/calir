@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef IR_LIST_H
-#define IR_LIST_H
+#pragma once
 
 #include <stddef.h>
 
@@ -136,5 +135,3 @@ list_empty(const IDList *head)
 #define list_for_each_safe(head, iter_node, temp_node)                                                                 \
   for ((iter_node) = (head)->next, (temp_node) = (iter_node)->next; (iter_node) != (head);                             \
        (iter_node) = (temp_node), (temp_node) = (iter_node)->next)
-
-#endif

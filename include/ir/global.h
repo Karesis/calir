@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef IR_GLOBAL_H
-#define IR_GLOBAL_H
+#pragma once
 
 #include "ir/context.h"
 #include "ir/module.h"
@@ -62,5 +61,3 @@ IRGlobalVariable *ir_global_variable_create(IRModule *mod, const char *name, IRT
  * @param p 打印机 (策略)
  */
 void ir_global_variable_dump(IRGlobalVariable *global, IRPrinter *p);
-
-#endif

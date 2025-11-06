@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef CALIR_IR_PRINTER_H
-#define CALIR_IR_PRINTER_H
+#pragma once
 
 #include "utils/string_buf.h"
 #include <stdarg.h>
@@ -65,5 +64,3 @@ void ir_print_str(IRPrinter *p, const char *str);
  * (等同于 fprintf(f, "...", ...))
  */
 void ir_printf(IRPrinter *p, const char *fmt, ...);
-
-#endif

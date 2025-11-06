@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef INSTRUCTION_H
-#define INSTRUCTION_H
+#pragma once
 
 #include "ir/basicblock.h"
 #include "ir/printer.h"
@@ -163,5 +162,3 @@ void ir_instruction_erase_from_parent(IRInstruction *inst);
  * @param p 打印机 (策略)
  */
 void ir_instruction_dump(IRInstruction *inst, IRPrinter *p);
-
-#endif

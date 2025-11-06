@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef CALIR_TEST_UTILS_H
-#define CALIR_TEST_UTILS_H
+#pragma once
 
 #include <stdio.h>
 #include <string.h>
@@ -133,5 +132,3 @@ static int __calir_current_suite_passed = 0;
       return 1;                                                                                                        \
     }                                                                                                                  \
   } while (0)
-
-#endif

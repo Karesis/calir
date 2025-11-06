@@ -21,8 +21,7 @@
  * `bumpalo` library: https://github.com/fitzgen/bumpalo
  */
 
-#ifndef BUMP_H
-#define BUMP_H
+#pragma once
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -255,5 +254,3 @@ size_t bump_get_allocated_bytes(Bump *bump);
  */
 #define BUMP_REALLOC_SLICE(bump_ptr, T, old_ptr, old_count, new_count)                                                 \
   ((T *)bump_realloc((bump_ptr), (old_ptr), sizeof(T) * (old_count), sizeof(T) * (new_count), _Alignof(T)))
-
-#endif

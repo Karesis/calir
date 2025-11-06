@@ -15,8 +15,7 @@
  */
 
 /* include/utils/hashmap/generic.h */
-#ifndef HASHMAP_GENERIC_H
-#define HASHMAP_GENERIC_H
+#pragma once
 
 #include "utils/bump.h"
 #include <stdbool.h>
@@ -137,5 +136,3 @@ GenericHashMapIter generic_hashmap_iter(const GenericHashMap *map);
  * @return false 如果已到达末尾。
  */
 bool generic_hashmap_iter_next(GenericHashMapIter *iter, GenericHashMapEntry *entry_out);
-
-#endif

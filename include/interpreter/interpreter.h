@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef CALIR_INTERPRETER_INTERPRETER_H
-#define CALIR_INTERPRETER_INTERPRETER_H
+#pragma once
 
 #include "ir/function.h"
 #include "ir/module.h"
@@ -190,5 +189,3 @@ void interpreter_register_external_function(Interpreter *interp, const char *nam
  */
 bool interpreter_run_function(Interpreter *interp, IRFunction *func, RuntimeValue **args, size_t num_args,
                               RuntimeValue *result_out);
-
-#endif

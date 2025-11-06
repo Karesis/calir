@@ -15,8 +15,7 @@
  */
 
 /* hashmap/_ptr.h */
-#ifndef HASHMAP_PTR_H
-#define HASHMAP_PTR_H
+#pragma once
 
 #include "utils/bump.h"
 #include <stdbool.h>
@@ -107,5 +106,3 @@ size_t ptr_hashmap_size(const PtrHashMap *map);
 
 PtrHashMapIter ptr_hashmap_iter(const PtrHashMap *map);
 bool ptr_hashmap_iter_next(PtrHashMapIter *iter, PtrHashMapEntry *entry_out);
-
-#endif

@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef IR_VERIFIER_H
-#define IR_VERIFIER_H
+#pragma once
 
 #include "ir/function.h"
 #include "ir/module.h"
@@ -42,5 +41,3 @@ bool ir_verify_module(IRModule *mod);
  * @return 如果函数是良构的 (well-formed)，返回 true；否则返回 false。
  */
 bool ir_verify_function(IRFunction *func);
-
-#endif

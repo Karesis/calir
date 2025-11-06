@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef IR_CONTEXT_H
-#define IR_CONTEXT_H
+#pragma once
 
 #include "ir/type.h"
 #include "ir/value.h"
@@ -228,5 +227,3 @@ const char *ir_context_intern_str(IRContext *ctx, const char *str);
  * @return const char* 指向永久副本的指针 (注意: 它*不*保证以 '\0' 结尾)
  */
 const char *ir_context_intern_str_slice(IRContext *ctx, const char *str, size_t len);
-
-#endif

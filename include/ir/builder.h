@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef IR_BUILDER_H
-#define IR_BUILDER_H
+#pragma once
 
 #include "ir/instruction.h"
 #include "ir/value.h"
@@ -167,5 +166,3 @@ IRValueNode *ir_builder_create_switch(IRBuilder *builder, IRValueNode *cond, IRV
  * @brief 向 Switch 指令添加 [const_val, target_bb] 对
  */
 void ir_switch_add_case(IRValueNode *switch_inst, IRValueNode *const_val, IRValueNode *target_bb);
-
-#endif

@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef TYPE_H
-#define TYPE_H
+#pragma once
 
 #include "ir/printer.h"
 #include <stdbool.h>
@@ -136,5 +135,3 @@ IRType *ir_type_create_function(IRContext *ctx, IRType *return_type, IRType **pa
                                 bool is_variadic);
 
 void ir_type_dump(IRType *type, IRPrinter *p);
-
-#endif

@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef MODULE_H
-#define MODULE_H
+#pragma once
 
 #include "context.h"
 #include "ir/printer.h"
@@ -68,5 +67,3 @@ const char *ir_module_dump_to_string(IRModule *mod, Bump *arena);
  * (除非你正在实现一个新的 IRPrinter 策略，否则不应直接调用)
  */
 void ir_module_dump_internal(IRModule *mod, IRPrinter *p);
-
-#endif

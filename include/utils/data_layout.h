@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef CALIR_DATALAYOUT_H
-#define CALIR_DATALAYOUT_H
+#pragma once
 
 #include "ir/type.h"
 #include "utils/bump.h"
@@ -132,5 +131,3 @@ size_t datalayout_get_pointer_size(const DataLayout *dl);
  * @brief (便捷函数) 获取指针的ABI对齐。
  */
 size_t datalayout_get_pointer_align(const DataLayout *dl);
-
-#endif

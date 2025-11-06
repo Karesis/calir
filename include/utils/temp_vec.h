@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef CALIR_UTILS_TEMP_VEC_H
-#define CALIR_UTILS_TEMP_VEC_H
+#pragma once
 
 #include "utils/bump.h"
 #include <stdbool.h>
@@ -105,5 +104,3 @@ temp_vec_clear(TempVec *vec)
 {
   vec->len = 0;
 }
-
-#endif

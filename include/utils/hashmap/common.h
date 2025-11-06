@@ -15,8 +15,7 @@
  */
 
 /* include/utils/hashmap/common.h */
-#ifndef HASHMAP_COMMON_H
-#define HASHMAP_COMMON_H
+#pragma once
 
 #include <stdint.h>
 
@@ -34,5 +33,3 @@ typedef enum BucketState
   /** @brief 槽位曾被使用, 但现已被删除 (墓碑)。*/
   BUCKET_TOMBSTONE = 2
 } BucketState;
-
-#endif

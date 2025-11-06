@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef CALIR_TRANSFORMS_MEM2REG_H
-#define CALIR_TRANSFORMS_MEM2REG_H
+#pragma once
 
 #include "analysis/dom_frontier.h"
 #include "analysis/dom_tree.h"
@@ -33,5 +32,3 @@
  * @return 如果 IR 被修改则返回 true，否则返回 false。
  */
 bool ir_transform_mem2reg_run(IRFunction *func, DominatorTree *dt, DominanceFrontier *df);
-
-#endif

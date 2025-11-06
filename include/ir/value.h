@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-#ifndef VALUE_H
-#define VALUE_H
+#pragma once
 
 #include "ir/printer.h"
 #include "ir/type.h"
@@ -88,5 +87,3 @@ void ir_value_set_name(IRValueNode *val, const char *name);
  * @param new_val 替换后的新 Value
  */
 void ir_value_replace_all_uses_with(IRValueNode *old_val, IRValueNode *new_val);
-
-#endif
