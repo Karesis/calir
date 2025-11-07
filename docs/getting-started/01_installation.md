@@ -28,7 +28,7 @@ Before you begin, please **strictly** ensure your environment meets all of the f
 First, clone the project repository using `git`:
 
 ```bash
-git clone [https://github.com/Karesis/calico.git](https://github.com/Karesis/calico.git)
+git clone https://github.com/Karesis/calico.git
 cd calico
 ````
 
@@ -66,10 +66,7 @@ Result of @add(10, 20): 30
 All tests completed.
 ```
 
-If you see `All tests completed.`, congratulations, your build environment is perfectly configured\!
-
-\<details\>
-\<summary\>\<b\>Click to see the full successful output of `make test`\</b\>\</summary\>
+If you see `All tests completed.`, congratulations, your build environment is perfectly configured!
 
 ```
 karesis@Celestina:~/Projects/calico$ make test
@@ -101,8 +98,6 @@ Running test suite (build/test_readme_example_interpreter)...
 Result of @add(10, 20): 30
 All tests completed.
 ```
-
-\</details\>
 
 ### Step 3: How to Fix Linting Errors (If `make test` fails)
 

@@ -21,7 +21,7 @@ The core APIs for this tutorial come from `interpreter/interpreter.h` and `utils
   RuntimeValue rt_val;
   rt_val.kind = RUNTIME_VAL_I32; // 1. Set the type tag
   rt_val.as.val_i32 = 10;        // 2. Set the corresponding value
-````
+  ```
 
   * **`bool interpreter_run_function(...)`**
     The main API for executing an `IRFunction`.

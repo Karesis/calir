@@ -30,7 +30,7 @@ Please create a new file named `my_parser_test.c` in your `calico` project's roo
 #include <stdio.h>
 
 /* Include Calico core headers */
-#include "ir/context.h" // [!_!] Note: Your include was "ir/context.hh", verify if this is correct.
+#include "ir/context.h" // For management
 #include "ir/module.h"
 #include "ir/parser.h"  // The star of our tutorial
 #include "ir/verifier.h"
@@ -87,8 +87,6 @@ int main() {
   return 0;
 }
 ```
-
-*(**注意：** 你的中文版 `include` 示例中有一个错字 `"ir/context.hh"`，我在英文版的注释中标记了它。你的项目 `tree` 显示它应该是 `"ir/context.h"`。请在最终提交时确认一下。)*
 
 ## 2.3. Key API Explanations
 

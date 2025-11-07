@@ -287,3 +287,19 @@ The `mem2reg` pass modifies the `IRFunction` **in-place**:
 3.  **`insert_phi_nodes`**: Inserts empty `phi` nodes.
 4.  **`rename_recursive`**: Traverses the Dominator Tree (`dt`), using a stack to track the "current value" of the `alloca`, replacing all `load`s and `store`s, and finally filling in the `phi` nodes.
 5.  **Cleanup**: Deletes the now-useless `alloca`, `load`, and `store` instructions.
+
+## 4.6. Congratulations! 
+
+You have now completed the entire `How-to Guides` series!
+
+You have learned the full, practical workflow for interacting with Calico IR:
+1.  **Building** IR from scratch (`IRBuilder`)
+2.  **Verifying** its correctness (`Verifier`)
+3.  **Analyzing** its structure (`CFG`, `DomTree`, `DomFrontier`)
+4.  **Transforming** it (`Mem2Reg`)
+
+This hands-on knowledge is the foundation for building any tool on top of Calico, such as a compiler frontend for your own language.
+
+Now that you've mastered the **"how,"** the next logical step is to understand the **"why."** The `Core Concepts` section explains the high-level architecture and design philosophies behind the APIs you've just used.
+
+**[-> Next: Core Concepts: Architecture Overview](../core-concepts/01_architecture.md)**

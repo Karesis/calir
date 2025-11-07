@@ -54,7 +54,7 @@ The following code (sourced from `tests/test_readme_example.c`) fully demonstrat
 /*
  * Target: Build a function that uses GEP to access structs and arrays
  */
-#include "ir/builder.h" // Corrected from .hh
+#include "ir/builder.h" 
 #include "ir/context.h"
 #include "ir/function.h"
 #include "ir/global.h"
@@ -207,4 +207,4 @@ You will see the `stdout` output that perfectly matches our "Target IR" section.
 
 You've mastered how to programmatically build IR\!
 
-**[-\> Next: Guide: How to Run Analysis Passes](02_how_to_run_analysis.md)**
+**[-\> Next: Guide: How to Verify The IR](02_how_to_verify_ir.md)**
