@@ -11,8 +11,6 @@
 >
 > This README provides a quick overview. For detailed tutorials, how-to guides, and core concepts, please see the **[Full Documentation Site](docs/index.md)**.
 
----
-
 `Calico` is a personal project to build a general-purpose compiler backend, rigorously developed as part of the "Compiler Principles" coursework at UCAS. It is built around a lightweight, LLVM-inspired Intermediate Representation named **`calir`**.
 
 It provides the core data structures, transforms, analysis passes, and an interpreter required to define, build, parse, analyze, transform, verify, and **execute** SSA-form IR.
