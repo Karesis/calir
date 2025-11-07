@@ -1,6 +1,6 @@
-# Calico-IR (calir) Code Style Guide
+# Calico Code Style Guide
 
-This document outlines the code style and conventions for the `calir` project. All contributors are expected to follow these rules to ensure the codebase is consistent, readable, and maintainable.
+This document outlines the code style and conventions for the `calico` project. All contributors are expected to follow these rules to ensure the codebase is consistent, readable, and maintainable.
 
 ## 1. Automated Tooling (The Hard Rules)
 

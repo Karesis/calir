@@ -1,4 +1,4 @@
-# Contributing to Calico-IR
+# Contributing to Calico
 
 We warmly welcome your contributions! Whether it's reporting a bug, submitting a feature request, or contributing code directly.
 
@@ -11,7 +11,7 @@ As the project's maintainer (BDFL), all contributions will be reviewed by [Kares
 
 ## Reporting Bugs
 
-1.  Please search the [Issues Page](https://github.com/Karesis/calir/issues) (Please replace "Karesis/calir" with your repository path) to ensure the bug hasn't already been reported.
+1.  Please search the [Issues Page](https://github.com/Karesis/calico/issues) (Please replace "Karesis/calir" with your repository path) to ensure the bug hasn't already been reported.
 2.  Create a new Issue using the "Bug Report" template.
 3.  Please provide:
     * What you did.
@@ -26,7 +26,7 @@ As the project's maintainer (BDFL), all contributions will be reviewed by [Kares
 ## Pull Requests
 
 1.  **Fork** this repository and create your new branch from `main`.
-2.  **Code Style:** Your code **must** follow our **[Code Style Guide (STYLE.MD)](STYLE.MD)**.
+2.  **Code Style:** Your code **must** follow our **[Code Style Guide (STYLE.MD)](STYLE.md)**.
 3.  **Formatting:** Before submitting, please **must** run `make format` to automatically format your code.
 4.  **License:** All new `.c` and `.h` files **must** include the Apache 2.0 license header.
     * You can run `make headers` to add it automatically.
