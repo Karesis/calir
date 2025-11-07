@@ -374,8 +374,8 @@ The core IR, passes, and interpreter are stable. Future goals are focused on bui
 
 ## Contributing
 
-Contributions, issues, and feedback are warmly welcome\! Please see [CONTRIBUTING.md](https://www.google.com/search?q=CONTRIBUTING.md) for guidelines.
+Contributions, issues, and feedback are warmly welcome\! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-This project is licensed under the Apache-2.0 License. See the [LICENSE](https://www.google.com/search?q=LICENSE) and [NOTICE](https://www.google.com/search?q=NOTICE) files for details.
+This project is licensed under the Apache-2.0 License. See the [LICENSE](LICENSE) and [NOTICE](NOTICE) files for details.
