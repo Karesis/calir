@@ -12,7 +12,7 @@ AR = ar
 PYTHON = python3
 
 # --- 构建目标 ---
-LIB_NAME = libcalir.a
+LIB_NAME = libcalico.a
 
 # 目录
 BUILD_DIR = build
@@ -105,7 +105,7 @@ $(LIB_TARGET): $(LIB_OBJS)
 $(TEST_TARGETS): $(BUILD_DIR)/%: $(OBJ_DIR)/tests/%.o $(LIB_TARGET)
 	@echo "Linking Test ($@)..."
 	@mkdir -p $(@D)
-	$(CC) $(LDFLAGS) -o $@ $< -lcalir $(LDLIBS)
+	$(CC) $(LDFLAGS) -o $@ $< -lcalico $(LDLIBS)
 
 # =================================================================
 # --- 5. 编译规则 (Compilation Rules) ---
