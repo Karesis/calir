@@ -2,11 +2,6 @@
 
 **一个轻量级、零依赖、受 LLVM 启发的编译器工具套件，使用纯 C (C23) 编写，包含完整的 IR、分析遍和解释器。**
 
-[![构建状态](https://img.shields.io/github/actions/workflow/status/Karesis/calico/ci.yml?style=flat-square&logo=github)](https://github.com/Karesis/calir/actions) 
-![GitHub stars](https://img.shields.io/github/stars/Karesis/calico?style=flat-square&logo=github)
-[![许可证](https://img.shields.io/github/license/Karesis/calico?style=flat-square&color=blue)](LICENSE)
-![语言](https://img.shields.io/badge/Language-C23-orange.svg?style=flat-square)
-
 `Calico` 是一个用于构建通用编译器后端的个人项目，源于 UCAS 的“编译原理”课程作业。它围绕一个受 LLVM 启发的轻量级中间表示（IR）—— **`calir`** ——构建。
 
 本项目提供了定义、构建、解析、分析、转换、验证和**执行** SSA 形式 IR 所需的核心数据结构、转换遍、分析遍和解释器。
