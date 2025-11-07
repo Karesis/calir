@@ -1,14 +1,14 @@
-# 2. 教程：解析你的第一个 IR
+# 2. Tutorial: Parsing Your First IR
 
-这是 `Calico` 的 "Hello, World!" 教程。
+This is the "Hello, World!" tutorial for `Calico`.
 
-我们的目标是编写一个最小的 C 程序，它接受一个**文本字符串**形式的 `calir` IR，使用 `Calico` 库将其解析为一个**内存中的 `IRModule` 对象**，并验证其正确性。
+Our goal is to write a minimal C program that takes a `calir` IR in **text string** format, uses the `Calico` library to parse it into an **in-memory `IRModule` object**, and verifies its correctness.
 
-本教程的核心 API 是 `ir/parser.h` 中提供的 `ir_parse_module` 函数。
+The core API for this tutorial is the `ir_parse_module` function provided in `ir/parser.h`.
 
-## 2.1. 目标 IR 源码
+## 2.1. Target IR Source
 
-首先，这是我们想要解析的 `.cir`（Calico IR）文本。这是一个简单的模块，定义了一个 `@add` 函数，它接收两个 `i32` 参数并返回它们的和。
+First, this is the `.cir` (Calico IR) text we want to parse. It's a simple module that defines an `@add` function, which takes two `i32` parameters and returns their sum.
 
 ```llvm
 module = "parsed_module"
@@ -18,24 +18,24 @@ $entry:
   %sum: i32 = add %a: i32, %b: i32
   ret %sum: i32
 }
-```
+````
 
-## 2.2. 完整的 C 代码
+## 2.2. Complete C Code
 
-请在你的 `calico` 项目根目录中创建一个名为 `my_parser_test.c` 的新文件，并粘贴以下内容：
+Please create a new file named `my_parser_test.c` in your `calico` project's root directory and paste the following content:
 
 ```c
 /* my_parser_test.c */
 
 #include <stdio.h>
 
-/* 包含 Calico 核心头文件 */
-#include "ir/context.hh"
+/* Include Calico core headers */
+#include "ir/context.h" // [!_!] Note: Your include was "ir/context.hh", verify if this is correct.
 #include "ir/module.h"
-#include "ir/parser.h"  // 我们本教程的主角
+#include "ir/parser.h"  // The star of our tutorial
 #include "ir/verifier.h"
 
-// 目标 IR 源码
+// Target IR Source
 const char *CIR_SOURCE =
     "module = \"parsed_module\"\n"
     "\n"
@@ -46,125 +46,128 @@ const char *CIR_SOURCE =
     "}\n";
 
 int main() {
-  // 1. 创建 IR 上下文 (Context)
-  // 这是 Calico 的 "宇宙"
-  // 它拥有所有的类型、常量和（在解析时）所有 IR 对象
+  // 1. Create the IR Context
+  // This is the "universe" of Calico.
+  // It owns all types, constants, and (during parsing) all IR objects.
   IRContext *ctx = ir_context_create();
+  
+  printf("Parsing IR...\n");
 
-  printf("正在解析 IR...\n");
-
-  // 2. 解析模块！
-  // 这是本教程的核心调用。
-  // 它接收上下文和 C 字符串，返回一个完整的模块。
-  // 如果失败，它会返回 NULL，并自动将详细错误打印到 stderr。
+  // 2. Parse the module!
+  // This is the core call of this tutorial.
+  // It takes the context and a C string, and returns a complete module.
+  // If it fails, it returns NULL and automatically prints a detailed
+  // error to stderr.
   IRModule *mod = ir_parse_module(ctx, CIR_SOURCE);
 
-  // 3. 处理结果
+  // 3. Handle the result
   if (mod == NULL) {
-    // 我们不需要在这里打印自定义错误，
-    // 因为 ir_parse_module 已经自动完成了！
-    fprintf(stderr, "测试失败。\n");
+    // We don't need to print a custom error here,
+    // ir_parse_module already did it for us!
+    fprintf(stderr, "Test failed.\n");
     ir_context_destroy(ctx);
     return 1;
   }
 
-  printf("--- 解析成功 ---\n");
-  printf("模块名: %s\n", mod->name);
+  printf("--- Parse Successful ---\n");
+  printf("Module Name: %s\n", mod->name);
 
-  // 4. (最佳实践) 验证模块
-  // 注意：ir_parse_module 内部已经自动运行了一次验证器。
-  // 但如果你之后手动修改了 IR，ir_verify_module 会非常有用。
+  // 4. (Best Practice) Verify the module
+  // Note: ir_parse_module already runs the verifier internally.
+  // But ir_verify_module is very useful if you modify the IR manually later.
   if (ir_verify_module(mod)) {
-    printf("模块已验证通过。\n");
+    printf("Module verified successfully.\n");
   } else {
-    printf("模块验证失败！\n");
+    printf("Module verification failed!\n");
   }
 
-  // 5. 清理
-  // 销毁上下文会释放它拥有的所有资源 (模块、函数、类型等)
+  // 5. Clean up
+  // Destroying the context frees all resources it owns (modules, functions, types, etc.)
   ir_context_destroy(ctx);
   return 0;
 }
 ```
 
-## 2.3. 关键 API 讲解
+*(**注意：** 你的中文版 `include` 示例中有一个错字 `"ir/context.hh"`，我在英文版的注释中标记了它。你的项目 `tree` 显示它应该是 `"ir/context.h"`。请在最终提交时确认一下。)*
 
-让我们分解一下刚才用到的函数：
+## 2.3. Key API Explanations
 
-* **`IRContext *ir_context_create(void)`**
-  `IRContext` 是 `Calico` 中最重要的结构体。它是一个“对象池”，负责管理和池化（interning）所有唯一的类型、常量和字符串。所有其他 IR 对象（如 `IRModule`, `IRFunction`）都必须归属于一个 `IRContext`。
+Let's break down the functions we just used:
 
-* **`IRModule *ir_parse_module(IRContext *ctx, const char *source_buffer)`**
-  这是 `ir/parser.h` 提供的**主入口点**。
-  
-  * **输入**:
-    * `ctx`: 你在上一步创建的上下文。
-    * `source_buffer`: 一个标准的 C 字符串（`const char *`），包含你想解析的 `.cir` 文本。
-  * **输出**:
-    * **成功**: 返回一个指向新创建的 `IRModule` 对象的指针。
-    * **失败**: 返回 `NULL`。**重要的是**，它还会在 `stderr` 上自动打印一个格式精美的错误信息，指出失败的**确切行号和列号**。
+  * **`IRContext *ir_context_create(void)`**
+    The `IRContext` is the most important struct in `Calico`. It's an "object owner" responsible for managing and interning all unique types, constants, and strings. All other IR objects (like `IRModule`, `IRFunction`) must belong to an `IRContext`.
 
-* **`bool ir_verify_module(IRModule *mod)`**
-  这是一个诊断工具，用于检查 `IRModule` 是否遵循了 `calir` 的所有规则（例如 SSA 规则、类型匹配等）。`ir_parse_module` 在返回前会自动调用它，但你也可以在手动修改 IR 后再次调用它以确保正确性。
+  * **`IRModule *ir_parse_module(IRContext *ctx, const char *source_buffer)`**
+    This is the **main entry point** from `ir/parser.h`.
 
-* **`void ir_context_destroy(IRContext *ctx)`**
-  释放 `IRContext` 及其拥有的所有相关内存（包括 `IRModule`、`IRFunction`、`IRType` 等）。
+      * **Input**:
+          * `ctx`: The context you created in the previous step.
+          * `source_buffer`: A standard C string (`const char *`) containing the `.cir` text you want to parse.
+      * **Output**:
+          * **Success**: Returns a pointer to the newly created `IRModule` object.
+          * **Failure**: Returns `NULL`. **Importantly**, it also automatically prints a beautifully formatted error message to `stderr`, pointing out the **exact line and column number** of the failure.
 
-## 2.4. 编译与运行
+  * **`bool ir_verify_module(IRModule *mod)`**
+    This is a diagnostic tool used to check if an `IRModule` follows all of `calir`'s rules (e.g., SSA rules, type matching, etc.). `ir_parse_module` automatically calls this before returning, but you can also call it again after manually modifying the IR to ensure correctness.
 
-由于你已经构建了 `libcalico.a`（在上一章 `01_build_and_test.md` 中），我们现在只需要编译 `my_parser_test.c` 并将其链接到你的库即可。
+  * **`void ir_context_destroy(IRContext *ctx)`**
+    Frees the `IRContext` and all associated memory it owns (including the `IRModule`, `IRFunction`, `IRType`, etc.).
 
-1. **编译程序**（在 `calico` 根目录运行）：
-   
-   ```bash
-   clang -std=c23 -g -Wall -Iinclude -o build/my_parser_test my_parser_test.c -Lbuild -lcalico -lm
-   ```
-   
-   * `-Iinclude`：告诉编译器在哪里查找 `"ir/parser.h"` 等头文件。
-   * `-Lbuild`：告诉链接器在哪里查找库。
-   * `-lcalico`：链接 `libcalico.a` 库（`calico` 是 `libcalico.a` 的简写）。
-   * `-lm`：链接数学库（`Makefile` 中也包含了）。
+## 2.4. Compiling and Running
 
-2. **运行程序**：
-   
-   ```bash
-   ./build/my_parser_test
-   ```
+Since you already built `libcalico.a` (in the previous guide, `01_build_and_test.md`), we just need to compile our `my_parser_test.c` and link it against your library.
 
-3. **预期输出**：
-   
-   ```
-   正在解析 IR...
-   --- 解析成功 ---
-   模块名: parsed_module
-   模块已验证通过。
-   ```
+1.  **Compile the program** (run from the `calico` root directory):
 
-## 2.5. 强大的错误报告
+    ```bash
+    clang -std=c23 -g -Wall -Iinclude -o build/my_parser_test my_parser_test.c -Lbuild -lcalico -lm
+    ```
 
-`Calico` 解析器的真正亮点在于它如何处理错误。让我们故意破坏 `CIR_SOURCE` 字符串。
+      * `-Iinclude`: Tells the compiler where to find headers like `"ir/parser.h"`.
+      * `-Lbuild`: Tells the linker where to find libraries.
+      * `-lcalico`: Links the `libcalico.a` library (short for `libcalico.a`).
+      * `-lm`: Links the math library (also included in the `Makefile`).
 
-**修改** `my_parser_test.c` 中的 `%sum: i32 = add ...` 这一行，**删除类型注解**：
+2.  **Run the program**:
+
+    ```bash
+    ./build/my_parser_test
+    ```
+
+3.  **Expected Output**:
+
+    ```
+    Parsing IR...
+    --- Parse Successful ---
+    Module Name: parsed_module
+    Module verified successfully.
+    ```
+
+## 2.5. Powerful Error Reporting
+
+The real magic of the `Calico` parser is how it handles errors. Let's intentionally break the `CIR_SOURCE` string.
+
+**Modify** the `%sum: i32 = add ...` line in `my_parser_test.c` by **deleting the type annotation**:
 
 ```c
 // ...
     "define i32 @add(%a: i32, %b: i32) {\n"
     "$entry:\n"
-    "  %sum = add %a: i32, %b: i32\n"  // 错误！删除了 : i32
+    "  %sum = add %a: i32, %b: i32\n"  // ERROR! Removed : i32
     "  ret %sum: i32\n"
     "}\n";
 // ...
 ```
 
-现在，**重新编译并运行**（使用与上一步相同的命令）。你不需要在 `main` 函数中添加任何新的错误处理代码，解析器会自动为你完成：
+Now, **re-compile and run** (using the same commands as the last step). You don't need to add any new error-handling code to your `main` function; the parser does it all for you:
 
-1. `make build/my_parser_test` （或者直接运行 `clang` 命令）
-2. `./build/my_parser_test`
+1.  `make build/my_parser_test` (or run the `clang` command directly)
+2.  `./build/my_parser_test`
 
-**错误输出**：
+**Error Output**:
 
 ```
-正在解析 IR...
+Parsing IR...
 
 --- Parse Error ---
 Error: 5:3: Expected ':', but got '='
@@ -173,16 +176,14 @@ Error: 5:3: Expected ':', but got '='
   |       ^
 
 Failed to parse IR.
-测试失败。
+Test failed.
 ```
 
-注意 `ir_parse_module` 如何返回 `NULL`，导致 `main` 函数打印 "测试失败。"，但更重要的是，`ir_parse_module` **自己**打印了一个详细的、带上下文的错误信息，准确地指出了问题所在。
+Notice how `ir_parse_module` returned `NULL`, causing `main` to print "Test failed.", but more importantly, `ir_parse_module` **itself** printed a detailed, contextual error message pinpointing the exact problem.
 
-## 2.6. 下一步
+## 2.6. Next Steps
 
-你已经成功地将文本 IR 解析为了内存中的对象！从这里开始，你有两个主要的选择：
+You've successfully parsed text IR into in-memory objects\! From here, you have two main options:
 
-* [-\> 教程：执行你的 IR](03_tutorial_interpreter.md)(学习如何使用 `interpreter` 运行这个 `@add` 函数并得到 `30`)
-* [-\> 指南：使用 Builder API 构建 IR](../how-to-guides/01_build_with_builder.md)(学习如何不使用文本，而是通过 C 函数调用来构建 IR)
-
-<!-- end list -->
+  * **[-\> Tutorial: Executing Your IR](03_tutorial_interpreter.md)** (Learn how to use the `interpreter` to run this `@add` function and get `30`)
+  * **[-\> Guide: Building IR with the Builder API](../how-to-guides/01_build_with_builder.md)** (Learn how to build IR using C function calls instead of text)

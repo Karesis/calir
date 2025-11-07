@@ -1,62 +1,62 @@
-# 1. 构建与测试
+# 1. Building and Testing
 
-`Calico` 是一个专为开发者和编译器研究者设计的 C23 工具套件。因此，它没有传统的“安装”步骤；你将直接从源代码构建、测试和使用它。
+`Calico` is a C23 toolkit designed for developers and compiler researchers. As such, it doesn't have a traditional "installation" step; you will build, test, and use it directly from the source code.
 
-本文档将指导你如何设置开发环境并验证构建。
+This document will guide you through setting up your environment and verifying the build.
 
-## 1.1. ❗ 环境依赖 (必读)
+## 1.1. ❗ Environment Dependencies (Required)
 
-在开始之前，请**严格**确保你的环境满足以下所有条件。
+Before you begin, please **strictly** ensure your environment meets all of the following conditions.
 
-* **编译器**: **Clang (版本 20 或更高)**
+* **Compiler**: **Clang (Version 20 or higher)**
   
-  * **[!]** 本项目**强依赖 Clang** 及其特定的 C23 语法实现。
-  * `gcc` **不支持**，因为 C23 的某些细节语法在 Clang 和 GCC 之间存在差异。
-  * *开发环境验证于: `clang version 20.1.8`*
+  * **[!]** This project has a **strong dependency on Clang** and its specific C23 syntax implementation.
+  * `gcc` is **not supported**, as some C23 syntax details differ between Clang and GCC.
+  * *Development environment verified on: `clang version 20.1.8`*
 
-* **构建系统**:
+* **Build System**:
   
   * `make`
 
-* **辅助工具**:
+* **Helper Tools**:
   
-  * `python3`: 用于运行代码质量（格式化、许可证）脚本。
-  * `clang-format`: 用于代码格式化，`make test` 会自动调用它进行检查。
+  * `python3`: Required for running code quality (formatting, license) scripts.
+  * `clang-format`: Required for code formatting. `make test` will automatically invoke it for checking.
 
-## 1.2. 获取源码
+## 1.2. Get the Source
 
-使用 `git` 克隆项目仓库：
+First, clone the project repository using `git`:
 
 ```bash
 git clone [https://github.com/Karesis/calico.git](https://github.com/Karesis/calico.git)
 cd calico
-```
+````
 
-## 1.3. 核心构建与测试工作流
+## 1.3. Core Build & Test Workflow
 
-`Makefile` 已经将代码质量检查（Linting）和单元测试集成到了一个命令中。
+The `Makefile` has integrated code quality checks (Linting) and unit tests into a single command.
 
-### 步骤 1: 运行完整验证
+### Step 1: Run Full Verification
 
-这是在开发过程中最常使用，也是验证环境是否正确的**唯一**命令：
+This is the **only command** you need to verify your environment is configured correctly and is the one you will use most often during development:
 
 ```bash
 make test
 ```
 
-这个命令会按顺序执行以下操作：
+This command will execute the following steps in order:
 
-1. **代码格式检查**: (调用 `check-format`) 确保所有代码符合 `clang-format` 规范。
-2. **许可证头部检查**: (调用 `check-headers`) 确保所有文件都包含 `NOTICE`。
-3. **编译源码**: 将 `src/` 下的所有 `.c` 文件编译为对象文件。
-4. **打包静态库**: 将所有对象文件归档为 `build/libcalico.a`。
-5. **编译测试**: 编译 `tests/` 目录下的所有测试用例。
-6. **链接测试**: 将每个测试用例与 `libcalico.a` 链接。
-7. **运行测试**: 自动执行所有测试套件。
+1.  **Code Format Check**: (Calls `check-format`) Ensures all code conforms to the `clang-format` specification.
+2.  **License Header Check**: (Calls `check-headers`) Ensures all files contain the `NOTICE`.
+3.  **Compile Source**: Compiles all `.c` files under `src/` into object files.
+4.  **Archive Static Library**: Archives all object files into `build/libcalico.a`.
+5.  **Compile Tests**: Compiles all test cases under `tests/`.
+6.  **Link Tests**: Links each test case against `libcalico.a`.
+7.  **Run Tests**: Automatically executes all test suites.
 
-### 步骤 2: 检查输出
+### Step 2: Check the Output
 
-如果一切顺利，你将看到大量的编译日志，最后以类似这样的信息结尾，表明所有测试均已通过：
+If everything is successful, you will see a large amount of compilation logs, ending with a message similar to this, indicating all tests have passed:
 
 ```
 ...
@@ -66,25 +66,26 @@ Result of @add(10, 20): 30
 All tests completed.
 ```
 
-如果你看到了 `All tests completed.`，那么恭喜你，你的构建环境已完美配置！
+If you see `All tests completed.`, congratulations, your build environment is perfectly configured\!
 
-`make test` 完整的成功输出示例:
+\<details\>
+\<summary\>\<b\>Click to see the full successful output of `make test`\</b\>\</summary\>
 
 ```
 karesis@Celestina:~/Projects/calico$ make test
 Checking C formatting...
---- Calico-IR 代码格式化 ---
-模式: 检查 (Check-Only)
+--- Calico-IR Code Formatting ---
+Mode: Check-Only
 ...
-[OK] 所有被处理的文件均符合格式规范。
+[OK] All processed files conform to formatting standards.
 Checking license headers...
---- Calico-IR 许可证头部检查 ---
-模式: 检查 (Check-Only)
+--- Calico-IR License Header Check ---
+Mode: Check-Only
 ...
-[OK] 所有被处理的文件均包含许可证头部。
+[OK] All processed files contain a license header.
 Compiling tests/test_bitset.c...
 ...
-(大量编译日志)
+(Extensive compilation log)
 ...
 Archiving Static Lib (build/libcalico.a)...
 ...
@@ -93,7 +94,7 @@ Running test suite (build/test_bitset)...
 ...
 [OK] All Bitset: count_slow tests passed.
 ...
-(大量测试日志)
+(Extensive test log)
 ...
 Running test suite (build/test_readme_example_interpreter)...
 ./build/test_readme_example_interpreter
@@ -101,46 +102,49 @@ Result of @add(10, 20): 30
 All tests completed.
 ```
 
-### 步骤 3: 如何修复 Linting 错误 (如果 `make test` 失败)
+\</details\>
 
-`make test` 命令**包含**检查 (check)，但它**不包含**自动修复。如果它因为格式或许可证头部问题而失败，你需要运行“修复”命令：
+### Step 3: How to Fix Linting Errors (If `make test` fails)
 
-* **修复格式问题**:
-  
-  ```bash
-  make format
-  ```
+The `make test` command **includes** checks, but it does **not** include automatic fixes. If it fails due to formatting or license header issues, you need to run the "fix" commands:
 
-* **修复许可证头部问题**:
-  
-  ```bash
-  make headers
-  ```
+  * **To fix formatting issues**:
 
-修复后，**重新运行 `make test`** 以确保所有检查和测试都通过。
+    ```bash
+    make format
+    ```
 
-## 1.4. 其他有用的构建目标
+  * **To fix license header issues**:
 
-* **`make all`**
-  构建库 (`libcalico.a`) 和所有测试可执行文件，但不运行它们。
+    ```bash
+    make headers
+    ```
 
-* **`make lib`**
-  仅构建静态库 `build/libcalico.a`。
+After fixing, **re-run `make test`** to ensure all checks and tests pass.
 
-* **`make run_test_X`**
-  构建并**只运行**一个特定的测试套件。这对调试非常有用。
-  (例如: `make run_test_parser`)
+## 1.4. Other Useful Build Targets
 
-* **`make clean`**
-  删除所有构建产物 (`build/` 目录)。
+  * **`make all`**
+    Builds the library (`libcalico.a`) and all test executables, but does not run them.
 
-* **`make help`**
-  显示 `Makefile` 中定义的所有主要命令的帮助信息。
+  * **`make lib`**
+    Builds only the static library `build/libcalico.a`.
+
+  * **`make run_test_X`**
+    Builds and **only runs** a single, specific test suite. This is very useful for debugging.
+    (e.g., `make run_test_parser`)
+
+  * **`make clean`**
+    Removes all build artifacts (`build/` directory).
+
+  * **`make help`**
+    Displays help information for all primary commands defined in the `Makefile`.
 
 -----
 
-## 下一步
+## Next Steps
 
-你已经成功在本地构建并验证了 `Calico`。现在，让我们开始使用它。
+You have successfully built and verified `Calico` locally. Now, let's start using its core features.
 
-**[-\> 下一篇：教程：解析你的第一个 IR](02_tutorial_parser.md)**
+**[-\> Next: Tutorial: Parsing Your First IR](02_tutorial_parser.md)**
+

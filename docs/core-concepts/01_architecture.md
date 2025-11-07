@@ -1,123 +1,127 @@
-# 1. 架构概览
+# 1. Architecture Overview
 
-欢迎来到 `Calico` 的核心概念！在“入门指南”和“操作指南”中，我们学习了如何*使用* API 来构建和执行 IR。在这一部分，我们将深入探讨这些 API 背后“是什么”和“为什么”的设计。
+Welcome to Calico's Core Concepts! In the "Getting Started" and "How-to Guides," we learned how to *use* the APIs to build and execute IR. In this section, we'll dive deeper into the "what" and "why" behind these APIs' design.
 
-`Calico` 的 IR 架构深受 LLVM 的启发。它不是一个单一的巨大结构，而是一个由多个**分层对象**组成的、**强所有权**的图。
+Calico's IR architecture is heavily inspired by LLVM. It is not a single massive structure, but rather a graph of multiple **hierarchical objects** with **strong ownership**.
 
-理解 `Calico` 架构最快的方法是将其分解为两个主要概念：
+The fastest way to understand Calico's architecture is to break it down into two
+main concepts:
 
-1. **核心容器 (Ownership)**：`IR` 对象的“父子”关系（“谁拥有谁”）。
-2. **值系统 (The Value System)**：`IRValue` 如何作为“粘合剂”连接一切（“是什么”）。
+1.  **Core Containers (Ownership)**: The "parent-child" relationship of IR objects ("who owns what").
+2.  **The Value System**: How `IRValue` acts as the "glue" that connects everything ("what it is").
 
 ---
 
-## 🏗️ 核心容器：所有权层次
+## 🏗️ Core Containers: The Ownership Hierarchy
 
-`Calico` IR 具有严格的树状所有权结构。每个对象（`Function`、`BasicBlock` 等）都明确知道其“父”对象是谁。
+Calico IR has a strict, tree-like ownership structure. Every object (`Function`, `BasicBlock`, etc.) explicitly knows who its "parent" object is.
 
-这种层次结构如下所示：
+This hierarchy is as follows:
 
 ```
-IRContext (整个“宇宙”)
-└─ IRModule (一个“翻译单元”)
-├─ IRGlobalVariable (全局变量 @g\_data)
-└─ IRFunction (函数 @my\_func)
-├─ IRArgument (参数 %arg)
-└─ IRBasicBlock (基本块 $entry)
-└─ IRInstruction (指令 %sum = add)
+
+IRContext (The entire "universe")
+└─ IRModule (A "translation unit")
+├─ IRGlobalVariable (Global @g\_data)
+└─ IRFunction (Function @my\_func)
+├─ IRArgument (Argument %arg)
+└─ IRBasicBlock (Block $entry)
+└─ IRInstruction (Instruction %sum = add)
+
 ```
 
----
-
-### 1. `IRContext` (来自 `ir/context.h`)
-
-**`IRContext` 是 `Calico` 的“宇宙”或“中央管理器”。**
-
-* **唯一所有者**：它是所有*持久*对象的最终所有者。它管理着内存竞技场（Arenas），用于快速分配所有其他 IR 对象（`Module`, `Function`, `Type` 等）。
-* **唯一化（Interning）**：它是所有类型（`Type`）和常量（`Constant`）的“工厂”。当你请求一个 `i32` 类型时，`IRContext` 会确保你得到的是指向**同一个** `i32` 类型实例的指针。这使得类型和常量的比较变得非常快（只需比较指针）。
-* **生命周期**：`IRContext` 是你创建的第一个对象，也是你最后销F毁的对象。销毁 `IRContext` 会释放它所拥有的*所有* IR。
-
-### 2. `IRModule` (来自 `ir/module.h`)
-
-**`IRModule` 是 IR 结构的“根节点”，代表一个完整的翻译单元（例如，一个 `.c` 文件）。**
-
-* 它持有一个指向其父 `IRContext` 的指针。
-* 它拥有一个 `IRGlobalVariable` 列表（例如 `@g_data`）。
-* 它拥有一个 `IRFunction` 列表（例如 `@main`）。
-
-### 3. `IRFunction` (来自 `ir/function.h`)
-
-**`IRFunction` 代表一个可调用的代码单元。**
-
-* 它持有一个指向其父 `IRModule` 的指针。
-* 它定义了其**返回类型**（例如 `i32`）。
-* 它拥有一个 `IRArgument` 列表（例如 `%a: i32`, `%b: i32`）。
-* 它拥有一个 `IRBasicBlock` 列表（例如 `$entry`, `$then`, `$end`）。
-
-### 4. `IRBasicBlock` (来自 `ir/basicblock.h`)
-
-**`IRBasicBlock` 代表一个“基本块”，即一个没有内部跳转的线性指令序列。**
-
-* 它持有一个指向其父 `IRFunction` 的指针。
-* 它拥有一个 `IRInstruction` 列表。
-* `Calico` 中的 `IRBasicBlock` 必须以一个**终结者指令**（`ret`, `br`, `cond_br`, `switch`）结尾。
-
-### 5. `IRInstruction` (来自 `ir/instruction.h`)
-
-**`IRInstruction` 是最小的可执行代码单元。**
-
-* 它持有一个指向其父 `IRBasicBlock` 的指针。
-* 它有一个操作码（`IROpcode`），例如 `IR_OP_ADD`。
-* 它拥有一个**操作数（Operands）**列表，这些操作数是通过 `IRUse` 对象连接的。
 
 ---
 
-## 🧬 `IRValue`：统一的值系统
+### 1. `IRContext` (from `ir/context.h`)
 
-虽然上述的“容器”层次结构（`Module` -> `Function` -> `Block`）很容易理解，但 `Calico`（和 LLVM）的真正威力来自于它的**值（Value）系统**。
+**The `IRContext` is Calico's "universe" or "central manager."**
 
-**`IRValue`（在 `ir/value.h` 中定义）是 `Calico` 中最重要的核心概念。**
+* **Ultimate Owner**: It is the final owner of all *persistent* objects. It manages the memory Arenas used to quickly allocate all other IR objects (`Module`, `Function`, `Type`, etc.).
+* **Interning**: It is the "factory" for all types (`Type`) and constants (`Constant`). When you request an `i32` type, the `IRContext` ensures you get a pointer to the **exact same** `i32` type instance. This makes type and constant comparison extremely fast (just a pointer comparison).
+* **Lifecycle**: The `IRContext` is the first object you create and the last object you destroy. Destroying the `IRContext` frees *all* IR it owns.
 
-> **核心理念：** “如果一个东西可以被用作指令的操作数，那么它就是一个 `IRValue`。”
+### 2. `IRModule` (from `ir/module.h`)
 
-`IRValue` 本身是一个“基类”（通过C语言的结构体组合实现）。以下所有对象**都是** `IRValue`：
+**The `IRModule` is the "root node" of the IR structure, representing a single translation unit (e.g., one `.c` file).**
 
-* **`IRInstruction`** (的 *result*)
-  * `_**%sum**: i32_ = add %a: i32, %b: i32`
-  * `%sum` 是一个 `IRValue`。
+* It holds a pointer to its parent `IRContext`.
+* It owns a list of `IRGlobalVariable`s (e.g., `@g_data`).
+* It owns a list of `IRFunction`s (e.g., `@main`).
+
+### 3. `IRFunction` (from `ir/function.h`)
+
+**An `IRFunction` represents a callable unit of code.**
+
+* It holds a pointer to its parent `IRModule`.
+* It defines its **return type** (e.g., `i32`).
+* It owns a list of `IRArgument`s (e.g., `%a: i32`, `%b: i32`).
+* It owns a list of `IRBasicBlock`s (e.g., `$entry`, `$then`, `$end`).
+
+### 4. `IRBasicBlock` (from `ir/basicblock.h`)
+
+**An `IRBasicBlock` represents a "basic block," a linear sequence of instructions with no internal jumps.**
+
+* It holds a pointer to its parent `IRFunction`.
+* It owns a list of `IRInstruction`s.
+* A `Calico` `IRBasicBlock` *must* end with a **terminator instruction** (`ret`, `br`, `cond_br`, `switch`).
+
+### 5. `IRInstruction` (from `ir/instruction.h`)
+
+**An `IRInstruction` is the smallest unit of executable code.**
+
+* It holds a pointer to its parent `IRBasicBlock`.
+* It has an opcode (`IROpcode`), such as `IR_OP_ADD`.
+* It owns a list of **Operands**, which are connected via `IRUse` objects.
+
+---
+
+## 🧬 `IRValue`: The Unified Value System
+
+While the "container" hierarchy above (`Module` -> `Function` -> `Block`) is easy to understand, the real power of `Calico` (and LLVM) comes from its **Value system**.
+
+**`IRValue` (defined in `ir/value.h`) is the most important core concept in `Calico`.**
+
+> **Core Philosophy:** "If a thing can be used as an operand to an instruction, then it is an `IRValue`."
+
+`IRValue` itself is a "base class" (implemented via C struct composition). All of the following objects **are** `IRValue`s:
+
+* **`IRInstruction`** (its *result*)
+    * `_**%sum**: i32_ = add %a: i32, %b: i32`
+    * `%sum` is an `IRValue`.
 * **`IRConstant`**
-  * `%sum: i32 = add %a: i32, _**10**: i32_`
-  * `10: i32` 是一个 `IRValue`。
+    * `%sum: i32 = add %a: i32, _**10**: i32_`
+    * `10: i32` is an `IRValue`.
 * **`IRArgument`**
-  * `%sum: i32 = add _**%a**: i32_, %b: i32`
-  * `%a` 是一个 `IRValue`。
+    * `%sum: i32 = add _**%a**: i32_, %b: i32`
+    * `%a` is an `IRValue`.
 * **`IRGlobalVariable`**
-  * `%ptr: <i32> = bitcast _**@g_data**: <[10xi32]>_ to <i32>`
-  * `@g_data` 是一个 `IRValue` (其类型是指针)。
-* **`IRBasicBlock`** (的 *label*)
-  * `br _**$end**_`
-  * `$end` 是一个 `IRValue` (其类型是 `label`)。
+    * `%ptr: <i32> = bitcast _**@g_data**: <[10xi32]>_ to <i32>`
+    * `@g_data` is an `IRValue` (its type is a pointer).
+* **`IRBasicBlock`** (its *label*)
+    * `br _**$end**_`
+    * `$end` is an `IRValue` (its type is `label`).
 
-**这有什么好处？**
-这意味着一个 `add` 指令**不需要关心**它是在加两个 `IRArgument`、两个 `IRConstant`、还是两个 `IRInstruction` 的结果。它只知道它需要两个指向 `IRValue` 的指针，并且这两个 `IRValue` 的类型都是 `i32`。
+**What's the benefit?**
+This means an `add` instruction **doesn't need to care** if it's adding two `IRArgument`s, two `IRConstant`s, or the results of two other `IRInstruction`s. It only knows that it requires two pointers to `IRValue`s, and that both of those `IRValue`s have the type `i32`.
 
 ---
 
-## 🔗 Use-Def 链 (来自 `ir/use.h`)
+## 🔗 Use-Def Chains (from `ir/use.h`)
 
-`IRValue` 系统是通过 `Use-Def`（使用-定义）链连接起来的。
+The `IRValue` system is connected via **Use-Def chains**.
 
-* **Def-Use (定义 -> 使用)**：
-  * 一个 `IRInstruction`（例如 `add`）拥有一个它所“使用”的 `IRValue` 列表（操作数列表）。
-  * 例如：`add` 指令**使用**了 `%a` 和 `%b`。
-* **Use-Def (使用 -> 定义)**：
-  * 每一个 `IRValue`（例如 `%a`）都拥有一个“使用”它的所有指令的**列表**。
-  * 例如：`%a` 这个 `IRValue` **被** `add` 指令所使用。
+* **Def-Use (Definition -> Uses)**:
+    * An `IRInstruction` (like `add`) owns a list of the `IRValue`s it "uses" (its operand list).
+    * Example: The `add` instruction **uses** `%a` and `%b`.
+* **Use-Def (Use -> Definition)**:
+    * Every `IRValue` (like `%a`) owns a **list** of all instructions that "use" it.
+    * Example: The `IRValue` `%a` **is used by** the `add` instruction.
 
-`ir/use.h` 中的 `IRUse` 结构就是实现这个双向链接的“中间人”。这使得像 `ir_value_replace_all_uses_with()` 这样的高级重构（在 `mem2reg` 中使用）成为可能。
+The `IRUse` struct from `ir/use.h` is the "middle-man" that implements this bi-directional link. This makes advanced refactoring like `ir_value_replace_all_uses_with()` (used in `mem2reg`) possible.
 
-## 4.6. 下一步
+## Next Steps
 
-现在你已经理解了 `Calico` IR 的**数据结构**，下一步是学习它的**文本语法**。
+Now that you understand the **data structure** of `Calico` IR, the next step is to learn its **text syntax**.
 
-[-> 下一篇：核心概念：`calir` 文本 IR 格式](02_calir_text_format.md)
+[-> Next: Core Concepts: The `calir` Text IR Format](02_calir_text_format.md)
