@@ -11,7 +11,7 @@ As the project's maintainer (BDFL), all contributions will be reviewed by [Kares
 
 ## Reporting Bugs
 
-1.  Please search the [Issues Page](https://github.com/Karesis/calico/issues) (Please replace "Karesis/calir" with your repository path) to ensure the bug hasn't already been reported.
+1.  Please search the [Issues Page](https://github.com/Karesis/calico/issues) to ensure the bug hasn't already been reported.
 2.  Create a new Issue using the "Bug Report" template.
 3.  Please provide:
     * What you did.
