@@ -2,9 +2,9 @@
 
 **A lightweight, zero-dependency, LLVM-inspired compiler toolkit written in pure C (C23), featuring a complete IR, analysis passes, and an interpreter.**
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/Karesis/calir/ci.yml?style=flat-square&logo=github)](https://github.com/Karesis/calir/actions) 
-![GitHub stars](https://img.shields.io/github/stars/Karesis/calir?style=flat-square&logo=github)
-[![License](https://img.shields.io/github/license/Karesis/calir?style=flat-square&color=blue)](LICENSE)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/Karesis/calico/ci.yml?style=flat-square&logo=github)](https://github.com/Karesis/calir/actions) 
+![GitHub stars](https://img.shields.io/github/stars/Karesis/calico?style=flat-square&logo=github)
+[![License](https://img.shields.io/github/license/Karesis/calico?style=flat-square&color=blue)](LICENSE)
 ![Language](https://img.shields.io/badge/Language-C23-orange.svg?style=flat-square)
 
 `Calico` is a personal project to build a general-purpose compiler backend, rigorously developed as part of the "Compiler Principles" coursework at UCAS. It is built around a lightweight, LLVM-inspired Intermediate Representation named **`calir`**.
